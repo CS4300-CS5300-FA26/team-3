@@ -1,0 +1,11 @@
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Operating system and editor files
+.DS_Store
+*.swp
+
+# Local logs
+*.log
