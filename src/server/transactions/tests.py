@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 
 from .models import Transaction
@@ -51,6 +52,47 @@ class TransactionCategoryTests(TestCase):
             description="Part-time job",
             category="",
         ).full_clean()
+
+
+class TransactionDatabaseConstraintTests(TestCase):
+    """Saving without calling full_clean() must still be refused by the database."""
+
+    def assert_save_is_refused(self, **overrides):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            make_transaction(**overrides).save()
+        self.assertEqual(Transaction.objects.count(), 0)
+
+    def test_save_refuses_zero_amount(self):
+        self.assert_save_is_refused(amount=Decimal("0.00"))
+
+    def test_save_refuses_negative_amount(self):
+        self.assert_save_is_refused(amount=Decimal("-5.00"))
+
+    def test_save_refuses_expense_without_category(self):
+        self.assert_save_is_refused(category="")
+
+    def test_save_refuses_unknown_kind(self):
+        self.assert_save_is_refused(kind="refund")
+
+    def test_create_refuses_invalid_rows(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Transaction.objects.create(
+                kind=Transaction.Kind.EXPENSE,
+                amount=Decimal("0.00"),
+                date=date(2026, 10, 6),
+                description="Coffee",
+                category="",
+            )
+        self.assertEqual(Transaction.objects.count(), 0)
+
+    def test_save_allows_uncategorized_income(self):
+        make_transaction(
+            kind=Transaction.Kind.INCOME,
+            amount=Decimal("1200.00"),
+            description="Part-time job",
+            category="",
+        ).save()
+        self.assertEqual(Transaction.objects.count(), 1)
 
 
 class TransactionSignedAmountTests(TestCase):

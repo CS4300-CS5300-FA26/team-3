@@ -26,6 +26,25 @@ class Transaction(models.Model):
 
     class Meta:
         ordering = ["-date", "-id"]
+        # Enforced by the database, so objects.create() and save() cannot
+        # store rows that skip the form-level validation in clean().
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(kind__in=["income", "expense"]),
+                name="transaction_kind_valid",
+                violation_error_message="Kind must be income or expense.",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name="transaction_amount_positive",
+                violation_error_message="Amount must be greater than zero.",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(kind="expense") | ~models.Q(category=""),
+                name="transaction_expense_has_category",
+                violation_error_message="Choose a category.",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.date} {self.description} ({self.get_kind_display()} ${self.amount})"
