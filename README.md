@@ -35,6 +35,8 @@ python src/manage.py runserver 0.0.0.0:3000
 
 ## Deployment
 
+Pull requests to `main` run Django checks, migrations, and tests against a temporary PostgreSQL database in GitHub Actions. This uses no AWS credentials or Aurora credits. Teammates can run local tests with `python src/manage.py test tests src`.
+
 Public URL: https://budget-wise.dev/
 
 API Gateway sends requests to Django on AWS Lambda. The current scaffold returns a 404 until our application view is added. See [deployment instructions](docs/DEPLOYMENT.md) for the setup and remaining work.
@@ -136,6 +138,7 @@ We checked the local Django project, updated its setup instructions, and kept th
 - Configuring the domain settings properly
 - Prepared the Lambda adapter
 - Wrote tests for AWS Aurora PostgreSQL initial configuration
+- Wrote CI yaml for testing Django against temporary PostgreSQL
 
 **How we used the result:**
 

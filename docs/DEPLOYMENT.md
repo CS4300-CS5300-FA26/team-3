@@ -29,13 +29,15 @@ Without `DB_HOST`, Django uses local SQLite. To select Aurora, set:
 | `DB_USER` | `budgetwise_app` for the web app; `budgetwise_migrator` for migrations |
 | `AWS_REGION` | `us-east-1` |
 
-The backend in `src/budgetwise/db/aurora/` generates a fresh IAM token for each connection and verifies the server certificate. Lambda uses its IAM role; authorized local users use their own AWS profile. No database password is stored. Connections close after each request so Aurora can pause to avoid wasting usage credits.
+The backend in `src/budgetwise/db/aurora/` generates a fresh IAM token for each connection and verifies the server certificate. Lambda uses its IAM role; teammates do not need AWS access to develop or test their code. No Aurora password is stored. Connections close after each request so Aurora can pause to avoid wasting usage credits.
 
 Keep the actual hostname in environment configuration rather than source control. We currently use the single writer's instance endpoint; update it if the writer is replaced. Local database-connection tests run with `python -m unittest discover -s tests` and make no AWS calls.
 
 The app user can read and write records. The migration user can create tables and grants the app access to new tables. Run `python src/manage.py migrate` with the migration user's connection settings when deploying migrations. Keep routine tests local; don't run Django's test database creation against Aurora.
 
 ## Release and rollback
+
+CI uses `budgetwise.ci_settings` and a temporary PostgreSQL 17 service on the GitHub runner. Its fixed password is only for that disposable database. Local development uses SQLite; the deployed app uses Aurora once activated. These databases do not share data.
 
 The planned workflow checks the code, builds the ZIP, publishes a Lambda version, tests it, and moves `live` to that version. Until that workflow is configured, releases remain manual.
 
