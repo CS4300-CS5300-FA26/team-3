@@ -70,6 +70,13 @@ We used feedback to improve our Gherkins, discuss with ourselves and the custome
 **How we used the result:**
 Used the feedback to create organized tasks/issues on GitHub, tying with stories and assigning sprints.
 
+### Sprint 0-2: Sep 29, 2026 — follow-up revisions
+**Tool:** Codex
+**What it helped with:**
+- Revised the lo-fi UI into 17 numbered screen sketches, a navigation diagram, and 5 high-level storyboards in response to the review feedback from Pardot.
+**How we used the result:**
+We replaced the earlier visuals in the Sprint 0-2 document with the revised sketches and updated the supporting text.
+
 ### Sprint 0-3: Oct 5, 2026
 **Tool:** Codex (GPT6.0 Sol)
 **What it helped with** 
