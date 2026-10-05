@@ -30,6 +30,7 @@ python src/manage.py runserver 0.0.0.0:3000
 ## Source layout
 
 - `src/budgetwise/`: Django project settings and URLs.
+- `src/budgetwise/db/aurora/`: PostgreSQL connection with AWS IAM authentication.
 - `src/integrations/`: future Resend, OpenAI, and other service connections.
 
 ## Deployment
@@ -131,8 +132,10 @@ We checked the local Django project, updated its setup instructions, and kept th
 
 **What it helped with:**
 
+- Documentation of all deployment steps
 - Configuring the domain settings properly
 - Prepared the Lambda adapter
+- Wrote tests for AWS Aurora PostgreSQL initial configuration
 
 **How we used the result:**
 
