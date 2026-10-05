@@ -12,6 +12,21 @@ Team Members:
 - Calvin McDearman
 - Noah Dumas
 
+## How to run Django Project locally
+
+Use Python 3.13 (tested locally with Python 3.13.2). The Django project resides in `src/server/`. Run these commands from the repository root:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python src/server/manage.py check
+python src/server/manage.py migrate
+python src/server/manage.py runserver 0.0.0.0:3000
+```
+
+`check` validates the Django project, and `migrate` creates or updates local SQLite tables. The development server uses port 3000 for DevEdu; use the URL DevEdu provides, or `http://127.0.0.1:3000/` locally. Stop it with `Ctrl+C`. The Django welcome page is expected until the application view is added.
+
 ## Planned Features (as of Sprint 0-2, subject to change)
 
 - **Account and persistence** — Create an account and securely retain financial records between sessions.
@@ -85,3 +100,16 @@ Used the feedback to create organized tasks/issues on GitHub, tying with stories
 **How we used the result:**
 
 We replaced the earlier visuals in the Sprint 0-2 document with the revised sketches and updated the supporting text.
+
+### Sprint 0-3: Oct 5, 2026
+
+**Tool:** Codex
+
+**What it helped with:**
+
+- Reviewed the initial Django setup and removal of the generated secret key from source.
+- Helped describe the changes in commits and reconcile the README with the latest `main` branch.
+
+**How we used the result:**
+
+We checked the local Django project, updated its setup instructions, and kept the current Sprint 0-2 project details while adding Sprint 0-3 documentation.
