@@ -9,3 +9,6 @@
 
 # Local logs
 *.log
+__pycache__/
+*.py[cod]
+db.sqlite3
