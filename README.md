@@ -33,6 +33,21 @@ python src/manage.py runserver 0.0.0.0:3000
 - `src/budgetwise/db/aurora/`: PostgreSQL connection with AWS IAM authentication.
 - `src/integrations/`: future Resend, OpenAI, and other service connections.
 
+## Architecture decisions
+
+Planned request flow: `Browser → API Gateway → Lambda → Django → Aurora PostgreSQL`
+
+| Choice | Reason |
+| --- | --- |
+| Django views, templates, and ORM | Keep pages, application logic, and database models in one project that the team can develop together. |
+| API Gateway and AWS Lambda | Receive HTTPS requests and run Django without maintaining an application server. Mangum translates requests for Django. |
+| Aurora PostgreSQL | Keep deployed data independent of Lambda releases. IAM provides temporary database authentication; separate app and migration users limit who can change the schema. |
+| SQLite locally; temporary PostgreSQL in CI | Let teammates develop without AWS accounts and test PostgreSQL compatibility without using Aurora credits. These databases do not share data. |
+| Cloudflare DNS and Resend | Cloudflare manages our domain. Resend is selected for application email; its Django integration is still planned. |
+| GitHub Actions | Test pull requests and automate releases from `main`, using temporary AWS credentials instead of stored access keys. |
+
+The scaffold is live, but application models and pages are still pending. Aurora connectivity through the deployed code and the first automated release remain to be verified. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
+
 ## Deployment
 
 Pull requests to `main` run Django checks, migrations, and tests against a temporary PostgreSQL database in GitHub Actions. This uses no AWS credentials or Aurora credits. Teammates can run local tests with `python src/manage.py test tests src`.
@@ -130,11 +145,11 @@ We checked the local Django project, updated its setup instructions, and kept th
 
 ### Sprint 0-3: Oct 5, 2026 — deployment
 
-**Tool:** Codex 
+**Tool:** Codex
 
 **What it helped with:**
 
-- Documentation of all deployment steps
+- Documentation of deployment steps and architecture decisions
 - Configuring the domain settings properly
 - Prepared the Lambda adapter
 - Wrote tests for AWS Aurora PostgreSQL initial configuration
