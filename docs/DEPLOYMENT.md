@@ -8,13 +8,13 @@ Chase will maintain the AWS setup for Team 3. Local development follows the READ
 
 Cloudflare manages DNS. API Gateway calls the `live` alias of Lambda function `budgetwise-demo` in `us-east-1`. Lambda uses Python 3.13, x86_64, and handler `lambda_entry.handler`.
 
-`src/server/lambda_entry.py` uses Mangum to translate requests for Django. It disables debug output, accepts our domain, and requires HTTPS and secure cookies. These overrides only apply when Lambda loads the adapter.
+`src/lambda_entry.py` uses Mangum to translate requests for Django. It disables debug output, accepts our domain, and requires HTTPS and secure cookies. These overrides only apply when Lambda loads the adapter.
 
 ## Configuration
 
 Set `DJANGO_SECRET_KEY` in Lambda to a private, randomly generated value of at least 50 characters. Never commit its value. Dependencies are recorded in `requirements.txt`.
 
-The deployment ZIP needs the contents of `src/server/` and installed dependencies at its root. Exclude local databases, `.env` files, virtual environments, and caches. GitHub Actions will build this ZIP as part of CD.
+The deployment ZIP needs the contents of `src/` and installed dependencies at its root. Exclude local databases, `.env` files, virtual environments, and caches. GitHub Actions will build this ZIP as part of CD.
 
 ## Release and rollback
 

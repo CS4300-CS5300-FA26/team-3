@@ -14,18 +14,23 @@ Team Members:
 
 ## How to run Django Project locally
 
-Use Python 3.13 (tested locally with Python 3.13.2). The Django project resides in `src/server/`. Run these commands from the repository root:
+Use Python 3.13 (tested locally with Python 3.13.2). The Django project resides in `src/`. Run these commands from the repository root:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-python src/server/manage.py check
-python src/server/manage.py migrate
-python src/server/manage.py runserver 0.0.0.0:3000
+python src/manage.py check
+python src/manage.py migrate
+python src/manage.py runserver 0.0.0.0:3000
 ```
 
 `check` validates the Django project, and `migrate` creates or updates local SQLite tables. The development server uses port 3000 for DevEdu; use the URL DevEdu provides, or `http://127.0.0.1:3000/` locally. Stop it with `Ctrl+C`. The Django welcome page is expected until the application view is added.
+
+## Source layout
+
+- `src/budgetwise/`: Django project settings and URLs.
+- `src/integrations/`: future Resend, OpenAI, and other service connections.
 
 ## Deployment
 
