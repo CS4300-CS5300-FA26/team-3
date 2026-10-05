@@ -10,6 +10,20 @@ Team Members:
 - Calvin McDearman
 -  Noah Dumas
 
+## How to run Django Project locally
+The current Django project resides in `src/server/`. Steps to run locally, run an integrated terminal within `/src`:
+```bash
+python3 -m venv yourvenvname
+source yourvenvname/bin/activate
+python3 -m pip install -r requirements.txt
+python3 server/manage.py check # Validates the Django project
+python3 server/manage.py migrate # Creates or updates local SQLite db tables
+python3 server/manage.py runserver 0.0.0.0:3000 # Runs the local server, doesn't update to production
+``` 
+
+To avoid any issues with DevEdu, make sure you are in port 3000. You can stop the server with `Ctrl+C`
+
+
 ## Planned Features (as of Sprint 0-2, subject to change)
 
 - **Account and persistence** — Create an account and securely retain financial records between sessions.
@@ -55,3 +69,11 @@ We used feedback to improve our Gherkins, discuss with ourselves and the custome
 -Analyzed pathways for better development of GitHub Board issues, sprint organization, and proper fielding.
 **How we used the result:**
 Used the feedback to create organized tasks/issues on GitHub, tying with stories and assigning sprints.
+
+### Sprint 0-3: Oct 5, 2026
+**Tool:** Codex (GPT6.0 Sol)
+**What it helped with** 
+- Making sure that SECRET_KEY was not deployed when creating the Django project.
+- Helped with translating work done to effective commit messages.
+**How we used the result:**
+We used the feedback to ensure all initial Django project setup was compliant with Sprint 0-3 requirement of "secrets, credentials, and API keys are not committed to the repository".
