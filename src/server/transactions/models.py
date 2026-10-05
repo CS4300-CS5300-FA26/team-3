@@ -3,6 +3,8 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models.functions import Trim
+from django.db.models.lookups import Exact
 
 
 class Transaction(models.Model):
@@ -40,7 +42,9 @@ class Transaction(models.Model):
                 violation_error_message="Amount must be greater than zero.",
             ),
             models.CheckConstraint(
-                condition=~models.Q(kind="expense") | ~models.Q(category=""),
+                # Trim first so a category of only spaces counts as missing.
+                condition=~models.Q(kind="expense")
+                | ~models.Q(Exact(Trim("category"), "")),
                 name="transaction_expense_has_category",
                 violation_error_message="Choose a category.",
             ),
@@ -51,7 +55,7 @@ class Transaction(models.Model):
 
     def clean(self):
         super().clean()
-        if self.kind == self.Kind.EXPENSE and not self.category:
+        if self.kind == self.Kind.EXPENSE and not self.category.strip():
             raise ValidationError({"category": "Choose a category."})
 
     @property

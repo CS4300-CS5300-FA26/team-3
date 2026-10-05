@@ -45,6 +45,12 @@ class TransactionCategoryTests(TestCase):
             transaction.full_clean()
         self.assertEqual(raised.exception.message_dict["category"], ["Choose a category."])
 
+    def test_expense_with_whitespace_only_category_is_rejected(self):
+        transaction = make_transaction(category="   ")
+        with self.assertRaises(ValidationError) as raised:
+            transaction.full_clean()
+        self.assertEqual(raised.exception.message_dict["category"], ["Choose a category."])
+
     def test_income_without_category_is_allowed(self):
         make_transaction(
             kind=Transaction.Kind.INCOME,
@@ -70,6 +76,13 @@ class TransactionDatabaseConstraintTests(TestCase):
 
     def test_save_refuses_expense_without_category(self):
         self.assert_save_is_refused(category="")
+
+    def test_save_refuses_expense_with_whitespace_only_category(self):
+        self.assert_save_is_refused(category="   ")
+
+    def test_save_keeps_category_with_surrounding_spaces(self):
+        make_transaction(category=" Food ").save()
+        self.assertEqual(Transaction.objects.get().category, " Food ")
 
     def test_save_refuses_unknown_kind(self):
         self.assert_save_is_refused(kind="refund")
