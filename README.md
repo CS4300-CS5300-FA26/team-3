@@ -39,7 +39,7 @@ Pull requests to `main` run Django checks, migrations, and tests against a tempo
 
 Public URL: https://budget-wise.dev/
 
-API Gateway sends requests to Django on AWS Lambda. The current scaffold returns a 404 until our application view is added. See [deployment instructions](docs/DEPLOYMENT.md) for the setup and remaining work.
+API Gateway sends requests to Django on AWS Lambda. The current scaffold returns a 404 until our application view is added. Once merged, the deployment workflow tests changes to `main`, applies migrations, and releases them to Lambda. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
 
 ## Planned Features (as of Sprint 0-2, subject to change)
 
@@ -139,6 +139,7 @@ We checked the local Django project, updated its setup instructions, and kept th
 - Prepared the Lambda adapter
 - Wrote tests for AWS Aurora PostgreSQL initial configuration
 - Wrote CI yaml for testing Django against temporary PostgreSQL
+- Prepared the Lambda CD workflow
 
 **How we used the result:**
 

@@ -1,0 +1,153 @@
+name: Deploy
+
+on:
+  # Merging a PR updates main and triggers deployment; documentation-only edits skip it.
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "requirements.txt"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never interrupt a release halfway through moving the live alias.
+concurrency:
+  group: budgetwise-deploy
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    # Recheck the merged code. Manual runs on other branches cannot deploy.
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      # Let GitHub prove this job's identity to AWS without storing AWS access keys.
+      id-token: write
+    env:
+      AWS_REGION: us-east-1
+      # Expect 404 while there is no homepage; change the repository variable to 200 later.
+      ROOT_STATUS: ${{ vars.ROOT_STATUS }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Build Lambda package
+        run: |
+          # Install tools for runner-side migrations, then dependencies for Lambda's Linux runtime.
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements.txt --target "$RUNNER_TEMP/package" \
+            --platform manylinux2014_x86_64 --implementation cp --python-version 3.13 --only-binary=:all: --no-compile
+          # Put Django at the ZIP root without copying local data or secrets.
+          rsync -a --exclude='__pycache__' --exclude='*.pyc' --exclude='*.sqlite3' \
+            --exclude='.env*' --exclude='.venv' src/ "$RUNNER_TEMP/package/"
+          python - <<'PY'
+          import os
+          import shutil
+          if os.environ["ROOT_STATUS"] not in ("200", "404"):
+              raise SystemExit("ROOT_STATUS must be 200 or 404")
+          shutil.make_archive(os.environ["RUNNER_TEMP"] + "/budgetwise", "zip", os.environ["RUNNER_TEMP"] + "/package")
+          PY
+      - name: Authenticate to AWS
+        # AWS trusts this repository's main branch and issues temporary role credentials.
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+          role-duration-seconds: 900
+          mask-aws-account-id: true
+      - name: Apply database migrations
+        # This database user can change the schema; the web app's user cannot.
+        # Migrations must remain compatible with the previous code in case we roll back.
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_NAME: budgetwise
+          DB_USER: budgetwise_migrator
+          DJANGO_SETTINGS_MODULE: budgetwise.settings
+        run: |
+          test -n "$DB_HOST" || { echo "DB_HOST is not configured"; exit 1; }
+          python src/manage.py migrate --noinput
+      - name: Publish, check, and promote
+        run: |
+          python - <<'PY'
+          import base64
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          from urllib.error import HTTPError
+          from urllib.request import urlopen
+          import boto3
+
+          client = boto3.client("lambda")
+          name = "budgetwise"
+          expected = int(os.environ["ROOT_STATUS"])
+          previous = client.get_alias(FunctionName=name, Name="live")
+          config = client.get_function_configuration(FunctionName=name)
+          package = Path(os.environ["RUNNER_TEMP"], "budgetwise.zip").read_bytes()
+          digest = base64.b64encode(hashlib.sha256(package).digest()).decode()
+          # Upload without changing live traffic, then publish this exact ZIP as a version.
+          # RevisionId rejects the update if someone changed the function after we read it.
+          client.update_function_code(FunctionName=name, ZipFile=package, RevisionId=config["RevisionId"])
+          client.get_waiter("function_updated").wait(FunctionName=name)
+          version = client.publish_version(
+              FunctionName=name, CodeSha256=digest, Description=os.environ["GITHUB_SHA"]
+          )["Version"]
+          client.get_waiter("function_active").wait(FunctionName=name, Qualifier=version)
+
+          def invoke(event):
+              # Invoke the new version directly while visitors still use the previous version.
+              result = client.invoke(FunctionName=name, Qualifier=version, Payload=json.dumps(event).encode())
+              if result.get("FunctionError"):
+                  raise RuntimeError("Candidate Lambda invocation failed; inspect its CloudWatch logs")
+              return json.loads(result["Payload"].read())
+
+          if invoke({"operation": "check_database"}) != {"database": "ok"}:
+              raise RuntimeError("Candidate database check failed")
+          # Simulate API Gateway's HTTP event to check Django before switching traffic.
+          event = {
+              "version": "2.0", "routeKey": "$default", "rawPath": "/", "rawQueryString": "",
+              "headers": {"host": "budget-wise.dev", "x-forwarded-proto": "https"},
+              "requestContext": {"stage": "$default", "domainName": "budget-wise.dev",
+                  "http": {"method": "GET", "path": "/", "sourceIp": "127.0.0.1", "protocol": "HTTP/1.1"}},
+              "isBase64Encoded": False,
+          }
+          if invoke(event).get("statusCode") != expected:
+              raise RuntimeError("Candidate homepage returned an unexpected status")
+
+          # API Gateway uses the live alias; moving it makes the checked version public.
+          promoted = client.update_alias(
+              FunctionName=name, Name="live", FunctionVersion=version, RevisionId=previous["RevisionId"]
+          )
+          try:
+              # Check the full public path, including DNS, HTTPS, and API Gateway.
+              try:
+                  with urlopen("https://budget-wise.dev/", timeout=35) as response:
+                      status = response.status
+              except HTTPError as response:
+                  status = response.code
+                  response.close()
+              if status != expected:
+                  raise RuntimeError("Public URL returned an unexpected status")
+          except Exception:
+              # Restore the previous code if the public check fails; migrations are not undone.
+              # The revision check prevents overwriting a later operator change.
+              client.update_alias(FunctionName=name, Name="live", FunctionVersion=previous["FunctionVersion"],
+                                  RevisionId=promoted["RevisionId"])
+              print("Restored live version", previous["FunctionVersion"])
+              raise
+          print("Deployed", os.environ["GITHUB_SHA"], "as Lambda version", version,
+                "(previous version:", previous["FunctionVersion"] + ")")
+          PY

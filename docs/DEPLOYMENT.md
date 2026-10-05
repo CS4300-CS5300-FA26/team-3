@@ -14,7 +14,7 @@ Cloudflare manages DNS. API Gateway calls the `live` alias of Lambda function `b
 
 Set `DJANGO_SECRET_KEY` in Lambda to a private, randomly generated value of at least 50 characters. Never commit its value. Dependencies are recorded in `requirements.txt`.
 
-The deployment ZIP needs the contents of `src/` and installed dependencies at its root. Exclude local databases, `.env` files, virtual environments, and caches. GitHub Actions will build this ZIP as part of CD.
+GitHub Actions builds the deployment ZIP from `src/` and Linux-compatible dependencies, excluding local databases, `.env` files, virtual environments, and caches.
 
 ## Database
 
@@ -33,19 +33,34 @@ The backend in `src/budgetwise/db/aurora/` generates a fresh IAM token for each 
 
 Keep the actual hostname in environment configuration rather than source control. We currently use the single writer's instance endpoint; update it if the writer is replaced. Local database-connection tests run with `python -m unittest discover -s tests` and make no AWS calls.
 
-The app user can read and write records. The migration user can create tables and grants the app access to new tables. Run `python src/manage.py migrate` with the migration user's connection settings when deploying migrations. Keep routine tests local; don't run Django's test database creation against Aurora.
+The app user can read and write records. The migration user can create tables; its new tables automatically grant the app access. CD runs migrations using that role. Keep routine tests local; don't run Django's test database creation against Aurora.
 
 ## Release and rollback
 
-CI uses `budgetwise.ci_settings` and a temporary PostgreSQL 17 service on the GitHub runner. Its fixed password is only for that disposable database. Local development uses SQLite; the deployed app uses Aurora once activated. These databases do not share data.
+CI uses `budgetwise.ci_settings` and a temporary PostgreSQL 17 service. Its fixed password is only for that disposable database. Local SQLite, CI PostgreSQL, and deployed Aurora do not share data.
 
-The planned workflow checks the code, builds the ZIP, publishes a Lambda version, tests it, and moves `live` to that version. Until that workflow is configured, releases remain manual.
+`.github/workflows/cd.yml` runs after application or workflow changes merge into `main`, or manually through Actions → Deploy on `main`:
 
-Record the previous version before moving `live`. To roll back code, point the alias at that previous version. Database changes need their own recovery plan; changing the alias does not undo migrations.
+1. Run CI, build the ZIP, and obtain temporary AWS credentials through GitHub OIDC.
+2. Apply Aurora migrations and publish a new Lambda version.
+3. Check that version's database connection and homepage before moving `live` to it.
+4. Check the public URL; restore the previous version if this check fails.
+
+The AWS role `budgetwise-github-deploy` trusts only this repository's `main` branch. It can deploy this Lambda and connect as the migration user. No AWS access keys or teammate AWS accounts are needed.
+
+GitHub Actions settings:
+
+| Setting | Purpose |
+| --- | --- |
+| Variable `AWS_DEPLOY_ROLE_ARN` | Deployment role ARN |
+| Variable `ROOT_STATUS` | Expected homepage status: `404` now; set to `200` when the homepage is added |
+| Secret `DB_HOST` | Same Aurora writer endpoint as Lambda |
+
+The workflow reports the previous Lambda version. For a later code rollback, point `live` back to it in Lambda's Aliases tab. This does not undo migrations: keep schema changes compatible with the previous release.
 
 ## Current status
 
 - The initial scaffold is deployed; `/` returns Django's production 404.
-- Aurora and its two database users are configured. Activating the connection in Lambda, application migrations, and a database-backed view are pending.
-- Automated deployment and its AWS permissions are pending.
+- Aurora, its database users, Lambda environment, and GitHub deployment permissions are configured. The live version still uses the initial scaffold.
+- The first Actions deployment remains to be verified after this workflow is merged. Application models and a database-backed view remain team work.
 - Verify a release with a small number of requests and check `/aws/lambda/budgetwise` logs for failures. A 404 is expected only while the homepage is missing.
