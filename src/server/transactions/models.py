@@ -1,0 +1,43 @@
+from decimal import Decimal
+
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+from django.db import models
+
+
+class Transaction(models.Model):
+    """One entry in a student's budget: money received or money spent."""
+
+    class Kind(models.TextChoices):
+        INCOME = "income", "Income"
+        EXPENSE = "expense", "Expense"
+
+    kind = models.CharField(max_length=7, choices=Kind.choices)
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    date = models.DateField()
+    description = models.CharField(max_length=200)
+    category = models.CharField(max_length=50, blank=True)
+    is_fixed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date", "-id"]
+
+    def __str__(self):
+        return f"{self.date} {self.description} ({self.get_kind_display()} ${self.amount})"
+
+    def clean(self):
+        super().clean()
+        if self.kind == self.Kind.EXPENSE and not self.category:
+            raise ValidationError({"category": "Choose a category."})
+
+    @property
+    def signed_amount(self):
+        """Amount as it affects the remaining budget: income adds, expenses subtract."""
+        if self.kind == self.Kind.EXPENSE:
+            return -self.amount
+        return self.amount
