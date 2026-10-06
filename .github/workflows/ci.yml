@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  # Check proposed changes before merging; CD also calls this workflow after merging.
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  # Allows cd.yml to reuse these same checks.
+  workflow_call:
+
+permissions:
+  # CI only reads the repository; it does not need AWS credentials.
+  contents: read
+
+concurrency:
+  # Replace outdated test runs when the same PR or branch receives new changes.
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Use the runner's PostgreSQL database instead of local SQLite or Aurora.
+      DJANGO_SETTINGS_MODULE: budgetwise.ci_settings
+      # Prevent the AWS SDK from trying to find credentials through EC2 metadata.
+      AWS_EC2_METADATA_DISABLED: "true"
+    services:
+      postgres:
+        # This database is discarded after the job; its password is not a production secret.
+        image: postgres:17
+        env:
+          POSTGRES_DB: budgetwise_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d budgetwise_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      # Commit hashes keep the action versions fixed until we deliberately update them.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Check Django and migrations
+        # Detect missing migration files, then verify committed migrations can run.
+        run: |
+          python src/manage.py check
+          python src/manage.py makemigrations --check --dry-run
+          python src/manage.py migrate --noinput
+      - name: Run tests
+        # Run tests/ and discover any additional tests in Django apps under src/.
+        run: python src/manage.py test tests src --noinput

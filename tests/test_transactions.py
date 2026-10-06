@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from .models import Transaction
+from transactions.models import Transaction
 
 
 def make_transaction(**overrides):

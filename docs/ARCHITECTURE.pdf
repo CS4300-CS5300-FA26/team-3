@@ -1,0 +1,1808 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<<
+/PageMode /UseNone
+/Pages 2 0 R
+/Type /Catalog
+>>
+endobj
+2 0 obj
+<<
+/Count 3
+/Kids [ 3 0 R 9 0 R 12 0 R ]
+/Type /Pages
+>>
+endobj
+3 0 obj
+<<
+/Contents 4 0 R
+/MediaBox [ 0 0 612 792 ]
+/Parent 2 0 R
+/Resources <<
+/Font 5 0 R
+/ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>>
+/Rotate 0
+/Trans <<
+>>
+/Type /Page
+>>
+endobj
+4 0 obj
+<<
+/Length 9142
+>>
+stream
+1 0 0 1 0 0 cm
+BT
+/F1 12 Tf
+14.4 TL
+ET
+0.8 0.839216 0.870588 RG
+n
+54 40 m
+558 40 l
+S
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.321569 0.392157 0.466667 rg
+BT
+1 0 0 1 54 27 Tm
+(BudgetWise \174 Architecture and service decisions \174 05 Oct 2026) Tj
+T*
+ET
+BT
+1 0 0 1 542.432 27 Tm
+(1 \057 3) Tj
+T*
+ET
+q
+1 0 0 1 60 726 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 4 Tm
+/F2 20 Tf
+24 TL
+(BudgetWise \174 Architecture) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 708 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3 Tm
+/F1 8 Tf
+11 TL
+<5465616d2033207f2055706461746564203035204f63746f6265722032303236207f205265717565737420666c6f7720616e64206465636973696f6e73> Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 675 cm
+q
+BT
+1 0 0 1 0 16.5 Tm
+13 TL
+/F2 9.5 Tf
+0.098039 0.2 0.290196 rg
+(Current state\072) Tj
+/F1 9.5 Tf
+( The live Lambda scaffold serves budget\055wise\056dev but \057 returns 404\056 Noah\222s model and migrations are) Tj
+T*
+(merged\056 PR \04333 has passing CI\073 the database\055backed page and first automated deployment are still pending\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 653 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 11.5 Tf
+15 TL
+(Request flow\072 how a database\055backed page will work) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 481 cm
+q
+1 0 0 1 0 0 cm
+0 0 0 RG
+1 w
+0 J
+0 j
+[ ] 0 d
+0 0 0 rg
+BT
+/F3 10 Tf
+12 TL
+ET
+BT
+/F3 10 Tf
+12 TL
+ET
+q
+1 0 0 1 0 0 cm
+q
+0.917647 0.960784 0.960784 rg
+0.031373 0.498039 0.52549 RG
+0.7 w
+0 J
+0 j
+[ ] 0 d
+n
+5 109 m
+151 109 l
+153.764 109 156 111.236 156 114 c
+156 147 l
+156 149.764 153.764 152 151 152 c
+5 152 l
+2.236 152 0 149.764 0 147 c
+0 114 l
+0 111.236 2.236 109 5 109 c
+h
+B*
+Q
+q
+BT
+/F2 9 Tf
+10.8 TL
+ET
+BT
+/F2 9 Tf
+10.8 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 59.9955 135 Tm
+(Browser) Tj
+T*
+ET
+Q
+q
+BT
+/F1 8 Tf
+9.6 TL
+ET
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 48.876 121 Tm
+(budget\055wise\056dev) Tj
+T*
+ET
+Q
+q
+0.917647 0.960784 0.960784 rg
+0.031373 0.498039 0.52549 RG
+0.7 w
+0 J
+0 j
+[ ] 0 d
+n
+179 109 m
+325 109 l
+327.764 109 330 111.236 330 114 c
+330 147 l
+330 149.764 327.764 152 325 152 c
+179 152 l
+176.236 152 174 149.764 174 147 c
+174 114 l
+174 111.236 176.236 109 179 109 c
+h
+B*
+Q
+q
+BT
+/F2 9 Tf
+10.8 TL
+ET
+BT
+/F2 9 Tf
+10.8 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 224.739 135 Tm
+(API Gateway) Tj
+T*
+ET
+Q
+q
+BT
+/F1 8 Tf
+9.6 TL
+ET
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 219.1 121 Tm
+(HTTPS entry point) Tj
+T*
+ET
+Q
+q
+0.917647 0.960784 0.960784 rg
+0.031373 0.498039 0.52549 RG
+0.7 w
+0 J
+0 j
+[ ] 0 d
+n
+353 109 m
+499 109 l
+501.764 109 504 111.236 504 114 c
+504 147 l
+504 149.764 501.764 152 499 152 c
+353 152 l
+350.236 152 348 149.764 348 147 c
+348 114 l
+348 111.236 350.236 109 353 109 c
+h
+B*
+Q
+q
+BT
+/F2 9 Tf
+10.8 TL
+ET
+BT
+/F2 9 Tf
+10.8 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 388.731 135 Tm
+(Lambda live alias) Tj
+T*
+ET
+Q
+q
+BT
+/F1 8 Tf
+9.6 TL
+ET
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 389.096 121 Tm
+(Selects code version) Tj
+T*
+ET
+Q
+q
+0.031373 0.498039 0.52549 RG
+1.4 w
+0 J
+0 j
+[ ] 0 d
+n
+156 130 m
+174 130 l
+S
+Q
+q
+0.031373 0.498039 0.52549 rg
+0.031373 0.498039 0.52549 RG
+1 w
+0 J
+0 j
+[ ] 0 d
+n
+174 130 m
+169 127 l
+169 133 l
+h
+B*
+Q
+q
+0.031373 0.498039 0.52549 RG
+1.4 w
+0 J
+0 j
+[ ] 0 d
+n
+330 130 m
+348 130 l
+S
+Q
+q
+0.031373 0.498039 0.52549 rg
+0.031373 0.498039 0.52549 RG
+1 w
+0 J
+0 j
+[ ] 0 d
+n
+348 130 m
+343 127 l
+343 133 l
+h
+B*
+Q
+q
+0.031373 0.498039 0.52549 RG
+1.4 w
+0 J
+0 j
+[ ] 0 d
+n
+426 109 m
+426 85 l
+S
+Q
+q
+0.031373 0.498039 0.52549 rg
+0.031373 0.498039 0.52549 RG
+1 w
+0 J
+0 j
+[ ] 0 d
+n
+426 85 m
+423 90 l
+429 90 l
+h
+B*
+Q
+q
+0.917647 0.960784 0.960784 rg
+0.031373 0.498039 0.52549 RG
+0.7 w
+0 J
+0 j
+[ ] 0 d
+n
+353 42 m
+499 42 l
+501.764 42 504 44.236 504 47 c
+504 80 l
+504 82.764 501.764 85 499 85 c
+353 85 l
+350.236 85 348 82.764 348 80 c
+348 47 l
+348 44.236 350.236 42 353 42 c
+h
+B*
+Q
+q
+BT
+/F2 9 Tf
+10.8 TL
+ET
+BT
+/F2 9 Tf
+10.8 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 387.12 68 Tm
+(Mangum \053 Django) Tj
+T*
+ET
+Q
+q
+BT
+/F1 8 Tf
+9.6 TL
+ET
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 387.54 54 Tm
+(Route to view \057 model) Tj
+T*
+ET
+Q
+q
+0.917647 0.960784 0.960784 rg
+0.031373 0.498039 0.52549 RG
+0.7 w
+0 J
+0 j
+[ ] 0 d
+n
+179 42 m
+325 42 l
+327.764 42 330 44.236 330 47 c
+330 80 l
+330 82.764 327.764 85 325 85 c
+179 85 l
+176.236 85 174 82.764 174 80 c
+174 47 l
+174 44.236 176.236 42 179 42 c
+h
+B*
+Q
+q
+BT
+/F2 9 Tf
+10.8 TL
+ET
+BT
+/F2 9 Tf
+10.8 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 209.9925 68 Tm
+(Aurora PostgreSQL) Tj
+T*
+ET
+Q
+q
+BT
+/F1 8 Tf
+9.6 TL
+ET
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 208.208 54 Tm
+(Query persistent records) Tj
+T*
+ET
+Q
+q
+0.917647 0.960784 0.960784 rg
+0.031373 0.498039 0.52549 RG
+0.7 w
+0 J
+0 j
+[ ] 0 d
+n
+5 42 m
+151 42 l
+153.764 42 156 44.236 156 47 c
+156 80 l
+156 82.764 153.764 85 151 85 c
+5 85 l
+2.236 85 0 82.764 0 80 c
+0 47 l
+0 44.236 2.236 42 5 42 c
+h
+B*
+Q
+q
+BT
+/F2 9 Tf
+10.8 TL
+ET
+BT
+/F2 9 Tf
+10.8 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 42.9945 68 Tm
+(Django template) Tj
+T*
+ET
+Q
+q
+BT
+/F1 8 Tf
+9.6 TL
+ET
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 35.32 54 Tm
+(Render HTML response) Tj
+T*
+ET
+Q
+q
+0.031373 0.498039 0.52549 RG
+1.4 w
+0 J
+0 j
+[ ] 0 d
+n
+348 63 m
+330 63 l
+S
+Q
+q
+0.031373 0.498039 0.52549 rg
+0.031373 0.498039 0.52549 RG
+1 w
+0 J
+0 j
+[ ] 0 d
+n
+330 63 m
+335 60 l
+335 66 l
+h
+B*
+Q
+q
+0.031373 0.498039 0.52549 RG
+1.4 w
+0 J
+0 j
+[ ] 0 d
+n
+174 63 m
+156 63 l
+S
+Q
+q
+0.031373 0.498039 0.52549 rg
+0.031373 0.498039 0.52549 RG
+1 w
+0 J
+0 j
+[ ] 0 d
+n
+156 63 m
+161 60 l
+161 66 l
+h
+B*
+Q
+q
+BT
+/F1 8.5 Tf
+10.2 TL
+ET
+BT
+/F1 8.5 Tf
+10.2 TL
+ET
+0.321569 0.392157 0.466667 rg
+BT
+1 0 0 1 0 162 Tm
+(Cloudflare DNS resolves the domain to API Gateway\073 it does not run Django\056) Tj
+T*
+ET
+Q
+q
+BT
+/F1 8.2 Tf
+9.84 TL
+ET
+BT
+/F1 8.2 Tf
+9.84 TL
+ET
+0.321569 0.392157 0.466667 rg
+BT
+1 0 0 1 0 17 Tm
+(Database results return to Django\056 HTML returns through Lambda and API Gateway to the browser\056) Tj
+T*
+ET
+Q
+Q
+Q
+Q
+q
+1 0 0 1 60 460 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 11.5 Tf
+15 TL
+(Why these choices) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 54 184 cm
+q
+0.941176 0.956863 0.968627 rg
+n
+0 269 504 -47 re
+f*
+1 1 1 rg
+n
+0 222 504 -47 re
+f*
+0.941176 0.956863 0.968627 rg
+n
+0 175 504 -47 re
+f*
+1 1 1 rg
+n
+0 128 504 -47 re
+f*
+0.941176 0.956863 0.968627 rg
+n
+0 81 504 -34 re
+f*
+1 1 1 rg
+n
+0 47 504 -47 re
+f*
+0 0 0 rg
+BT
+/F1 10 Tf
+12 TL
+ET
+q
+1 0 0 1 6 251 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 9.5 Tf
+13 TL
+(Django) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 123 225 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 29.5 Tm
+/F1 9.5 Tf
+13 TL
+(One Python project for views\054 templates\054 models and migrations\056 No separate hosted) Tj
+T*
+(frontend is needed\056 API Gateway can serve ordinary pages\073 a separate public API is not) Tj
+T*
+(required\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 204 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 9.5 Tf
+13 TL
+(Lambda \053 HTTP API) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 123 178 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 29.5 Tm
+/F1 9.5 Tf
+13 TL
+(Run Django on demand without managing a server or Elastic Beanstalk\056 Mangum) Tj
+T*
+(translates AWS requests for Django\056 Cold starts and dependency packaging are) Tj
+T*
+(tradeoffs\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 157 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 9.5 Tf
+13 TL
+(Aurora PostgreSQL) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 123 131 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 29.5 Tm
+/F1 9.5 Tf
+13 TL
+(Keep deployed data independent of code releases\056 Serverless v2 express is configured) Tj
+T*
+(for 0\2261 ACU and five\055minute idle auto\055pause\056 End\055to\055end wake\055up behavior still needs) Tj
+T*
+(verification\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 110 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 9.5 Tf
+13 TL
+(IAM \053 TLS) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 123 84 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 29.5 Tm
+/F1 9.5 Tf
+13 TL
+(The Lambda role supplies AWS credentials\073 our backend signs a fresh database token) Tj
+T*
+(for each new connection and verifies TLS\056 The app user reads\057writes records\073 the) Tj
+T*
+(migration user changes the schema\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 63 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 9.5 Tf
+13 TL
+(Networking) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 123 50 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 16.5 Tm
+/F1 9.5 Tf
+13 TL
+(Lambda is outside a VPC and uses Aurora express\222s internet access gateway\056 No NAT) Tj
+T*
+(gateway\054 load balancer or RDS Proxy\056 The existing AWS region is us\055east\0551\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 29 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 9.5 Tf
+13 TL
+(Secrets) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 123 3 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 29.5 Tm
+/F1 9.5 Tf
+13 TL
+(Django reads Lambda environment variables for its private signing key and DB settings\056) Tj
+T*
+(GitHub stores deployment configuration and the DB\137HOST secret\056 Secrets Manager is) Tj
+T*
+(not currently used\056 No permanent AWS keys or DB password go in Git\056) Tj
+T*
+ET
+Q
+Q
+q
+Q
+Q
+Q
+q
+1 0 0 1 60 162 cm
+q
+BT
+1 0 0 1 0 14 Tm
+11 TL
+/F2 8 Tf
+0.098039 0.2 0.290196 rg
+(Data stays separate\072) Tj
+/F1 8 Tf
+( local SQLite persists in a local file\073 CI PostgreSQL is disposable\073 deployed Aurora retains app data\056 Closing DB) Tj
+T*
+(connections allows idle pause without deleting records\056) Tj
+T*
+ET
+Q
+Q
+
+endstream
+endobj
+5 0 obj
+<<
+/F1 6 0 R
+/F2 7 0 R
+/F3 8 0 R
+>>
+endobj
+6 0 obj
+<<
+/BaseFont /Helvetica
+/Encoding /WinAnsiEncoding
+/Name /F1
+/Subtype /Type1
+/Type /Font
+>>
+endobj
+7 0 obj
+<<
+/BaseFont /Helvetica-Bold
+/Encoding /WinAnsiEncoding
+/Name /F2
+/Subtype /Type1
+/Type /Font
+>>
+endobj
+8 0 obj
+<<
+/BaseFont /Times-Roman
+/Encoding /WinAnsiEncoding
+/Name /F3
+/Subtype /Type1
+/Type /Font
+>>
+endobj
+9 0 obj
+<<
+/Contents 10 0 R
+/MediaBox [ 0 0 612 792 ]
+/Parent 2 0 R
+/Resources <<
+/Font 5 0 R
+/ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>>
+/Rotate 0
+/Trans <<
+>>
+/Type /Page
+>>
+endobj
+10 0 obj
+<<
+/Length 9851
+>>
+stream
+1 0 0 1 0 0 cm
+BT
+/F1 12 Tf
+14.4 TL
+ET
+0.8 0.839216 0.870588 RG
+n
+54 40 m
+558 40 l
+S
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.321569 0.392157 0.466667 rg
+BT
+1 0 0 1 54 27 Tm
+(BudgetWise \174 Architecture and service decisions \174 05 Oct 2026) Tj
+T*
+ET
+BT
+1 0 0 1 542.432 27 Tm
+(2 \057 3) Tj
+T*
+ET
+q
+1 0 0 1 60 726 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 4 Tm
+/F2 20 Tf
+24 TL
+(BudgetWise \174 Development and delivery) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 708 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3 Tm
+/F1 8 Tf
+11 TL
+(One shared deployment\073 routine development and tests stay off AWS\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 686 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 11.5 Tf
+15 TL
+(Deployment flow) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 567 cm
+q
+1 0 0 1 0 0 cm
+0 0 0 RG
+1 w
+0 J
+0 j
+[ ] 0 d
+0 0 0 rg
+BT
+/F3 10 Tf
+12 TL
+ET
+BT
+/F3 10 Tf
+12 TL
+ET
+q
+1 0 0 1 0 0 cm
+q
+0.917647 0.960784 0.960784 rg
+0.031373 0.498039 0.52549 RG
+0.7 w
+0 J
+0 j
+[ ] 0 d
+n
+5 64 m
+151 64 l
+153.764 64 156 66.236 156 69 c
+156 102 l
+156 104.764 153.764 107 151 107 c
+5 107 l
+2.236 107 0 104.764 0 102 c
+0 69 l
+0 66.236 2.236 64 5 64 c
+h
+B*
+Q
+q
+BT
+/F2 9 Tf
+10.8 TL
+ET
+BT
+/F2 9 Tf
+10.8 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 31.8615 90 Tm
+(Branch \053 pull request) Tj
+T*
+ET
+Q
+q
+BT
+/F1 8 Tf
+9.6 TL
+ET
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 41.984 76 Tm
+(CI\072 checks and tests) Tj
+T*
+ET
+Q
+q
+0.917647 0.960784 0.960784 rg
+0.031373 0.498039 0.52549 RG
+0.7 w
+0 J
+0 j
+[ ] 0 d
+n
+179 64 m
+325 64 l
+327.764 64 330 66.236 330 69 c
+330 102 l
+330 104.764 327.764 107 325 107 c
+179 107 l
+176.236 107 174 104.764 174 102 c
+174 69 l
+174 66.236 176.236 64 179 64 c
+h
+B*
+Q
+q
+BT
+/F2 9 Tf
+10.8 TL
+ET
+BT
+/F2 9 Tf
+10.8 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 217.8585 90 Tm
+(Review \053 merge) Tj
+T*
+ET
+Q
+q
+BT
+/F1 8 Tf
+9.6 TL
+ET
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 221.996 76 Tm
+(Main triggers CD) Tj
+T*
+ET
+Q
+q
+0.917647 0.960784 0.960784 rg
+0.031373 0.498039 0.52549 RG
+0.7 w
+0 J
+0 j
+[ ] 0 d
+n
+353 64 m
+499 64 l
+501.764 64 504 66.236 504 69 c
+504 102 l
+504 104.764 501.764 107 499 107 c
+353 107 l
+350.236 107 348 104.764 348 102 c
+348 69 l
+348 66.236 350.236 64 353 64 c
+h
+B*
+Q
+q
+BT
+/F2 9 Tf
+10.8 TL
+ET
+BT
+/F2 9 Tf
+10.8 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 397.245 90 Tm
+(Build one ZIP) Tj
+T*
+ET
+Q
+q
+BT
+/F1 8 Tf
+9.6 TL
+ET
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 386.976 76 Tm
+(Code \053 dependencies) Tj
+T*
+ET
+Q
+q
+0.031373 0.498039 0.52549 RG
+1.4 w
+0 J
+0 j
+[ ] 0 d
+n
+156 85 m
+174 85 l
+S
+Q
+q
+0.031373 0.498039 0.52549 rg
+0.031373 0.498039 0.52549 RG
+1 w
+0 J
+0 j
+[ ] 0 d
+n
+174 85 m
+169 82 l
+169 88 l
+h
+B*
+Q
+q
+0.031373 0.498039 0.52549 RG
+1.4 w
+0 J
+0 j
+[ ] 0 d
+n
+330 85 m
+348 85 l
+S
+Q
+q
+0.031373 0.498039 0.52549 rg
+0.031373 0.498039 0.52549 RG
+1 w
+0 J
+0 j
+[ ] 0 d
+n
+348 85 m
+343 82 l
+343 88 l
+h
+B*
+Q
+q
+0.031373 0.498039 0.52549 RG
+1.4 w
+0 J
+0 j
+[ ] 0 d
+n
+426 64 m
+426 44 l
+S
+Q
+q
+0.031373 0.498039 0.52549 rg
+0.031373 0.498039 0.52549 RG
+1 w
+0 J
+0 j
+[ ] 0 d
+n
+426 44 m
+423 49 l
+429 49 l
+h
+B*
+Q
+q
+0.917647 0.960784 0.960784 rg
+0.031373 0.498039 0.52549 RG
+0.7 w
+0 J
+0 j
+[ ] 0 d
+n
+353 0 m
+499 0 l
+501.764 0 504 2.236 504 5 c
+504 38 l
+504 40.764 501.764 43 499 43 c
+353 43 l
+350.236 43 348 40.764 348 38 c
+348 5 l
+348 2.236 350.236 0 353 0 c
+h
+B*
+Q
+q
+BT
+/F2 9 Tf
+10.8 TL
+ET
+BT
+/F2 9 Tf
+10.8 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 393.366 26 Tm
+(OIDC \053 migrate) Tj
+T*
+ET
+Q
+q
+BT
+/F1 8 Tf
+9.6 TL
+ET
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 382.88 12 Tm
+(Temporary AWS access) Tj
+T*
+ET
+Q
+q
+0.917647 0.960784 0.960784 rg
+0.031373 0.498039 0.52549 RG
+0.7 w
+0 J
+0 j
+[ ] 0 d
+n
+179 0 m
+325 0 l
+327.764 0 330 2.236 330 5 c
+330 38 l
+330 40.764 327.764 43 325 43 c
+179 43 l
+176.236 43 174 40.764 174 38 c
+174 5 l
+174 2.236 176.236 0 179 0 c
+h
+B*
+Q
+q
+BT
+/F2 9 Tf
+10.8 TL
+ET
+BT
+/F2 9 Tf
+10.8 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 222.615 26 Tm
+(Publish \053 test) Tj
+T*
+ET
+Q
+q
+BT
+/F1 8 Tf
+9.6 TL
+ET
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 208.204 12 Tm
+(Check candidate version) Tj
+T*
+ET
+Q
+q
+0.917647 0.960784 0.960784 rg
+0.031373 0.498039 0.52549 RG
+0.7 w
+0 J
+0 j
+[ ] 0 d
+n
+5 0 m
+151 0 l
+153.764 0 156 2.236 156 5 c
+156 38 l
+156 40.764 153.764 43 151 43 c
+5 43 l
+2.236 43 0 40.764 0 38 c
+0 5 l
+0 2.236 2.236 0 5 0 c
+h
+B*
+Q
+q
+BT
+/F2 9 Tf
+10.8 TL
+ET
+BT
+/F2 9 Tf
+10.8 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 42.612 26 Tm
+(Promote \053 verify) Tj
+T*
+ET
+Q
+q
+BT
+/F1 8 Tf
+9.6 TL
+ET
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 39.324 12 Tm
+(Move live\073 check URL) Tj
+T*
+ET
+Q
+q
+0.031373 0.498039 0.52549 RG
+1.4 w
+0 J
+0 j
+[ ] 0 d
+n
+348 21 m
+330 21 l
+S
+Q
+q
+0.031373 0.498039 0.52549 rg
+0.031373 0.498039 0.52549 RG
+1 w
+0 J
+0 j
+[ ] 0 d
+n
+330 21 m
+335 18 l
+335 24 l
+h
+B*
+Q
+q
+0.031373 0.498039 0.52549 RG
+1.4 w
+0 J
+0 j
+[ ] 0 d
+n
+174 21 m
+156 21 l
+S
+Q
+q
+0.031373 0.498039 0.52549 rg
+0.031373 0.498039 0.52549 RG
+1 w
+0 J
+0 j
+[ ] 0 d
+n
+156 21 m
+161 18 l
+161 24 l
+h
+B*
+Q
+Q
+Q
+Q
+q
+1 0 0 1 60 558 cm
+Q
+q
+1 0 0 1 60 532 cm
+q
+BT
+1 0 0 1 0 16.5 Tm
+13 TL
+/F2 9.5 Tf
+0.098039 0.2 0.290196 rg
+(Develop\072) Tj
+/F1 9.5 Tf
+( teammates use SQLite and README commands without individual AWS access\056 CI applies migrations) Tj
+T*
+(and runs tests on temporary PostgreSQL 17\054 using no AWS credentials or Aurora credits\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 486 cm
+q
+BT
+1 0 0 1 0 29.5 Tm
+13 TL
+/F2 9.5 Tf
+0.098039 0.2 0.290196 rg
+(Build and deploy\072) Tj
+/F1 9.5 Tf
+( relevant main changes trigger CD\073 documentation\055only edits skip it\056 Manual CD is available on) Tj
+T*
+(main\056 The build job has no AWS access\056 It packages src\057 and installed libraries once\073 library code belongs in the ZIP\054) Tj
+T*
+(not in Git\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 440 cm
+q
+BT
+1 0 0 1 0 29.5 Tm
+-0.126588 Tw
+13 TL
+/F2 9.5 Tf
+0.098039 0.2 0.290196 rg
+(Authorize and check\072) Tj
+/F1 9.5 Tf
+( GitHub OIDC obtains temporary credentials for a role restricted to this repo\222s main branch\056 CD) Tj
+T*
+0 Tw
+(migrates Aurora from that ZIP\054 publishes a Lambda version\054 and checks its DB connection and homepage before) Tj
+T*
+(moving live\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 394 cm
+q
+BT
+1 0 0 1 0 29.5 Tm
+13 TL
+/F2 9.5 Tf
+0.098039 0.2 0.290196 rg
+(Rollback\072) Tj
+/F1 9.5 Tf
+( a failed public check attempts to restore the previous alias\056 This rolls back code\054 ) Tj
+/F2 9.5 Tf
+(not migrations) Tj
+/F1 9.5 Tf
+(\073 schema) Tj
+T*
+(changes must support the previous release\056 ROOT\137STATUS is 404 now\073 change it to 200 when the homepage is) Tj
+T*
+(added\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 372 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 11.5 Tf
+15 TL
+(Selected for later work \055 not implemented app features) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 54 263 cm
+q
+0.941176 0.956863 0.968627 rg
+n
+0 102 504 -34 re
+f*
+1 1 1 rg
+n
+0 68 504 -34 re
+f*
+0.941176 0.956863 0.968627 rg
+n
+0 34 504 -34 re
+f*
+0 0 0 rg
+BT
+/F1 10 Tf
+12 TL
+ET
+q
+1 0 0 1 6 84 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 9.5 Tf
+13 TL
+(Accounts \057 email) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 123 71 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 16.5 Tm
+/F1 9.5 Tf
+13 TL
+(Django auth for required account flows\056 Resend domain setup is complete\073 app email\054) Tj
+T*
+(sender\057reply handling and reminder scheduling remain to be built\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 50 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 9.5 Tf
+13 TL
+(AI \057 imports) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 123 37 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 16.5 Tm
+/F1 9.5 Tf
+13 TL
+(OpenAI insights with the professor\055provided key\073 RapidOCR trial for receipts\073 Plaid) Tj
+T*
+(Sandbox for test bank imports\056 Textract is only a fallback subject to eligibility\057cost review\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 16 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 9.5 Tf
+13 TL
+(Uploads \057 assets) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 123 3 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 16.5 Tm
+/F1 9.5 Tf
+13 TL
+(Private S3 is planned for uploads\056 Static files stay in Git\073 their serving method remains) Tj
+T*
+(undecided\056 Do not assume development static\055file serving works on Lambda\056) Tj
+T*
+ET
+Q
+Q
+q
+Q
+Q
+Q
+q
+1 0 0 1 60 242 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 3.5 Tm
+/F2 11.5 Tf
+15 TL
+(What the team must remember) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 209 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 16.5 Tm
+/F1 9.5 Tf
+13 TL
+(Django must enforce account access\054 record ownership and validation\073 AWS IAM does not replace those checks\056) Tj
+T*
+(Use fictional demo data until account isolation exists\056 Keep integration keys server\055side\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 163 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 29.5 Tm
+/F1 9.5 Tf
+13 TL
+(Preserve the AWS Free Plan and credits\072 test locally\054 make only a few live checks\054 and review costs\057eligibility before) Tj
+T*
+(adding services or changing plans\056 Auto\055pause and throttling are not zero\055cost guarantees\056 CI\057CD does not check) Tj
+T*
+(billing\055plan status\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 134 cm
+q
+BT
+1 0 0 1 0 14 Tm
+11 TL
+/F2 8 Tf
+0.098039 0.2 0.290196 rg
+(Code map\072) Tj
+/F1 8 Tf
+<207372632f6c616d6264615f656e7472792e70793a20485454502061646170746572207f207372632f627564676574776973652f64622f6175726f72612f3a2049414d20746f6b656e73207f207372632f7472616e73616374696f6e732f3a206d6f64656c2f6d6967726174696f6e73207f2074657374732f3a> Tj
+T*
+<636865636b73207f202e6769746875622f776f726b666c6f77732f3a2043492f43442e20524541444d452e6d6420636f766572732073657475703b20646f63732f4445504c4f594d454e542e6d6420636f766572732072656c6561736520616e6420726f6c6c6261636b2e> Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 60 105 cm
+q
+0.098039 0.2 0.290196 rg
+BT
+1 0 0 1 0 14 Tm
+/F1 8 Tf
+11 TL
+(Evidence\072 repository 29ac427\073 PR \04333 open with passing CI\056 Provider setup reflects this session\222s recorded configuration\073 no live AWS) Tj
+T*
+(changes or billing checks were made for this update\056 Prepared with Codex assistance for team review\056) Tj
+T*
+ET
+Q
+Q
+
+endstream
+endobj
+11 0 obj
+<<
+/Author (Team 3)
+/CreationDate (D\07220261005185824\05506\04700\047)
+/Creator (\050unspecified\051)
+/Keywords ()
+/ModDate (D\07220261005185824\05506\04700\047)
+/Producer (ReportLab PDF Library \055 \050opensource\051)
+/Subject (\050unspecified\051)
+/Title (BudgetWise \055 Architecture and Service Decisions)
+/Trapped /False
+>>
+endobj
+12 0 obj
+<<
+/Contents 13 0 R
+/MediaBox [ 0 0 612 792 ]
+/Resources <<
+/Font 14 0 R
+/ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>>
+/Rotate 0
+/Trans <<
+>>
+/Type /Page
+/Parent 2 0 R
+>>
+endobj
+13 0 obj
+<<
+/Filter [ /ASCII85Decode /FlateDecode ]
+/Length 3279
+>>
+stream
+Gatm=>uTKM&q/qEoHUsK@EUR]nDlhuW8]./m(97Ng6]'$Q7#3A75M70Xo%/QoSb?C$eL_E3<X<SR\#r8e#,u#IHodlms[_DdJGq0I-acrV"p2M_dH%,#Pp,=$$qeTD_Rk-`;`E45ImRF3H7iM'__=dE;(p?mFPr?6b42qrJXM/=)fGO2e=958`*QQZ7Cd`d7UH1RX`]^43de.0BXQRg^/;CpiWXraB>(2<gL;#C+Tn6b!_LL1-VI2$DVZ07]%rHr/Sj.ZDEAR?7l\D.$=bj%pj-9k)Cb)jm2g;HZ%_dp[GOhQ?6,)PR:p!..qe#HG_\s;QM>!Q;gn\m`m)h7ug!_T5JcHgcZ!^*K15eY^_Me=2!"+9M_9UE^%=D7i@:U@t'Qglm*F$rQuo8_iKk]-l?:Mhc1\gcI'P1QZ8CYd7RO][OS-FOHJWC=/&edascuAT@=h-f>o/YiT7e_>2s$F*/(pE#'<.`cBCIf3iBJ-%tYCdL3NY1;uHob"+1<:$o1(Vi#ol%&Xq2'<*/TF'fc$FQW[t9hsn+hB7KjA*Ch8kPBdE<4q6:Of^V-a<f3::P+Hc,-&i*/>+uFEA`9_++5\Kp<GqgML7t<%V3LV>ML9W^do,1F(%Ln@j')^_Y0X-m@<BBEO%PZmPI[O"e8#AcWl^<#&%R4obi#0].m.K&9u"qDjfp?^IcNEC"uNOBIbh*N6nT*Sgh91A>/dd(2g]`K?3*^=A:tr.N/D5Tb_/Tna[6"9%f(H.)'(0G%jG5rK&4o2GEF9Li241"f]oT.?<mc!2h_"ED0YTDP*InPF'ZX%aPW!0Re*i-F-S,oPTnX^%Tg]qg/q\,E%hPDm$4qTBhAb).Sf(C),3.VO5WuE5lR!F`SPMaJ5M80SnO61Ot1CF925TuQC"g'.+>t\V"6H%a't1>+9MUD->??1*MD]J<#*_W(*.A06Ai^jU9s'aYu$8?=X8C2]`V041)qm=:A0)<H1A-tU4m<:MYR[A>J%ap]i!*4Oj4<Z+oVr3/QAb:[TUA-0T8Z/lf*P))id:=nebd+(aCOseNgi/\8+&1Y26hWYkJ@'#t1^'-0H8BNGI"KeF5^E?c.X+0nT9eMM2\Rj-I\d-5+KJa,o-"_0*Oj\["i'<5@Gu!^$udmZC2`12W@^NI%glAJYtqi/`5:ePpH\SUI*W9'2HQ^h=.4!aHqDQ*7FmP#]mi$D@TRaV8<hgu;U/IkG;kg=oSn_h%2\_-+eam-"3BOf"36LNXUZTPp`hb9?2(^CBGJ.ec@2a4#Z$USeX/3M1q\AGYfpg:dK=J:g\P`:LY.ZTmH^c\X;/,@ieskm?7HR8p5g9tR+O.-)9:9i.j0KS;\QM)_kh-R"g^Ngs4;aKesP$\%<:F&JkRdkHb5F_\KQ&Z?DENe*aM5XE9I99njs`DU0o`WS1)PO<V)BpR@"kg:UGV(PnW<No)L/2Lk--92@$61=A8Hn_Zp>mbmG1+&ifrVgbLgTWX7Kpjrlm.PjYTCZC9)ifHOboW)h/GSqsKr;Q9);X7:$m\S%_J@6&CF!OBp.I]t)2a+_4q&V;d>G5)C!'E7lb41?m9Q3K\FWCe!SNKWM'iA-@pg)ULGE;5<=RX(0Z3dnjj(q=0B<$&Ljdt^=[<I#Pm@o8cCO7^A6(*9ELS7>,r?!f,\(hi7!;G<&^M)AMO;ETBR@b/b@S%^@D*@q1<\.4ZVhm[A>tat1e!/[8Lcgs:7(-mBtULFW-`CIiQ>FMeiph[]r[t9O:*%bKlB4S9^\FC0BE-@FS3\p@D_p+D\,k<B)r`^E6LK1H$*W4qX%M%OVWZB2LKZA*WRr"f8j]An;<P-fAl8;Qg#Jcg=8'%!J*Pt3BJs=I2m.1=fIX\B&V5l++ak:&ED#VTVZ5]RN;4QF^Z`jcQ8iaNC);887X?$Jt1d81LE?amAu6`h+4.X;N4PrISEh<C^2Q#K%,+HeX0RR9/q,'_rYpn(4Me"$*6m=?NH&Wnc'LO"#PnUl`;.L"NT$fpPs.[hnjs4#Qlu-<)o0]27m%tM?*HtC8dQRHf`sm=k6ShVq`/0;K;Y%JWq^^12`6"C8g&c;,(4ImfrI-AIm96pRmX0^GmiG^.7aqjFn*h\ViUeiTjV%itlho-gR'!J3c5&jO1W'1;*W6^^rnPDe'@^pli"UWs)3Bci!7qli#Z,_7`?khQ^2`/6]l\s1WtN:Vq.kGW2ABMk"LL45+>X2/Q]#8l#C,Z2-6JpuEX4KMZgWTb/d=6p)Si[^rL+e$uaG()cC^0>*=-n_Mj`<h#ZRE-n8%9&\ns14"\7Bk;G,ZIdcSD+h#D]3,ie($fKk&on/SY'SqJh%m"uLt9NN40R%bMFB!*_din;*/=c6N?B^_!_/b,UhG-plXBhYpc\DS:=./Il^_QXr8>dL8^^jp)%h"\gI_TrTU%(-aVtCZqFZf"IV+S`&N2Rc]&LTE3@]9,V_W)C<c':qUb"#A1:QpG0HhV'SKlEDbV!L7B%OGOp,_.Zl4C;?;\gE%i:TQYd45QE;jA<1na[.o#@?Vd(NoPjV%(ae6o.!CY(Y(@*F*eg[4kIW(0hrTmd2(<2io)GYq>f)\B/WX3Bt4JhPn\hRi-A&;a1N@%?M'pEA/7O8WM+BneS(q2g:kaRa@lueK%+i3!kWjb>050ZV7k$aO^U%<YF170hpI\F'e$13.EGqd$=cOhnXGAh7;)dk,9&"jo[O$R^stO]ttr4O&A@cEt`Fa-.a?SLkOA(&XrR&DNiR>Znp9Ul8G;]X=!PH.Wt1)Z509GDD=$)[,Z_G:$dnC=fQE[+%npB:NLDSX0Q87qm3k4UQW:(*ih6kg?uRZd/glP=^@q!*I3dQ!oT3)bLIURnkfP?o=/D7hrQOO_lL7J[DQKH*q6G+hfVj&\*[NsIN^'KdH&nGk0n[1%(QoMEM$bG!DGT[J4kut9@/DGcg+itn^+^emuo/!r:Tbt#=OBFG&!g^ifAV-a;aHC&Uph7jU-Ylg0W9M]lTtJbG?#\-VnVn%ZQI/Xjae?]OLP`g)_fb=\LSN8_jaY4>+\:1J`E?12IV:K4/!Oq=bU&?F^CC/#<q/qL\X5D]W!QN87->RLStJE'%dq9NDRLf'j*tVRMMG;9kFlT5R@T@P%9=]h1A4dgJ=*&kg<j_l2mVj'SLui@aocqCc;8*U8N;,M*&91q;Xb)L9a+issBHq)3\tA+8!pdCFb>*mHMXkU_ZMkJ)?Zjc%gI1o\/A=dm*41hM9(F3\i+dC/fSoN?1OVcZ*Kom?hDjWlJ?&s[_GA/=sqS[Z$#UXE2Uk^)IRImJI%6N~>
+endstream
+endobj
+14 0 obj
+<<
+/F1 15 0 R
+/F2 16 0 R
+>>
+endobj
+15 0 obj
+<<
+/BaseFont /Helvetica
+/Encoding /WinAnsiEncoding
+/Name /F1
+/Subtype /Type1
+/Type /Font
+>>
+endobj
+16 0 obj
+<<
+/BaseFont /Helvetica-Bold
+/Encoding /WinAnsiEncoding
+/Name /F2
+/Subtype /Type1
+/Type /Font
+>>
+endobj
+xref
+0 17
+0000000000 65535 f 
+0000000015 00000 n 
+0000000083 00000 n 
+0000000155 00000 n 
+0000000344 00000 n 
+0000009538 00000 n 
+0000009589 00000 n 
+0000009696 00000 n 
+0000009808 00000 n 
+0000009917 00000 n 
+0000010107 00000 n 
+0000020011 00000 n 
+0000020358 00000 n 
+0000020550 00000 n 
+0000023922 00000 n 
+0000023966 00000 n 
+0000024074 00000 n 
+trailer
+<<
+/Size 17
+/Root 1 0 R
+/Info 11 0 R
+/ID [ (\356\302\264C\312\322A\340\245\275\050i\015B\055\302) (\356\302\264C\312\322A\340\245\275\050i\015B\055\302) ]
+>>
+startxref
+24187
+%%EOF

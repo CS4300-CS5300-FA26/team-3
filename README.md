@@ -14,18 +14,49 @@ Team Members:
 
 ## How to run Django Project locally
 
-Use Python 3.13 (tested locally with Python 3.13.2). The Django project resides in `src/server/`. Run these commands from the repository root:
+Use Python 3.13 (tested locally with Python 3.13.2). The Django project resides in `src/`. Run these commands from the repository root:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-python src/server/manage.py check
-python src/server/manage.py migrate
-python src/server/manage.py runserver 0.0.0.0:3000
+python src/manage.py check
+python src/manage.py migrate
+python src/manage.py runserver 0.0.0.0:3000
 ```
 
 `check` validates the Django project, and `migrate` creates or updates local SQLite tables. The development server uses port 3000 for DevEdu; use the URL DevEdu provides, or `http://127.0.0.1:3000/` locally. Stop it with `Ctrl+C`. The Django welcome page is expected until the application view is added.
+
+## Source layout
+
+- `src/budgetwise/`: Django project settings and URLs.
+- `src/budgetwise/db/aurora/`: PostgreSQL connection with AWS IAM authentication.
+- `src/transactions/`: transaction model, migrations, and admin registration.
+- `src/integrations/`: future Resend, OpenAI, and other service connections.
+- `tests/`: transaction, database connection, Lambda, and deployment tests.
+
+## Architecture decisions
+
+Planned request flow: `Browser → API Gateway → Lambda → Django → Aurora PostgreSQL`
+
+| Choice | Reason |
+| --- | --- |
+| Django views, templates, and ORM | Keep pages, application logic, and database models in one project that the team can develop together. |
+| API Gateway and AWS Lambda | Receive HTTPS requests and run Django without maintaining an application server. Mangum translates requests for Django. |
+| Aurora PostgreSQL | Keep deployed data independent of Lambda releases. IAM provides temporary database authentication; separate app and migration users limit who can change the schema. |
+| SQLite locally; temporary PostgreSQL in CI | Let teammates develop without AWS accounts and test PostgreSQL compatibility without using Aurora credits. These databases do not share data. |
+| Cloudflare DNS and Resend | Cloudflare manages our domain. Resend is selected for application email; its Django integration is still planned. |
+| GitHub Actions | Test pull requests and automate releases from `main`, using temporary AWS credentials instead of stored access keys. |
+
+The transaction model and migrations are implemented; the public application page is still pending. The live site still runs the initial scaffold. Aurora connectivity through the deployed code and the first automated release remain to be verified. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
+
+## Deployment
+
+Pull requests to `main` run Django checks, migrations, and tests against a temporary PostgreSQL database in GitHub Actions. This uses no AWS credentials or Aurora credits. Teammates can run local tests with `python src/manage.py test tests src`.
+
+Public URL: https://budget-wise.dev/
+
+API Gateway sends requests to Django on AWS Lambda. The current scaffold returns a 404 until our application view is added. Once merged, the deployment workflow tests changes to `main`, applies migrations, and releases them to Lambda. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
 
 ## Planned Features (as of Sprint 0-2, subject to change)
 
@@ -52,7 +83,7 @@ The initial receipt-scanning choice is RapidOCR. We will evaluate its receipt-to
 
 ### Sprint 0-2: Sep 28, 2026
 
-**Tool:** Claude Code (Claude Opus 5.5)
+**Tool:** Claude Code
 
 **What it helped with:**
 
@@ -66,7 +97,7 @@ We used the template as the outline for our Sprint 0-2 document and wrote the us
 
 ### Sprint 0-2: Sep 29, 2026
 
-**Tool:** Codex (GPT6.0 Sol)
+**Tool:** Codex
 
 **What it helped with:**
 
@@ -79,7 +110,7 @@ We used feedback to improve our Gherkins, discuss with ourselves and the custome
 
 ### Sprint 0-2: Sep 29, 2026
 
-**Tool:** Codex (GPT5.6 Terra)
+**Tool:** Codex
 
 **What it helped with:**
 
@@ -113,3 +144,21 @@ We replaced the earlier visuals in the Sprint 0-2 document with the revised sket
 **How we used the result:**
 
 We checked the local Django project, updated its setup instructions, and kept the current Sprint 0-2 project details while adding Sprint 0-3 documentation.
+
+### Sprint 0-3: Oct 5, 2026 — deployment
+
+**Tool:** Codex
+
+**What it helped with:**
+
+- Documentation of deployment steps and architecture decisions
+- Configuring the domain settings properly
+- Prepared the Lambda adapter
+- Wrote tests for AWS Aurora PostgreSQL initial configuration
+- Wrote CI yaml for testing Django against temporary PostgreSQL
+- Wrote CD yaml for Lambda deployment workflow
+- Reviewed deployment checks, package handling, and rollback behavior, suggested improvements
+
+**How we used the result:**
+
+The initial scaffold is now running at the registered public URL. Lambda is properly invoked through API Gateway and running our Django code to deploy the application.
