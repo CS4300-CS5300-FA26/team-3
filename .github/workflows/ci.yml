@@ -58,5 +58,5 @@ jobs:
           python src/manage.py makemigrations --check --dry-run
           python src/manage.py migrate --noinput
       - name: Run tests
-        # Include both infrastructure tests in tests/ and Django app tests in src/.
+        # Run tests/ and discover any additional tests in Django apps under src/.
         run: python src/manage.py test tests src --noinput

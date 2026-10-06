@@ -31,7 +31,9 @@ python src/manage.py runserver 0.0.0.0:3000
 
 - `src/budgetwise/`: Django project settings and URLs.
 - `src/budgetwise/db/aurora/`: PostgreSQL connection with AWS IAM authentication.
+- `src/transactions/`: transaction model, migrations, and admin registration.
 - `src/integrations/`: future Resend, OpenAI, and other service connections.
+- `tests/`: transaction, database connection, Lambda, and deployment tests.
 
 ## Architecture decisions
 
@@ -46,7 +48,7 @@ Planned request flow: `Browser → API Gateway → Lambda → Django → Aurora 
 | Cloudflare DNS and Resend | Cloudflare manages our domain. Resend is selected for application email; its Django integration is still planned. |
 | GitHub Actions | Test pull requests and automate releases from `main`, using temporary AWS credentials instead of stored access keys. |
 
-The scaffold is live, but application models and pages are still pending. Aurora connectivity through the deployed code and the first automated release remain to be verified. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
+The transaction model and migrations are implemented; the public application page is still pending. The live site still runs the initial scaffold. Aurora connectivity through the deployed code and the first automated release remain to be verified. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
 
 ## Deployment
 
@@ -154,8 +156,8 @@ We checked the local Django project, updated its setup instructions, and kept th
 - Prepared the Lambda adapter
 - Wrote tests for AWS Aurora PostgreSQL initial configuration
 - Wrote CI yaml for testing Django against temporary PostgreSQL
-- Prepared the Lambda CD workflow
-- Reviewed deployment checks, package handling, and rollback behavior, suggested fixes
+- Wrote CD yaml for Lambda deployment workflow
+- Reviewed deployment checks, package handling, and rollback behavior, suggested improvements
 
 **How we used the result:**
 

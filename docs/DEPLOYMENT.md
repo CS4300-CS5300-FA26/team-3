@@ -31,7 +31,7 @@ Without `DB_HOST`, Django uses local SQLite. To select Aurora, set:
 
 The backend in `src/budgetwise/db/aurora/` generates a fresh IAM token for each connection and verifies the server certificate. Lambda uses its IAM role; teammates do not need AWS access to develop or test their code. No Aurora password is stored. Connections close after each request so Aurora can pause to avoid wasting usage credits.
 
-Keep the actual hostname in environment configuration rather than source control. We currently use the single writer's instance endpoint; update it if the writer is replaced. Local database-connection tests run with `python -m unittest discover -s tests` and make no AWS calls.
+Keep the actual hostname in environment configuration rather than source control. We currently use the single writer's instance endpoint; update it if the writer is replaced. Run local tests with `python src/manage.py test tests src`; database-connection tests use mocks and make no AWS calls.
 
 The app user can read and write records. The migration user can create tables; its new tables automatically grant the app access. CD runs migrations using that role. Keep routine tests local; don't run Django's test database creation against Aurora.
 
@@ -65,5 +65,5 @@ The workflow reports the previous Lambda version. For a later code rollback, poi
 
 - The initial scaffold is deployed; `/` returns Django's production 404.
 - Aurora, its database users, Lambda environment, and GitHub deployment permissions are configured. The live version still uses the initial scaffold.
-- The first Actions deployment remains to be verified after this workflow is merged. Application models and a database-backed view remain team work.
+- The transaction model and migrations are implemented. The first Actions deployment and a public database-backed view remain pending.
 - Verify a release with a small number of requests and check `/aws/lambda/budgetwise` logs for failures. A 404 is expected only while the homepage is missing.
