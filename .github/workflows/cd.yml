@@ -73,7 +73,6 @@ jobs:
       AWS_REGION: us-east-1
       # Expect 404 while there is no homepage; change the repository variable to 200 later.
       ROOT_STATUS: ${{ vars.ROOT_STATUS }}
-      PYTHONPATH: ${{ runner.temp }}/package
     steps:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -88,6 +87,8 @@ jobs:
         run: |
           case "$ROOT_STATUS" in 200|404) ;; *) echo "ROOT_STATUS must be 200 or 404"; exit 1 ;; esac
           unzip -q "$RUNNER_TEMP/budgetwise.zip" -d "$RUNNER_TEMP/package"
+          # The runner's temporary path is available once a step starts.
+          echo "PYTHONPATH=$RUNNER_TEMP/package" >> "$GITHUB_ENV"
       - name: Reject stale deployment
         env:
           GH_TOKEN: ${{ github.token }}
