@@ -162,3 +162,11 @@ We checked the local Django project, updated its setup instructions, and kept th
 **How we used the result:**
 
 The initial scaffold is now running at the registered public URL. Lambda is properly invoked through API Gateway and running our Django code to deploy the application.
+
+### Sprint 0-3: Oct 6, 2026 — public traffic protections
+
+**Tool:** Codex
+
+**What it helped with:** Inspected Cloudflare and AWS traffic controls, configured free Cloudflare proxying, strict TLS, scanner blocking and rate limiting, and added an operator-approved exception for the deployment health check. Verified the public request path with bounded probes and documented limitations and rollback in `docs/DEPLOYMENT.md`.
+
+**How we used the result:** The operator approved the live Cloudflare changes. The public app remains on the existing AWS deployment; this work did not change AWS settings, billing plans, application code, or the pending deployment repair.
