@@ -41,10 +41,13 @@ CI uses `budgetwise.ci_settings` and a temporary PostgreSQL 17 service. Its fixe
 
 `.github/workflows/cd.yml` runs after application or workflow changes merge into `main`, or manually through Actions → Deploy on `main`:
 
-1. Run CI, build the ZIP, and obtain temporary AWS credentials through GitHub OIDC.
-2. Apply Aurora migrations and publish a new Lambda version.
-3. Check that version's database connection and homepage before moving `live` to it.
-4. Check the public URL; restore the previous version if this check fails.
+1. Run CI and build one ZIP in a job without AWS access.
+2. Download that exact ZIP, reject stale `main` revisions, and obtain temporary AWS credentials through GitHub OIDC.
+3. Apply Aurora migrations from the ZIP and publish it as a new Lambda version.
+4. Check that version's database connection and homepage before moving `live` to it.
+5. Check the public URL; restore the previous version if this check fails.
+
+The package is retained in GitHub Actions for one day. If it expires, rerun the entire workflow to rebuild it. If an alias-update response is lost, CD reads the alias back before continuing; it does not overwrite a conflicting change.
 
 The AWS role `budgetwise-github-deploy` trusts only this repository's `main` branch. It can deploy this Lambda and connect as the migration user. No AWS access keys or teammate AWS accounts are needed.
 

@@ -25,8 +25,44 @@ jobs:
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/ci.yml
 
-  deploy:
+  build:
     needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Build dependencies without AWS credentials or permission to request them.
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Build Lambda package
+        run: |
+          # The same Linux package supplies dependencies for migrations and Lambda.
+          python -m pip install -r requirements.txt --target "$RUNNER_TEMP/package" \
+            --platform manylinux2014_x86_64 --implementation cp --python-version 3.13 --only-binary=:all: --no-compile
+          # Put Django at the ZIP root without copying local data or secrets.
+          rsync -a --exclude='__pycache__' --exclude='*.pyc' --exclude='*.sqlite3' \
+            --exclude='.env*' --exclude='.venv' src/ "$RUNNER_TEMP/package/"
+          python - <<'PY'
+          import os
+          import shutil
+          shutil.make_archive(os.environ["RUNNER_TEMP"] + "/budgetwise", "zip", os.environ["RUNNER_TEMP"] + "/package")
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        id: upload
+        with:
+          name: budgetwise-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/budgetwise.zip
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+  deploy:
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -37,29 +73,28 @@ jobs:
       AWS_REGION: us-east-1
       # Expect 404 while there is no homepage; change the repository variable to 200 later.
       ROOT_STATUS: ${{ vars.ROOT_STATUS }}
+      PYTHONPATH: ${{ runner.temp }}/package
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      - name: Build Lambda package
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          # Select the exact artifact from this run and fail if its checksum differs.
+          artifact-ids: ${{ needs.build.outputs.artifact-id }}
+          path: ${{ runner.temp }}
+          digest-mismatch: error
+      - name: Extract package
         run: |
-          # Install tools for runner-side migrations, then dependencies for Lambda's Linux runtime.
-          python -m pip install -r requirements.txt
-          python -m pip install -r requirements.txt --target "$RUNNER_TEMP/package" \
-            --platform manylinux2014_x86_64 --implementation cp --python-version 3.13 --only-binary=:all: --no-compile
-          # Put Django at the ZIP root without copying local data or secrets.
-          rsync -a --exclude='__pycache__' --exclude='*.pyc' --exclude='*.sqlite3' \
-            --exclude='.env*' --exclude='.venv' src/ "$RUNNER_TEMP/package/"
-          python - <<'PY'
-          import os
-          import shutil
-          if os.environ["ROOT_STATUS"] not in ("200", "404"):
-              raise SystemExit("ROOT_STATUS must be 200 or 404")
-          shutil.make_archive(os.environ["RUNNER_TEMP"] + "/budgetwise", "zip", os.environ["RUNNER_TEMP"] + "/package")
-          PY
+          case "$ROOT_STATUS" in 200|404) ;; *) echo "ROOT_STATUS must be 200 or 404"; exit 1 ;; esac
+          unzip -q "$RUNNER_TEMP/budgetwise.zip" -d "$RUNNER_TEMP/package"
+      - name: Reject stale deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A rerun retains its original SHA; only the current main tip may deploy.
+          current="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          test "$current" = "$GITHUB_SHA" || { echo "main has changed; deploy its latest run"; exit 1; }
       - name: Authenticate to AWS
         # AWS trusts this repository's main branch and issues temporary role credentials.
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
@@ -78,7 +113,7 @@ jobs:
           DJANGO_SETTINGS_MODULE: budgetwise.settings
         run: |
           test -n "$DB_HOST" || { echo "DB_HOST is not configured"; exit 1; }
-          python src/manage.py migrate --noinput
+          python "$RUNNER_TEMP/package/manage.py" migrate --noinput
       - name: Publish, check, and promote
         run: |
           python - <<'PY'
@@ -90,6 +125,7 @@ jobs:
           from urllib.error import HTTPError
           from urllib.request import urlopen
           import boto3
+          from botocore.exceptions import BotoCoreError, ClientError
 
           client = boto3.client("lambda")
           name = "budgetwise"
@@ -100,10 +136,11 @@ jobs:
           digest = base64.b64encode(hashlib.sha256(package).digest()).decode()
           # Upload without changing live traffic, then publish this exact ZIP as a version.
           # RevisionId rejects the update if someone changed the function after we read it.
-          client.update_function_code(FunctionName=name, ZipFile=package, RevisionId=config["RevisionId"])
+          uploaded = client.update_function_code(FunctionName=name, ZipFile=package, RevisionId=config["RevisionId"])
           client.get_waiter("function_updated").wait(FunctionName=name)
           version = client.publish_version(
-              FunctionName=name, CodeSha256=digest, Description=os.environ["GITHUB_SHA"]
+              FunctionName=name, CodeSha256=digest, RevisionId=uploaded["RevisionId"],
+              Description=os.environ["GITHUB_SHA"]
           )["Version"]
           client.get_waiter("function_active").wait(FunctionName=name, Qualifier=version)
 
@@ -127,10 +164,20 @@ jobs:
           if invoke(event).get("statusCode") != expected:
               raise RuntimeError("Candidate homepage returned an unexpected status")
 
+          def move_live(target, revision):
+              try:
+                  return client.update_alias(FunctionName=name, Name="live", FunctionVersion=target,
+                                             RevisionId=revision)
+              except (BotoCoreError, ClientError):
+                  # AWS may have applied the change even if its response was lost.
+                  current = client.get_alias(FunctionName=name, Name="live")
+                  if (current["FunctionVersion"] != target or
+                          current.get("RoutingConfig", {}) != previous.get("RoutingConfig", {})):
+                      raise
+                  return current
+
           # API Gateway uses the live alias; moving it makes the checked version public.
-          promoted = client.update_alias(
-              FunctionName=name, Name="live", FunctionVersion=version, RevisionId=previous["RevisionId"]
-          )
+          promoted = move_live(version, previous["RevisionId"])
           try:
               # Check the full public path, including DNS, HTTPS, and API Gateway.
               try:
@@ -144,8 +191,7 @@ jobs:
           except Exception:
               # Restore the previous code if the public check fails; migrations are not undone.
               # The revision check prevents overwriting a later operator change.
-              client.update_alias(FunctionName=name, Name="live", FunctionVersion=previous["FunctionVersion"],
-                                  RevisionId=promoted["RevisionId"])
+              move_live(previous["FunctionVersion"], promoted["RevisionId"])
               print("Restored live version", previous["FunctionVersion"])
               raise
           print("Deployed", os.environ["GITHUB_SHA"], "as Lambda version", version,

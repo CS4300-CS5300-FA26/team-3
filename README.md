@@ -155,6 +155,7 @@ We checked the local Django project, updated its setup instructions, and kept th
 - Wrote tests for AWS Aurora PostgreSQL initial configuration
 - Wrote CI yaml for testing Django against temporary PostgreSQL
 - Prepared the Lambda CD workflow
+- Reviewed deployment checks, package handling, and rollback behavior, suggested fixes
 
 **How we used the result:**
 
