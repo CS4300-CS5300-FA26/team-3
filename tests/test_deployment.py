@@ -1,4 +1,6 @@
 """Exercise the CD workflow's failure paths without contacting GitHub or AWS."""
+import base64
+import hashlib
 import io
 import os
 from pathlib import Path
@@ -48,7 +50,12 @@ class DeploymentTests(unittest.TestCase):
     def client(self):
         client = MagicMock()
         client.get_alias.return_value = {"FunctionVersion": "1", "RevisionId": "previous"}
-        client.get_function_configuration.return_value = {"RevisionId": "original-config"}
+        config = {"RevisionId": "original-config", "Runtime": "python3.13",
+                  "Environment": {"Variables": {"DB_NAME": "budgetwise"}}}
+        latest = dict(config, RevisionId="verified-config", State="Active",
+                      LastUpdateStatus="Successful",
+                      CodeSha256=base64.b64encode(hashlib.sha256(b"test package").digest()).decode())
+        client.get_function_configuration.side_effect = [config, latest]
         client.update_function_code.return_value = {"RevisionId": "uploaded-config"}
         client.publish_version.return_value = {"Version": "2"}
         client.update_alias.return_value = {"FunctionVersion": "2", "RevisionId": "promoted"}
@@ -58,11 +65,28 @@ class DeploymentTests(unittest.TestCase):
         ]
         return client
 
-    def test_publication_uses_upload_revision(self):
+    def test_publication_uses_verified_revision(self):
         client = self.client()
         self.run_release(client)
-        self.assertEqual(client.publish_version.call_args.kwargs["RevisionId"], "uploaded-config")
+        self.assertEqual(client.publish_version.call_args.kwargs["RevisionId"], "verified-config")
         self.assertEqual(client.update_alias.call_args.kwargs["RevisionId"], "previous")
+
+    def test_unverified_function_never_publishes_or_promotes(self):
+        for changes in (
+            {"State": "Pending"}, {"State": "Failed"},
+            {"LastUpdateStatus": "InProgress"}, {"LastUpdateStatus": "Failed"},
+            {"CodeSha256": "different-package"}, {"Runtime": "python3.14"},
+            {"Environment": {"Variables": {"DB_NAME": "other"}}},
+        ):
+            with self.subTest(changes=changes):
+                client = self.client()
+                config, latest = list(client.get_function_configuration.side_effect)
+                latest.update(changes)
+                client.get_function_configuration.side_effect = [config, latest]
+                with self.assertRaises(RuntimeError):
+                    self.run_release(client)
+                client.publish_version.assert_not_called()
+                client.update_alias.assert_not_called()
 
     def test_failed_candidate_never_moves_live(self):
         client = self.client()

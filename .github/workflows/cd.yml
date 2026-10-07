@@ -137,10 +137,26 @@ jobs:
           digest = base64.b64encode(hashlib.sha256(package).digest()).decode()
           # Upload without changing live traffic, then publish this exact ZIP as a version.
           # RevisionId rejects the update if someone changed the function after we read it.
-          uploaded = client.update_function_code(FunctionName=name, ZipFile=package, RevisionId=config["RevisionId"])
+          client.update_function_code(FunctionName=name, ZipFile=package, RevisionId=config["RevisionId"])
           client.get_waiter("function_updated").wait(FunctionName=name)
+          latest = client.get_function_configuration(FunctionName=name)
+          if latest.get("State") != "Active" or latest.get("LastUpdateStatus") != "Successful":
+              raise RuntimeError("Lambda update is not active and successful")
+          if latest.get("CodeSha256") != digest:
+              raise RuntimeError("Lambda code digest changed before publication")
+          # Ignore response metadata and fields changed by a code upload;
+          # preserve the configuration read before uploading.
+          upload_fields = {
+              "ResponseMetadata", "RevisionId", "LastModified", "CodeSha256", "CodeSize",
+              "State", "StateReason", "StateReasonCode", "LastUpdateStatus",
+              "LastUpdateStatusReason", "LastUpdateStatusReasonCode",
+          }
+          def configuration(value):
+              return {key: item for key, item in value.items() if key not in upload_fields}
+          if configuration(latest) != configuration(config):
+              raise RuntimeError("Lambda configuration changed before publication")
           version = client.publish_version(
-              FunctionName=name, CodeSha256=digest, RevisionId=uploaded["RevisionId"],
+              FunctionName=name, CodeSha256=digest, RevisionId=latest["RevisionId"],
               Description=os.environ["GITHUB_SHA"]
           )["Version"]
           client.get_waiter("function_active").wait(FunctionName=name, Qualifier=version)
