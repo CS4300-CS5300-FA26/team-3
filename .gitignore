@@ -7,6 +7,8 @@
 # Operating system and editor files
 .DS_Store
 *.swp
+.vscode/
+.idea/
 
 # Local logs
 *.log
