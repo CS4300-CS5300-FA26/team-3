@@ -71,7 +71,7 @@ jobs:
       id-token: write
     env:
       AWS_REGION: us-east-1
-      # Expect 404 while there is no homepage; change the repository variable to 200 later.
+      # The homepage is expected to return 200.
       ROOT_STATUS: ${{ vars.ROOT_STATUS }}
     steps:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -145,11 +145,12 @@ jobs:
           if latest.get("CodeSha256") != digest:
               raise RuntimeError("Lambda code digest changed before publication")
           # Ignore response metadata and fields changed by a code upload;
-          # preserve the configuration read before uploading.
+          # preserve the configuration read before uploading. AWS may also
+          # select a new managed runtime patch during the upload.
           upload_fields = {
               "ResponseMetadata", "RevisionId", "LastModified", "CodeSha256", "CodeSize",
               "State", "StateReason", "StateReasonCode", "LastUpdateStatus",
-              "LastUpdateStatusReason", "LastUpdateStatusReasonCode",
+              "LastUpdateStatusReason", "LastUpdateStatusReasonCode", "RuntimeVersionConfig",
           }
           def configuration(value):
               return {key: item for key, item in value.items() if key not in upload_fields}

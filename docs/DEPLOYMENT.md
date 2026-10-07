@@ -4,7 +4,7 @@ Chase will maintain the AWS setup for Team 3. Local development follows the READ
 
 ## Request flow
 
-`budget-wise.dev → API Gateway → Lambda → Django`
+`budget-wise.dev → Cloudflare DNS → API Gateway → Lambda → Django`
 
 Cloudflare manages DNS. API Gateway calls the `live` alias of Lambda function `budgetwise` in `us-east-1`. Lambda uses Python 3.13, x86_64, and handler `lambda_entry.handler`.
 
@@ -56,7 +56,7 @@ GitHub Actions settings:
 | Setting | Purpose |
 | --- | --- |
 | Variable `AWS_DEPLOY_ROLE_ARN` | Deployment role ARN |
-| Variable `ROOT_STATUS` | Expected homepage status: `404` now; set to `200` when the homepage is added |
+| Variable `ROOT_STATUS` | Expected homepage status: `200` |
 | Secret `DB_HOST` | Same Aurora writer endpoint as Lambda |
 
 The workflow reports the previous Lambda version. For a later code rollback, point `live` back to it in Lambda's Aliases tab. This does not undo migrations: keep schema changes compatible with the previous release.

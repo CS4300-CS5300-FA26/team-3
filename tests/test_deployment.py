@@ -71,6 +71,21 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(client.publish_version.call_args.kwargs["RevisionId"], "verified-config")
         self.assertEqual(client.update_alias.call_args.kwargs["RevisionId"], "previous")
 
+    def test_runtime_patch_change_does_not_block_deployment(self):
+        client = self.client()
+        config, latest = list(client.get_function_configuration.side_effect)
+        config["RuntimeVersionConfig"] = {"RuntimeVersionArn": "arn:aws:lambda:us-east-1::runtime:old"}
+        latest["RuntimeVersionConfig"] = {"RuntimeVersionArn": "arn:aws:lambda:us-east-1::runtime:new"}
+        client.get_function_configuration.side_effect = [config, latest]
+
+        self.run_release(client)
+
+        client.publish_version.assert_called_once_with(
+            FunctionName="budgetwise", CodeSha256=latest["CodeSha256"],
+            RevisionId="verified-config", Description="current")
+        client.update_alias.assert_called_once_with(
+            FunctionName="budgetwise", Name="live", FunctionVersion="2", RevisionId="previous")
+
     def test_unverified_function_never_publishes_or_promotes(self):
         for changes in (
             {"State": "Pending"}, {"State": "Failed"},
