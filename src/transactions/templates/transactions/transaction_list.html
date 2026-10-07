@@ -4,31 +4,74 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BudgetWise</title>
+    <style>
+        body {
+            margin: 0;
+            background: white;
+            color: #101820;
+            font: 22px/1.5 Arial, sans-serif;
+        }
+        header {
+            padding: 22px 3%;
+            background: #e9efe6;
+            border-bottom: 1px solid #afc0ad;
+        }
+        h1 {
+            margin: 0;
+            color: #104b25;
+            font: 44px/1.2 Georgia, serif;
+            letter-spacing: -1.2px;
+        }
+        main { margin: 40px 8%; }
+        h2 { margin: 0 0 28px; font-size: 36px; font-weight: normal; }
+        h2 small {
+            display: inline-block;
+            margin-left: 20px;
+            padding-left: 20px;
+            border-left: 1px solid #56616b;
+            color: #56616b;
+            font-size: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            overflow-wrap: anywhere;
+        }
+        th, td { padding: 16px 1.5%; vertical-align: top; }
+        th { background: #e9efe6; color: #104b25; }
+        td { color: #56616b; }
+        tbody tr:nth-child(even) { background: #f3f6f1; }
+        td:nth-child(2) { color: #101820; font-weight: bold; }
+        td:nth-child(3) { white-space: nowrap; }
+        .amount { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+        td.amount { color: #101820; }
+        .income td:nth-child(3), .income .amount { color: #104b25; }
+    </style>
 </head>
 <body>
+    <header><h1>BudgetWise</h1></header>
     <main>
-        <h1>BudgetWise</h1>
-        <h2>Transactions</h2>
-
+        <h2>Transactions <small>Demo transactions</small></h2>
         {% if transactions %}
-            <table>
+            <table aria-label="Demo transactions">
                 <thead>
                     <tr>
-                        <th>Date</th>
-                        <th>Description</th>
-                        <th>Type</th>
-                        <th>Category</th>
-                        <th>Amount</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Category</th>
+                        <th scope="col" class="amount">Amount</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for transaction in transactions %}
-                        <tr>
+                        <tr{% if transaction.kind == "income" %} class="income"{% endif %}>
                             <td>{{ transaction.date }}</td>
                             <td>{{ transaction.description }}</td>
                             <td>{{ transaction.get_kind_display }}</td>
                             <td>{{ transaction.category|default:"—" }}</td>
-                            <td>${{ transaction.amount }}</td>
+                            <td class="amount">${{ transaction.amount|floatformat:"2g" }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
