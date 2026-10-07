@@ -25,7 +25,20 @@ python src/manage.py migrate
 python src/manage.py runserver 0.0.0.0:3000
 ```
 
-`check` validates the Django project, and `migrate` creates or updates local SQLite tables. The development server uses port 3000 for DevEdu; use the URL DevEdu provides, or `http://127.0.0.1:3000/` locally. Stop it with `Ctrl+C`. The root page displays synthetic demo transactions stored in the database.
+`check` validates the Django project, and `migrate` creates or updates local SQLite tables. The development server uses port 3000 for DevEdu; open `http://localhost:3000/` for a local setup. Stop it with `Ctrl+C`. The root page displays synthetic demo transactions stored in the database.
+
+Development always accepts `localhost`, `127.0.0.1`, and `[::1]`. Set
+`DJANGO_DEVELOPMENT_HOSTS` only if you access the server through another hostname,
+using that hostname without a scheme, port, or path (or a comma-separated list).
+For example, `export DJANGO_DEVELOPMENT_HOSTS="preview.example.test"` before
+starting the server. No extra setting is needed for `localhost:3000`. The Lambda adapter only accepts `budget-wise.dev`
+regardless of this environment variable.
+
+For a second DevEdu verification, have a teammate follow the setup above, open
+`http://localhost:3000/` (or their configured hostname), and confirm there is no
+`DisallowedHost` error. Run
+`python src/manage.py test tests.test_hosts tests.test_deployment` as well.
+Record the hostname and result when reporting verification.
 
 ## Source layout
 

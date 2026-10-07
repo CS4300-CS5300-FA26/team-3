@@ -26,7 +26,11 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "local-development-only-key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Add exact preview hostnames (without scheme or port) for development.
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"] + [
+    host.strip() for host in os.environ.get("DJANGO_DEVELOPMENT_HOSTS", "").split(",")
+    if host.strip()
+]
 
 
 # Application definition
