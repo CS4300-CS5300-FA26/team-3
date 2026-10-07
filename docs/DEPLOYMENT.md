@@ -63,7 +63,7 @@ The workflow reports the previous Lambda version. For a later code rollback, poi
 
 ## Current status
 
-- The initial scaffold is deployed; `/` returns Django's production 404.
-- Aurora, its database users, Lambda environment, and GitHub deployment permissions are configured. The live version still uses the initial scaffold.
-- The transaction model and migrations are implemented. The first Actions deployment and a public database-backed view remain pending.
-- Verify a release with a small number of requests and check `/aws/lambda/budgetwise` logs for failures. A 404 is expected only while the homepage is missing.
+- The application is deployed; `/` returns 200 and lists the demo transactions stored in Aurora.
+- Aurora, its database users, Lambda environment, and GitHub deployment permissions are configured. Migrations, including the demo data, have been applied to Aurora.
+- The first Actions deployment succeeded on Oct 6, 2026. Later merges to `main` that change application or workflow files deploy automatically.
+- Verify a release with a small number of requests and check `/aws/lambda/budgetwise` logs for failures. A 404 at `/` now indicates a failed or rolled-back release.
