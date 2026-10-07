@@ -25,7 +25,7 @@ python src/manage.py migrate
 python src/manage.py runserver 0.0.0.0:3000
 ```
 
-`check` validates the Django project, and `migrate` creates or updates local SQLite tables. The development server uses port 3000 for DevEdu; use the URL DevEdu provides, or `http://127.0.0.1:3000/` locally. Stop it with `Ctrl+C`. The Django welcome page is expected until the application view is added.
+`check` validates the Django project, and `migrate` creates or updates local SQLite tables. The development server uses port 3000 for DevEdu; use the URL DevEdu provides, or `http://127.0.0.1:3000/` locally. Stop it with `Ctrl+C`. The root page displays synthetic demo transactions stored in the database.
 
 ## Source layout
 
@@ -48,7 +48,7 @@ Planned request flow: `Browser → API Gateway → Lambda → Django → Aurora 
 | Cloudflare DNS and Resend | Cloudflare manages our domain. Resend is selected for application email; its Django integration is still planned. |
 | GitHub Actions | Test pull requests and automate releases from `main`, using temporary AWS credentials instead of stored access keys. |
 
-The transaction model and migrations are implemented; the public application page is still pending. The live site still runs the initial scaffold. Aurora connectivity through the deployed code and the first automated release remain to be verified. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
+The transaction model and migrations are implemented. The public application page displays synthetic demo transactions from the database while excluding non-demo transactions. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
 
 ## Deployment
 
@@ -56,7 +56,7 @@ Pull requests to `main` run Django checks, migrations, and tests against a tempo
 
 Public URL: https://budget-wise.dev/
 
-API Gateway sends requests to Django on AWS Lambda. The current scaffold returns a 404 until our application view is added. Once merged, the deployment workflow tests changes to `main`, applies migrations, and releases them to Lambda. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
+API Gateway sends requests to Django on AWS Lambda. The root application view returns a 200 response and displays synthetic demo transactions from the database. The deployment workflow tests changes to `main`, applies migrations, and releases them to Lambda. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
 
 ## Planned Features (as of Sprint 0-2, subject to change)
 

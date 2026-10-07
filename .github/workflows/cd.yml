@@ -71,7 +71,7 @@ jobs:
       id-token: write
     env:
       AWS_REGION: us-east-1
-      # Expect 404 while there is no homepage; change the repository variable to 200 later.
+      # The homepage is expected to return 200.
       ROOT_STATUS: ${{ vars.ROOT_STATUS }}
     steps:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0

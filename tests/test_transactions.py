@@ -62,6 +62,9 @@ class TransactionCategoryTests(TestCase):
 
 class TransactionDatabaseConstraintTests(TestCase):
     """Saving without calling full_clean() must still be refused by the database."""
+    def setUp(self):
+        """Start database constraint tests with an empty transaction table."""
+        Transaction.objects.all().delete()
 
     def assert_save_is_refused(self, **overrides):
         with self.assertRaises(IntegrityError), transaction.atomic():
@@ -109,6 +112,10 @@ class TransactionDatabaseConstraintTests(TestCase):
 
 
 class TransactionSignedAmountTests(TestCase):
+    def setUp(self):
+        """Start signed amount tests with an empty transaction table."""
+        Transaction.objects.all().delete()
+
     def test_income_adds_to_the_budget(self):
         transaction = make_transaction(kind=Transaction.Kind.INCOME, amount=Decimal("1200.00"))
         self.assertEqual(transaction.signed_amount, Decimal("1200.00"))

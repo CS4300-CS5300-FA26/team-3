@@ -56,7 +56,7 @@ GitHub Actions settings:
 | Setting | Purpose |
 | --- | --- |
 | Variable `AWS_DEPLOY_ROLE_ARN` | Deployment role ARN |
-| Variable `ROOT_STATUS` | Expected homepage status: `404` now; set to `200` when the homepage is added |
+| Variable `ROOT_STATUS` | Expected homepage status: `200` |
 | Secret `DB_HOST` | Same Aurora writer endpoint as Lambda |
 
 The workflow reports the previous Lambda version. For a later code rollback, point `live` back to it in Lambda's Aliases tab. This does not undo migrations: keep schema changes compatible with the previous release.

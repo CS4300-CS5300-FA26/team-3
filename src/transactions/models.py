@@ -24,6 +24,7 @@ class Transaction(models.Model):
     description = models.CharField(max_length=200)
     category = models.CharField(max_length=50, blank=True)
     is_fixed = models.BooleanField(default=False)
+    is_demo = models.BooleanField(default=False, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

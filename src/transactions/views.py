@@ -5,7 +5,7 @@ from .models import Transaction
 
 def transaction_list(request):
     """Render the landing page with transactions from the database."""
-    transactions = Transaction.objects.all()
+    transactions = Transaction.objects.filter(is_demo=True)
 
     return render(
         request,
