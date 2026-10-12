@@ -8,25 +8,22 @@ of copying them. Do not reconstruct undocumented historical decisions.
 
 ## Entry format
 
-### Date — Change title
-
-- **Reference / requirement:** Commit or PR (pending until available), issue/story
-  or requested behavior; sprint when known.
-- **Result and flow:** What changed and how the user action travels through the
-  affected components to its result. Include relevant file/symbol links.
-- **Design:** Significant choices, rationale, and useful alternatives/tradeoffs.
-- **Failures and limits:** Validation, abuse/failure handling, known gaps, and
-  unresolved decisions relevant to this change.
-- **Verification:** Actual commands/results, RED–GREEN evidence, coverage scope
-  and gaps, or why a check does not apply. Never imply an unperformed check passed.
-- **Demo / review:** A short example and likely questions with supported answers
-  for substantial changes. Tagged demo reviews also record the exact remote SHA,
-  prioritized questions/follow-ups, SHA-bound code references, and proposed fixes.
-
-Omit inapplicable fields for small edits. Keep pending entries current before
-handoff; preserve historical results and record later behavior in a new entry.
+Use a dated heading and a few short bullets: issue/PR reference, what changed
+and why, and important behavior limits. Link to source or acceptance scenarios.
+Keep validation results and execution history out of this record.
 
 ## Changes
+
+### 2026-10-12 — Luna PR review and CI coverage
+
+- **Reference:** [Issue #41](https://github.com/CS4300-CS5300-FA26/team-3/issues/41),
+  Sprint 1; commit/PR pending.
+- **Changes:** Luna reviews PR patches and referenced issue criteria using trusted
+  base-branch code. CI runs Django and Behave tests, reports coverage, and enforces
+  80% line coverage. See the [review script](../.github/scripts/ai_review.py),
+  [CI workflow](../.github/workflows/ci.yml), and [scenarios](../features/ai_review.feature).
+- **Limits:** Reviews activate once the workflow reaches `main`. Feedback is
+  advisory and limited to patches and linked issues.
 
 ### 2026-10-08 — Sprint 1 development guidance
 
@@ -39,5 +36,3 @@ handoff; preserve historical results and record later behavior in a new entry.
 - **Limits:** Instructions guide future work; they do not install coverage tooling,
   enforce a CI coverage gate, or establish teammate understanding. No application
   behavior changes.
-- **Verification:** Documentation-only review; `git diff --check` passed. Application
-  tests and coverage do not apply to this change.
