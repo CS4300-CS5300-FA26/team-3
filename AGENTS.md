@@ -24,8 +24,12 @@ src/
 ├── lambda_entry.py               API Gateway/Lambda request adapter
 └── manage.py                     Django command entry point
 tests/                            Model/view, host, database, Lambda, deployment tests
-.github/workflows/                ci.yml: PostgreSQL checks; cd.yml: deployment
+features/                         Behave scenarios tagged with issue numbers
+.github/scripts/                  Luna review/issue context and line-coverage gate
+.github/workflows/                ci.yml: tests/coverage; ai-review.yml: Luna review;
+                                  cd.yml: deployment
 requirements.txt                  Python dependencies
+requirements-dev.txt              Test/coverage tools; not packaged for Lambda
 ```
 
 - Identify the requirement, issue, or acceptance criterion being addressed. Read
@@ -46,11 +50,9 @@ requirements.txt                  Python dependencies
 - Reuse the existing Django stack, conventions, and canonical implementations.
   Build only the required behavior and necessary supporting work. Avoid speculative
   features, dependencies, abstractions, and unrelated redesigns.
-- Apply SOLID: give components one cohesive responsibility, extend through clear
-  boundaries, preserve contracts when substituting implementations, keep interfaces
-  focused on their callers, and isolate external dependencies from domain logic.
-  Use functions and Django conventions where sufficient; SOLID does not require
-  class hierarchies, service layers, or an interface for every implementation.
+- Apply SOLID pragmatically: cohesive responsibilities, clear boundaries, preserved
+  contracts, focused interfaces, and explicit dependencies. Prefer simple functions
+  and Django conventions over unnecessary layers.
 - Prefer explicit data flow and straightforward algorithms. Avoid duplication
   without coupling unrelated behavior. Consider query cost and realistic data size.
 - Comment non-obvious intent, invariants, ownership boundaries, and failure handling;
@@ -69,34 +71,21 @@ requirements.txt                  Python dependencies
 - Run affected tests while iterating, then applicable CI checks before handoff.
   Local suite: `python src/manage.py test tests src`. For model changes, also run
   `python src/manage.py makemigrations --check --dry-run` and verify migrations.
-- Measure line and branch coverage for implementation changes with coverage.py or
-  the repository's configured tool. Inspect uncovered changed paths, cover meaningful
-  gaps, and report command, scope, result, and justified omissions. Achieve at least
-  80% code coverage, as required for Sprint 1; no separate branch-coverage minimum
-  is specified. Percentages alone do not prove correctness; never report unmeasured
-  coverage as passing or exclude relevant code merely to reach the threshold.
-- Document any necessary departure from TDD or unavailable check and its reason.
+- Measure line and branch coverage for implementation changes. Require at least
+  80% line coverage; no separate branch minimum applies. Inspect uncovered paths
+  and report scope, results, and meaningful gaps. Do not exclude code to pass.
+- Explain TDD departures or unavailable checks in the handoff.
   Documentation-only changes require full diff review and `git diff --check`, not
   application tests. Keep routine checks local and off AWS to preserve credits.
 
 ## Explain and record the work
 
-- Before significant edits, explain intended behavior, affected components, data
-  flow, and meaningful tradeoffs in plain language. Give concise checkpoint updates
-  and address teammate questions or misunderstandings as work proceeds.
-- Finish with the requirement/result, end-to-end flow, design rationale, failure
-  handling/limitations, and verification with code pointers. Use a small example
-  when helpful. Invite questions without imposing a quiz or routine sign-off;
-  delivering an explanation is not evidence that every teammate understands it.
-- Maintain `docs/CHANGELOG.md` as the single structured implementation explanation
-  record, organized by logical commit or PR. Combine human and agent work into one
-  account; keep AI attribution only in README's AI usage log. Give substantial
-  features full entries and group minor related edits briefly. Link PR descriptions
-  and reports to entries instead of duplicating them in new documents.
-- Connect each completed story to its acceptance scenarios, verifying tests, and
-  implementation-record entry so reviewers can trace requirements through behavior
-  and evidence. Reference existing issue/story identifiers rather than inventing new ones.
-- Use the record's entry format, keep pending identifiers explicit, and add real
-  commit/PR references when available; never fabricate a SHA or add commits solely
-  to record their own hashes. Update setup/operational docs only when made stale.
-  Record observed facts separately from intent, inference, and unknowns.
+- Explain significant changes and tradeoffs in plain language. Report checks,
+  coverage, and any testing limitations in the handoff, not the changelog.
+- Keep `docs/CHANGELOG.md` entries brief: issue/PR reference, what changed and why,
+  and important behavior limits. Do not include validation sections, test results,
+  coverage numbers, or execution history. Link to source and acceptance scenarios.
+- Keep README updates to essential setup and usage. Match the existing AI log
+  format: **Tool**, **What it helped with**, and **How we used the result**.
+- Avoid duplicating details across documents. Use existing issue identifiers,
+  mark pending references honestly, and update docs only when needed.

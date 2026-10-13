@@ -40,6 +40,17 @@ For a second DevEdu verification, have a teammate follow the setup above, open
 `python src/manage.py test tests.test_hosts tests.test_deployment` as well.
 Record the hostname and result when reporting verification.
 
+## Tests and automated review
+
+Install test tools with `python -m pip install -r requirements-dev.txt`.
+Run `python src/manage.py test tests src` and `python -m behave` locally.
+CI reports coverage on pushes and PRs, requires 80% line coverage, and saves
+coverage reports as workflow artifacts.
+
+Luna reviews team PRs using the `OPENAI_API_KEY` GitHub secret. Reference issues
+in the PR description (for example, `Related: #12`) to include their Gherkin
+criteria. Reviews become available once the workflow reaches `main`.
+
 ## Source layout
 
 - `src/budgetwise/`: Django project settings and URLs.
@@ -175,3 +186,18 @@ We checked the local Django project, updated its setup instructions, and kept th
 **How we used the result:**
 
 The initial scaffold is now running at the registered public URL. Lambda is properly invoked through API Gateway and running our Django code to deploy the application.
+
+### Sprint 1: Oct 12, 2026 — automated review and coverage
+
+**Tool:** Codex
+
+**What it helped with:**
+
+- Prepared Luna PR review with related issue and Gherkin context.
+- Added coverage reporting, the 80% line coverage gate, and automated tests.
+
+**How we used the result:**
+
+We verified the implementation locally with unit/integration tests, Behave scenarios,
+PostgreSQL, coverage reports, and workflow linting. Changes remain local for human
+review and delivery; live API review still needs verification after merging to `main`.

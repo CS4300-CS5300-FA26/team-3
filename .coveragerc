@@ -1,0 +1,11 @@
+[run]
+branch = True
+patch = subprocess
+parallel = True
+source = src,.github/scripts
+
+[report]
+show_missing = True
+
+[html]
+directory = coverage-html
