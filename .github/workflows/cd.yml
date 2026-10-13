@@ -27,7 +27,7 @@ jobs:
 
   build:
     needs: checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     # Build dependencies without AWS credentials or permission to request them.
     outputs:
@@ -63,7 +63,7 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: read
