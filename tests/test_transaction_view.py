@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
@@ -26,6 +27,16 @@ class IncomeFormTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("Amount must be greater than zero", form.errors["amount"])
+
+
+class RecordIncomeViewTests(TestCase):
+    def test_signed_in_student_can_open_income_form(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
+
+        response = self.client.get(reverse("record_income"))
+
+        self.assertContains(response, "Source")
 
 
 class TransactionListViewTests(TestCase):

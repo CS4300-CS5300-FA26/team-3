@@ -214,14 +214,17 @@ review and delivery; live API review still needs verification after merging to `
 
 - Reviewed the D3 acceptance criteria and existing transaction model.
 - Drafted the income form and focused tests for the specified valid and zero-amount inputs.
+- Drafted the basic income HTML page, protected view, URL, and page test.
 
 **How we used the result:**
 
-We kept the model as the source of the amount rule, used a model-backed form for
-browser input, and reviewed baseline tests to the two D3 input examples of acceptance critera. Fabian
-manually ran the focused tests. The form is not yet connected to a page or save action; the
-remaining D3 behavior will be tested before it is implemented.
+We kept the model as the source of the amount rule and used a model-backed form for
+browser input. Fabian manually ran the seven focused tests, viewed the page after
+signing in on the local server, and checked in an incognito window that an unsigned-in
+visitor is redirected. The page does not save income yet; that behavior still needs
+tests and implementation.
 
 **Test check before continuing:** From `src/` with the virtual environment
 active, run `python manage.py test ../tests --pattern=test_transaction_view.py`.
-The current tests check the specified paycheck input and zero-amount message.
+The current tests check the specified paycheck input, zero-amount message, and
+signed-in page display.

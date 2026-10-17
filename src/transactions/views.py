@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from .models import Transaction
@@ -27,3 +28,8 @@ def transaction_list(request):
         "transactions/transaction_list.html",
         {"transactions": transactions},
     )
+
+
+@login_required
+def record_income(request):
+    return render(request, "transactions/record_income.html", {"form": IncomeForm()})
