@@ -5,6 +5,27 @@ from django.test import TestCase
 from django.urls import reverse
 
 from transactions.models import Transaction
+from transactions.views import IncomeForm
+
+
+class IncomeFormTests(TestCase):
+    def test_accepts_paycheck_details_as_exact_money(self):
+        form = IncomeForm(
+            {"amount": "1200.00", "date": "2026-10-02", "description": "Part-time job"}
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["amount"], Decimal("1200.00"))
+        self.assertEqual(form.cleaned_data["date"], date(2026, 10, 2))
+        self.assertEqual(form.cleaned_data["description"], "Part-time job")
+
+    def test_rejects_zero_amount_with_story_message(self):
+        form = IncomeForm(
+            {"amount": "0.00", "date": "2026-10-02", "description": "Part-time job"}
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("Amount must be greater than zero", form.errors["amount"])
 
 
 class TransactionListViewTests(TestCase):

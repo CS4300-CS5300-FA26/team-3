@@ -47,6 +47,10 @@ Run `python src/manage.py test tests src` and `python -m behave` locally.
 CI reports coverage on pushes and PRs, requires 80% line coverage, and saves
 coverage reports as workflow artifacts.
 
+For each new behavior, write a focused test and run it to confirm the expected
+failure (RED). Add the behavior, rerun the focused test (GREEN), then simplify
+and rerun the full Django and Behave suites before treating the issue as done.
+
 Luna reviews team PRs using the `OPENAI_API_KEY` GitHub secret. Reference issues
 in the PR description (for example, `Related: #12`) to include their Gherkin
 criteria. Reviews become available once the workflow reaches `main`.
@@ -201,3 +205,23 @@ The initial scaffold is now running at the registered public URL. Lambda is prop
 We verified the implementation locally with unit/integration tests, Behave scenarios,
 PostgreSQL, coverage reports, and workflow linting. Changes remain local for human
 review and delivery; live API review still needs verification after merging to `main`.
+
+### Sprint 1: Oct 17, 2026 — Recording Income
+
+**Tool:** Codex
+
+**What it helped with:**
+
+- Reviewed the D3 acceptance criteria and existing transaction model.
+- Drafted the income form and focused tests for the specified valid and zero-amount inputs.
+
+**How we used the result:**
+
+We kept the model as the source of the amount rule, used a model-backed form for
+browser input, and reviewed baseline tests to the two D3 input examples of acceptance critera. Fabian
+manually ran the focused tests. The form is not yet connected to a page or save action; the
+remaining D3 behavior will be tested before it is implemented.
+
+**Test check before continuing:** From `src/` with the virtual environment
+active, run `python manage.py test ../tests --pattern=test_transaction_view.py`.
+The current tests check the specified paycheck input and zero-amount message.
