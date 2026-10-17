@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
 from .models import Transaction
 
@@ -32,4 +32,15 @@ def transaction_list(request):
 
 @login_required
 def record_income(request):
-    return render(request, "transactions/record_income.html", {"form": IncomeForm()})
+    if request.method == "POST":
+        form = IncomeForm(request.POST)
+    else:
+        form = IncomeForm(None)
+
+    if request.method == "POST" and form.is_valid():
+        income = form.save(commit=False)
+        income.kind = Transaction.Kind.INCOME
+        income.save()
+        return redirect("record_income")
+
+    return render(request, "transactions/record_income.html", {"form": form})

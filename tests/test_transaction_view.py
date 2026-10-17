@@ -38,6 +38,34 @@ class RecordIncomeViewTests(TestCase):
 
         self.assertContains(response, "Source")
 
+    def test_submitting_paycheck_saves_an_income_transaction(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
+
+        self.client.post(
+            reverse("record_income"),
+            {"amount": "1200.00", "date": "2026-10-02", "description": "Part-time job"},
+        )
+
+        income = Transaction.objects.get(description="Part-time job", is_demo=False)
+        self.assertEqual(income.kind, Transaction.Kind.INCOME)
+        self.assertEqual(income.amount, Decimal("1200.00"))
+        self.assertEqual(income.date, date(2026, 10, 2))
+
+    def test_zero_amount_post_shows_error_and_saves_nothing(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
+
+        response = self.client.post(
+            reverse("record_income"),
+            {"amount": "0.00", "date": "2026-10-02", "description": "Invalid paycheck"},
+        )
+
+        self.assertContains(response, "Amount must be greater than zero")
+        self.assertFalse(
+            Transaction.objects.filter(description="Invalid paycheck", is_demo=False).exists()
+        )
+
 
 class TransactionListViewTests(TestCase):
     def setUp(self):

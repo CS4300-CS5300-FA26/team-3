@@ -215,16 +215,18 @@ review and delivery; live API review still needs verification after merging to `
 - Reviewed the D3 acceptance criteria and existing transaction model.
 - Drafted the income form and focused tests for the specified valid and zero-amount inputs.
 - Drafted the basic income HTML page, protected view, URL, and page test.
+- Drafted the Save income button, POST handling, and tests for valid and zero-amount submissions.
 
 **How we used the result:**
 
 We kept the model as the source of the amount rule and used a model-backed form for
-browser input. Fabian manually ran the seven focused tests, viewed the page after
-signing in on the local server, and checked in an incognito window that an unsigned-in
-visitor is redirected. The page does not save income yet; that behavior still needs
-tests and implementation.
+browser input. Fabian chose an explicit GET/POST branch for clarity. He manually ran
+the tests, saved an income entry on the local site and verified its date, type, and
+amount in Django admin, checked the zero-amount error and absence of a saved row,
+and confirmed an incognito visitor is redirected. The full Django suite passed with
+54 tests. Entries are not yet associated with users or shown in a budget.
 
 **Test check before continuing:** From `src/` with the virtual environment
 active, run `python manage.py test ../tests --pattern=test_transaction_view.py`.
-The current tests check the specified paycheck input, zero-amount message, and
-signed-in page display.
+The current tests check the form fields, signed-in page display, a saved paycheck,
+and a zero-amount POST that shows an error without saving a row.
