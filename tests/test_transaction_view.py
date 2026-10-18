@@ -42,15 +42,17 @@ class RecordIncomeViewTests(TestCase):
         student = get_user_model().objects.create_user(username="student")
         self.client.force_login(student)
 
-        self.client.post(
+        response = self.client.post(
             reverse("record_income"),
             {"amount": "1200.00", "date": "2026-10-02", "description": "Part-time job"},
+            follow=True,
         )
 
         income = Transaction.objects.get(description="Part-time job", is_demo=False)
         self.assertEqual(income.kind, Transaction.Kind.INCOME)
         self.assertEqual(income.amount, Decimal("1200.00"))
         self.assertEqual(income.date, date(2026, 10, 2))
+        self.assertContains(response, "Income saved.")
 
     def test_zero_amount_post_shows_error_and_saves_nothing(self):
         student = get_user_model().objects.create_user(username="student")
@@ -65,6 +67,18 @@ class RecordIncomeViewTests(TestCase):
         self.assertFalse(
             Transaction.objects.filter(description="Invalid paycheck", is_demo=False).exists()
         )
+
+    def test_missing_source_shows_error_and_saves_nothing(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
+
+        response = self.client.post(
+            reverse("record_income"),
+            {"amount": "1200.00", "date": "2026-10-02", "description": ""},
+        )
+
+        self.assertContains(response, "Enter an income source.")
+        self.assertFalse(Transaction.objects.filter(is_demo=False).exists())
 
 
 class TransactionListViewTests(TestCase):

@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
@@ -16,6 +17,7 @@ class IncomeForm(forms.ModelForm):
         }
         error_messages = {
             "amount": {"min_value": "Amount must be greater than zero"},
+            "description": {"required": "Enter an income source."},
         }
 
 
@@ -41,6 +43,7 @@ def record_income(request):
         income = form.save(commit=False)
         income.kind = Transaction.Kind.INCOME
         income.save()
+        messages.success(request, "Income saved.")
         return redirect("record_income")
 
     return render(request, "transactions/record_income.html", {"form": form})

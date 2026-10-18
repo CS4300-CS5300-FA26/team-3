@@ -8,6 +8,9 @@
 <body>
     <main>
         <h1>Record income</h1>
+        {% for message in messages %}
+            <p role="status">{{ message }}</p>
+        {% endfor %}
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}

@@ -216,6 +216,7 @@ review and delivery; live API review still needs verification after merging to `
 - Drafted the income form and focused tests for the specified valid and zero-amount inputs.
 - Drafted the basic income HTML page, protected view, URL, and page test.
 - Drafted the Save income button, POST handling, and tests for valid and zero-amount submissions.
+- Drafted tests and feedback for a missing income source and a successful save.
 
 **How we used the result:**
 
@@ -223,10 +224,16 @@ We kept the model as the source of the amount rule and used a model-backed form 
 browser input. Fabian chose an explicit GET/POST branch for clarity. He manually ran
 the tests, saved an income entry on the local site and verified its date, type, and
 amount in Django admin, checked the zero-amount error and absence of a saved row,
-and confirmed an incognito visitor is redirected. The full Django suite passed with
-54 tests. Entries are not yet associated with users or shown in a budget.
+and confirmed an incognito visitor is redirected. Fabian manually ran the focused
+tests to see each new feedback expectation fail before the code was added, then
+reran them successfully (10 passing tests). He saved income on the local site,
+saw “Income saved.” above the cleared form, and checked the new income row's
+source, date, type, and amount in Django admin. Entries are not yet associated
+with users or shown in a budget.
 
 **Test check before continuing:** From `src/` with the virtual environment
 active, run `python manage.py test ../tests --pattern=test_transaction_view.py`.
-The current tests check the form fields, signed-in page display, a saved paycheck,
-and a zero-amount POST that shows an error without saving a row.
+The current 10 tests check the form fields, signed-in page display, a saved
+paycheck and its confirmation, plus zero-amount and missing-source submissions
+that show errors without saving rows. Run `python src/manage.py test tests src`
+from the repository root before committing.
