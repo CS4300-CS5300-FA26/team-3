@@ -13,13 +13,12 @@ class AIReviewTests(unittest.TestCase):
     def fixture(self):
         return {'head': {'sha': 'abc', 'repo': {'full_name': 'team/repo'}},
                 'base': {'sha': 'base', 'ref': 'main'}, 'state': 'open',
-                'draft': False, 'author_association': 'MEMBER',
+                'draft': False, 'author_association': 'MEMBER', 'user': {'login': 'teammate'},
                 'changed_files': 1, 'title': 'Change', 'body': 'Closes #12'}
 
     def test_collect_blocks_ineligible_current_pr_before_reading_changes(self):
         """#41 / PR #44: validate trust with current REST metadata."""
         cases = [('draft', True), ('draft', None), ('base', {'ref': 'other'}),
-                 ('author_association', 'CONTRIBUTOR'),
                  ('head', {'sha': 'abc', 'repo': {'full_name': 'other/repo'}}),
                  ('head', {'sha': 'abc', 'repo': None})]
         for field, value in cases:
@@ -28,6 +27,21 @@ class AIReviewTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     ai_review.collect(github, 44, 'team/repo', 'abc')
                 self.assertEqual(github.call_count, 1)
+
+    def test_author_eligibility_uses_repository_access_not_association(self):
+        for permission in ('admin', 'write', 'read', 'none'):
+            with self.subTest(permission=permission):
+                pr = dict(self.fixture(), author_association='CONTRIBUTOR', body='')
+                github = Mock(side_effect=[pr, {'permission': permission}, [{'changes': 0}]])
+                if permission in {'admin', 'write'}:
+                    ai_review.collect(github, 46, 'team/repo', 'abc')
+                    self.assertEqual(github.call_count, 3)
+                else:
+                    with self.assertRaisesRegex(ValueError, 'write access'):
+                        ai_review.collect(github, 46, 'team/repo', 'abc')
+                    self.assertEqual(github.call_count, 2)
+                self.assertEqual(github.call_args_list[1].args,
+                                 ('/collaborators/teammate/permission',))
 
     def test_unexpected_eligibility_failure_is_not_a_successful_skip(self):
         import io
@@ -43,15 +57,16 @@ class AIReviewTests(unittest.TestCase):
             with patch.dict(os.environ, GITHUB_REPOSITORY='team/repo', GH_TOKEN='github',
                             OPENAI_API_KEY='openai', GITHUB_EVENT_PATH=str(event),
                             GITHUB_STEP_SUMMARY=str(summary)), \
-                    patch('urllib.request.urlopen', return_value=io.BytesIO(json.dumps(pr).encode())) as request, \
+                    patch('urllib.request.urlopen', side_effect=[io.BytesIO(json.dumps(pr).encode()),
+                          io.BytesIO(b'{"permission":"read"}')]) as request, \
                     patch('builtins.print'), self.assertRaises(SystemExit) as result:
                 runpy.run_path(ai_review.__file__, run_name='__main__')
             self.assertEqual(result.exception.code, 1)
-            self.assertEqual(request.call_count, 1)
-            self.assertIn('PR author is not an owner, member, or collaborator', summary.read_text())
+            self.assertEqual(request.call_count, 2)
+            self.assertIn('PR author must have repository write access', summary.read_text())
 
     def test_collect_related_gherkin_and_patch(self):
-        github = Mock(side_effect=[self.fixture(), [{'filename': 'a.py', 'changes': 1,
+        github = Mock(side_effect=[self.fixture(), {'permission': 'write'}, [{'filename': 'a.py', 'changes': 1,
                        'patch': '+code', 'status': 'added'}],
                        {'title': 'Story', 'body': 'Scenario: Valid input'}])
         result = ai_review.collect(github, 40, 'team/repo', 'abc')
@@ -61,13 +76,13 @@ class AIReviewTests(unittest.TestCase):
     def test_collect_rejects_stale_closed_oversize_and_missing_patch(self):
         pr = self.fixture()
         for responses, sha in (([pr], 'old'), ([dict(pr, state='closed')], 'abc'),
-                               ([pr, []], 'abc'),
-                               ([pr, [{'changes': 1}]], 'abc')):
+                               ([pr, {'permission': 'write'}, []], 'abc'),
+                               ([pr, {'permission': 'write'}, [{'changes': 1}]], 'abc')):
             with self.subTest(responses=responses), self.assertRaises(ValueError):
                 ai_review.collect(Mock(side_effect=responses), 40, 'team/repo', sha)
 
     def test_pr_references_are_not_treated_as_story_issues(self):
-        github = Mock(side_effect=[self.fixture(), [{'changes': 0}], {'pull_request': {}}])
+        github = Mock(side_effect=[self.fixture(), {'permission': 'write'}, [{'changes': 0}], {'pull_request': {}}])
         self.assertEqual(ai_review.collect(github, 40, 'team/repo', 'abc')['issues'], [])
 
     def test_successful_request_parses_json(self):
@@ -78,9 +93,20 @@ class AIReviewTests(unittest.TestCase):
 
     def test_network_failure_is_sanitized(self):
         from urllib.error import URLError
-        with patch('scripts.ai_review.urlopen', side_effect=URLError('private')):
-            with self.assertRaisesRegex(RuntimeError, 'timed out'):
-                ai_review.request_json('https://api.openai.com/v1/responses', 'token', {})
+        for failure in (URLError('private'), TimeoutError('private')):
+            with self.subTest(failure=failure), patch('scripts.ai_review.urlopen', side_effect=failure):
+                with self.assertRaisesRegex(RuntimeError, 'POST to api.openai.com.*timed out') as error:
+                    ai_review.request_json('https://api.openai.com/v1/responses', 'secret', {})
+                self.assertNotIn('private', str(error.exception))
+                self.assertNotIn('secret', str(error.exception))
+
+    def test_invalid_api_json_identifies_service_without_exposing_body(self):
+        import io
+        with patch('scripts.ai_review.urlopen', return_value=io.BytesIO(b'private response')):
+            with self.assertRaisesRegex(RuntimeError, 'Invalid JSON.*GET to api.github.com') as error:
+                ai_review.request_json('https://api.github.com/test', 'secret')
+        self.assertNotIn('private', str(error.exception))
+        self.assertNotIn('secret', str(error.exception))
 
     def test_main_connects_collection_review_and_publication(self):
         import json
@@ -89,18 +115,22 @@ class AIReviewTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             event = Path(directory, 'event.json')
             event.write_text(json.dumps({'number': 40, 'pull_request': {'head': {'sha': 'abc'}}}))
-            replies = [dict(self.fixture(), body=''), [{'changes': 0}],
+            replies = [dict(self.fixture(), body=''), {'permission': 'write'}, [{'changes': 0}],
                        {'status': 'completed', 'output': [{'type': 'message', 'content': [
                            {'type': 'output_text', 'text': 'No supported findings.'}]}]},
                        self.fixture(), {}]
             with patch.dict(os.environ, GITHUB_REPOSITORY='team/repo', GH_TOKEN='github',
                             OPENAI_API_KEY='openai', GITHUB_EVENT_PATH=str(event)), \
                     patch.object(ai_review, 'request_json', side_effect=replies) as request, \
-                    patch('builtins.print'):
+                    patch('builtins.print') as log:
                 ai_review.main()
-                self.assertEqual(request.call_count, 5)
+                self.assertEqual(request.call_count, 6)
                 self.assertEqual(request.call_args.args[0],
                                  'https://api.github.com/repos/team/repo/issues/40/comments')
+                messages = [call.args[0] for call in log.call_args_list]
+                self.assertIn('Collecting PR #40 at abc', messages)
+                self.assertIn('Generating review with gpt-6-luna', messages)
+                self.assertIn('Publishing review for PR #40', messages)
             with patch.dict(os.environ, GITHUB_REPOSITORY='team/repo', GH_TOKEN='github',
                             OPENAI_API_KEY=''), self.assertRaisesRegex(ValueError, 'missing'):
                 ai_review.main()
@@ -146,6 +176,11 @@ class AIReviewTests(unittest.TestCase):
             with self.subTest(result=result), self.assertRaises(ValueError):
                 ai_review.review({}, Mock(return_value=result))
 
+    def test_output_limit_failure_explains_incomplete_review(self):
+        result = {'status': 'incomplete', 'incomplete_details': {'reason': 'max_output_tokens'}}
+        with self.assertRaisesRegex(ValueError, 'output token limit'):
+            ai_review.review({}, Mock(return_value=result))
+
     def test_stale_head_does_not_publish(self):
         github = Mock(return_value={'head': {'sha': 'new'}})
         with self.assertRaisesRegex(ValueError, 'changed'):
@@ -161,10 +196,18 @@ class AIReviewTests(unittest.TestCase):
         self.assertIn('advisory', body)
 
     def test_api_errors_do_not_expose_response_or_credentials(self):
+        import io
         from urllib.error import HTTPError
-        with patch('scripts.ai_review.urlopen', side_effect=HTTPError(
-                'https://api.openai.com/v1/responses', 429, 'private error', {}, None)):
-            with self.assertRaisesRegex(RuntimeError, 'HTTP 429') as error:
-                ai_review.request_json('https://api.openai.com/v1/responses', 'secret', {})
-        self.assertNotIn('private', str(error.exception))
-        self.assertNotIn('secret', str(error.exception))
+        for host, status, headers, expected_id in (
+                ('api.openai.com', 429, {'x-request-id': 'req_123'}, 'req_123'),
+                ('api.github.com', 403, {'x-github-request-id': '123:ABC'}, '123:ABC'),
+                ('api.github.com', 500, {}, 'unavailable'),
+                ('api.github.com', 403, {'x-github-request-id': 'private\nforged log'}, 'unavailable')):
+            with self.subTest(host=host, status=status), patch('scripts.ai_review.urlopen',
+                    side_effect=HTTPError(f'https://{host}/test', status, 'private error',
+                                          headers, io.BytesIO(b'private response'))):
+                with self.assertRaisesRegex(RuntimeError, f'HTTP {status} during POST to {host}') as error:
+                    ai_review.request_json(f'https://{host}/test', 'secret', {})
+            self.assertIn(expected_id, str(error.exception))
+            self.assertNotIn('private', str(error.exception))
+            self.assertNotIn('secret', str(error.exception))
