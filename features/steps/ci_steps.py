@@ -14,9 +14,9 @@ from scripts import ai_review, check_coverage
 def related_issue(context):
     context.pr = {'head': {'sha': 'abc', 'repo': {'full_name': 'team/repo'}},
                   'base': {'sha': 'base', 'ref': 'main'}, 'state': 'open',
-                  'draft': False, 'author_association': 'MEMBER',
+                  'draft': False, 'user': {'login': 'teammate'},
                   'changed_files': 1, 'title': 'Validate input', 'body': 'Closes #12'}
-    context.github = Mock(side_effect=[context.pr,
+    context.github = Mock(side_effect=[context.pr, {'permission': 'write'},
         [{'filename': 'src/example.py', 'changes': 1, 'patch': '+validate(input)'}],
         {'title': 'Validation', 'body': 'Scenario: Invalid input is rejected'}, context.pr, {}])
     context.api = Mock(return_value={'status': 'completed', 'output': [
