@@ -42,6 +42,13 @@ def collect(github, number, repository, expected_sha):
     pr = github(f'/pulls/{number}')
     if pr['head']['sha'] != expected_sha or pr['state'] != 'open':
         raise ValueError('PR changed or closed; use its latest review run')
+    # Read trust metadata from GitHub, not optional event-time author fields.
+    if pr['draft'] is not False or pr['base']['ref'] != 'main':
+        raise ValueError('PR must be non-draft and target main')
+    if (pr['head']['repo'] or {}).get('full_name', '').lower() != repository.lower():
+        raise ValueError('PR head is not in this repository')
+    if pr['author_association'] not in {'OWNER', 'MEMBER', 'COLLABORATOR'}:
+        raise ValueError('PR author is not an owner, member, or collaborator')
     files = github(f'/pulls/{number}/files?per_page=100')
     if len(files) != pr['changed_files'] or len(files) > 60:
         raise ValueError('PR too large for one review; split it into smaller PRs')
@@ -116,5 +123,9 @@ if __name__ == '__main__':
         main()
     except (ValueError, RuntimeError, KeyError) as error:
         # Never print API response bodies, request headers, or credentials.
-        print(f'Review failed: {error}')
+        message = f'Review failed: {error}'
+        print(message)
+        if os.environ.get('GITHUB_STEP_SUMMARY'):
+            with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as summary:
+                summary.write(message + '\n')
         raise SystemExit(1)

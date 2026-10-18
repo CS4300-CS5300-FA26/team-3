@@ -17,10 +17,8 @@ concurrency:
 
 jobs:
   review:
-    if: >-
-      github.event.pull_request.draft == false &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)
+    # Drafts skip normally; current author/repository trust is checked by the script.
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:

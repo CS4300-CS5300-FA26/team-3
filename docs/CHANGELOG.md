@@ -14,6 +14,13 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-17 — Fix unexpected AI-review skips
+
+- **Reference:** #41; prompted by PR #44, delivery pending.
+- Check author/repository eligibility in the [review script](../.github/scripts/ai_review.py)
+  using current GitHub metadata; report failures in the Actions summary. Drafts
+  still skip normally. Takes effect after human delivery to `main`.
+
 ### 2026-10-12 — Luna PR review and CI coverage
 
 - **Reference:** [Issue #41](https://github.com/CS4300-CS5300-FA26/team-3/issues/41),

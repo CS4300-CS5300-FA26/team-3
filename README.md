@@ -47,13 +47,11 @@ Run `python src/manage.py test tests src` and `python -m behave` locally.
 CI reports coverage on pushes and PRs, requires 80% line coverage, and saves
 coverage reports as workflow artifacts.
 
-For each new behavior, write a focused test and run it to confirm the expected
-failure (RED). Add the behavior, rerun the focused test (GREEN), then simplify
-and rerun the full Django and Behave suites before treating the issue as done.
-
 Luna reviews team PRs using the `OPENAI_API_KEY` GitHub secret. Reference issues
 in the PR description (for example, `Related: #12`) to include their Gherkin
 criteria. Reviews become available once the workflow reaches `main`.
+Drafts skip normally. Other review failures appear in the Actions summary;
+current author/repository eligibility is checked using GitHub metadata.
 
 ## Source layout
 
@@ -226,7 +224,12 @@ amount in Django admin, checked the zero-amount error and absence of a saved row
 and confirmed an incognito visitor is redirected. The full Django suite passed with
 54 tests. Entries are not yet associated with users or shown in a budget.
 
-**Test check before continuing:** From `src/` with the virtual environment
-active, run `python manage.py test ../tests --pattern=test_transaction_view.py`.
-The current tests check the form fields, signed-in page display, a saved paycheck,
-and a zero-amount POST that shows an error without saving a row.
+### Sprint 1: Oct 17, 2026 — review eligibility
+
+**Tool:** Codex
+
+**What it helped with:** Diagnosed silent AI-review skips and prepared current-PR
+eligibility checks with visible failures.
+
+**How we used the result:** Checked the workflow boundaries and exercised eligible,
+ineligible, and failure cases locally before human delivery.
