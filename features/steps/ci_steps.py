@@ -12,7 +12,9 @@ from scripts import ai_review, check_coverage
 
 @given('a pull request references an issue with Gherkin acceptance criteria')
 def related_issue(context):
-    context.pr = {'head': {'sha': 'abc'}, 'base': {'sha': 'base'}, 'state': 'open',
+    context.pr = {'head': {'sha': 'abc', 'repo': {'full_name': 'team/repo'}},
+                  'base': {'sha': 'base', 'ref': 'main'}, 'state': 'open',
+                  'draft': False, 'author_association': 'MEMBER',
                   'changed_files': 1, 'title': 'Validate input', 'body': 'Closes #12'}
     context.github = Mock(side_effect=[context.pr,
         [{'filename': 'src/example.py', 'changes': 1, 'patch': '+validate(input)'}],

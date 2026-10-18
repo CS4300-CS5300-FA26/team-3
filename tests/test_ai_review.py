@@ -11,8 +11,44 @@ from scripts import check_coverage
 
 class AIReviewTests(unittest.TestCase):
     def fixture(self):
-        return {'head': {'sha': 'abc'}, 'base': {'sha': 'base'}, 'state': 'open',
+        return {'head': {'sha': 'abc', 'repo': {'full_name': 'team/repo'}},
+                'base': {'sha': 'base', 'ref': 'main'}, 'state': 'open',
+                'draft': False, 'author_association': 'MEMBER',
                 'changed_files': 1, 'title': 'Change', 'body': 'Closes #12'}
+
+    def test_collect_blocks_ineligible_current_pr_before_reading_changes(self):
+        """#41 / PR #44: validate trust with current REST metadata."""
+        cases = [('draft', True), ('draft', None), ('base', {'ref': 'other'}),
+                 ('author_association', 'CONTRIBUTOR'),
+                 ('head', {'sha': 'abc', 'repo': {'full_name': 'other/repo'}}),
+                 ('head', {'sha': 'abc', 'repo': None})]
+        for field, value in cases:
+            with self.subTest(field=field, value=value):
+                github = Mock(return_value=dict(self.fixture(), **{field: value}))
+                with self.assertRaises(ValueError):
+                    ai_review.collect(github, 44, 'team/repo', 'abc')
+                self.assertEqual(github.call_count, 1)
+
+    def test_unexpected_eligibility_failure_is_not_a_successful_skip(self):
+        import io
+        import json
+        import os
+        import runpy
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            event = Path(directory, 'event.json')
+            summary = Path(directory, 'summary.md')
+            event.write_text(json.dumps({'number': 44, 'pull_request': {'head': {'sha': 'abc'}}}))
+            pr = dict(self.fixture(), author_association='CONTRIBUTOR')
+            with patch.dict(os.environ, GITHUB_REPOSITORY='team/repo', GH_TOKEN='github',
+                            OPENAI_API_KEY='openai', GITHUB_EVENT_PATH=str(event),
+                            GITHUB_STEP_SUMMARY=str(summary)), \
+                    patch('urllib.request.urlopen', return_value=io.BytesIO(json.dumps(pr).encode())) as request, \
+                    patch('builtins.print'), self.assertRaises(SystemExit) as result:
+                runpy.run_path(ai_review.__file__, run_name='__main__')
+            self.assertEqual(result.exception.code, 1)
+            self.assertEqual(request.call_count, 1)
+            self.assertIn('PR author is not an owner, member, or collaborator', summary.read_text())
 
     def test_collect_related_gherkin_and_patch(self):
         github = Mock(side_effect=[self.fixture(), [{'filename': 'a.py', 'changes': 1,
