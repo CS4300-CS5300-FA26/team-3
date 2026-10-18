@@ -14,6 +14,16 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-17 — Record income regression coverage and page feedback
+
+- **Reference:** [Issue #12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12); follow-up PR pending.
+- Add [view regression tests](../tests/test_transaction_view.py) for access, CSRF,
+  negative amounts, and posted field overrides, plus a [Behave scenario](../features/record_income.feature)
+  for the non-positive amount criterion.
+- Show source errors and save confirmation on the [income page](../src/transactions/templates/transactions/record_income.html),
+  with clearer styling and a BudgetWise home link.
+- **Limits:** Income is not yet associated with a user or reflected in the budget.
+
 ### 2026-10-17 — Fix unexpected AI-review skips
 
 - **Reference:** #41; prompted by PR #44, delivery pending.

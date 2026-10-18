@@ -214,6 +214,8 @@ review and delivery; live API review still needs verification after merging to `
 - Drafted the income form and focused tests for the specified valid and zero-amount inputs.
 - Drafted the basic income HTML page, protected view, URL, and page test.
 - Drafted the Save income button, POST handling, and tests for valid and zero-amount submissions.
+- Drafted tests and feedback for a missing income source and a successful save.
+- Helped style the income page and add the BudgetWise home link.
 
 **How we used the result:**
 
@@ -222,7 +224,8 @@ browser input. Fabian chose an explicit GET/POST branch for clarity. He manually
 the tests, saved an income entry on the local site and verified its date, type, and
 amount in Django admin, checked the zero-amount error and absence of a saved row,
 and confirmed an incognito visitor is redirected. The full Django suite passed with
-54 tests. Entries are not yet associated with users or shown in a budget.
+54 tests. Fabian also checked the missing-source error, save confirmation, and
+updated page locally. Entries are not yet associated with users or shown in a budget.
 
 ### Sprint 1: Oct 17, 2026 — review eligibility
 
