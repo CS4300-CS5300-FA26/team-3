@@ -13,13 +13,12 @@ class AIReviewTests(unittest.TestCase):
     def fixture(self):
         return {'head': {'sha': 'abc', 'repo': {'full_name': 'team/repo'}},
                 'base': {'sha': 'base', 'ref': 'main'}, 'state': 'open',
-                'draft': False, 'author_association': 'MEMBER',
+                'draft': False, 'author_association': 'MEMBER', 'user': {'login': 'teammate'},
                 'changed_files': 1, 'title': 'Change', 'body': 'Closes #12'}
 
     def test_collect_blocks_ineligible_current_pr_before_reading_changes(self):
         """#41 / PR #44: validate trust with current REST metadata."""
         cases = [('draft', True), ('draft', None), ('base', {'ref': 'other'}),
-                 ('author_association', 'CONTRIBUTOR'),
                  ('head', {'sha': 'abc', 'repo': {'full_name': 'other/repo'}}),
                  ('head', {'sha': 'abc', 'repo': None})]
         for field, value in cases:
@@ -28,6 +27,21 @@ class AIReviewTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     ai_review.collect(github, 44, 'team/repo', 'abc')
                 self.assertEqual(github.call_count, 1)
+
+    def test_author_eligibility_uses_repository_access_not_association(self):
+        for permission in ('admin', 'write', 'read', 'none'):
+            with self.subTest(permission=permission):
+                pr = dict(self.fixture(), author_association='CONTRIBUTOR', body='')
+                github = Mock(side_effect=[pr, {'permission': permission}, [{'changes': 0}]])
+                if permission in {'admin', 'write'}:
+                    ai_review.collect(github, 46, 'team/repo', 'abc')
+                    self.assertEqual(github.call_count, 3)
+                else:
+                    with self.assertRaisesRegex(ValueError, 'write access'):
+                        ai_review.collect(github, 46, 'team/repo', 'abc')
+                    self.assertEqual(github.call_count, 2)
+                self.assertEqual(github.call_args_list[1].args,
+                                 ('/collaborators/teammate/permission',))
 
     def test_unexpected_eligibility_failure_is_not_a_successful_skip(self):
         import io
@@ -43,15 +57,16 @@ class AIReviewTests(unittest.TestCase):
             with patch.dict(os.environ, GITHUB_REPOSITORY='team/repo', GH_TOKEN='github',
                             OPENAI_API_KEY='openai', GITHUB_EVENT_PATH=str(event),
                             GITHUB_STEP_SUMMARY=str(summary)), \
-                    patch('urllib.request.urlopen', return_value=io.BytesIO(json.dumps(pr).encode())) as request, \
+                    patch('urllib.request.urlopen', side_effect=[io.BytesIO(json.dumps(pr).encode()),
+                          io.BytesIO(b'{"permission":"read"}')]) as request, \
                     patch('builtins.print'), self.assertRaises(SystemExit) as result:
                 runpy.run_path(ai_review.__file__, run_name='__main__')
             self.assertEqual(result.exception.code, 1)
-            self.assertEqual(request.call_count, 1)
-            self.assertIn('PR author is not an owner, member, or collaborator', summary.read_text())
+            self.assertEqual(request.call_count, 2)
+            self.assertIn('PR author must have repository write access', summary.read_text())
 
     def test_collect_related_gherkin_and_patch(self):
-        github = Mock(side_effect=[self.fixture(), [{'filename': 'a.py', 'changes': 1,
+        github = Mock(side_effect=[self.fixture(), {'permission': 'write'}, [{'filename': 'a.py', 'changes': 1,
                        'patch': '+code', 'status': 'added'}],
                        {'title': 'Story', 'body': 'Scenario: Valid input'}])
         result = ai_review.collect(github, 40, 'team/repo', 'abc')
@@ -61,13 +76,13 @@ class AIReviewTests(unittest.TestCase):
     def test_collect_rejects_stale_closed_oversize_and_missing_patch(self):
         pr = self.fixture()
         for responses, sha in (([pr], 'old'), ([dict(pr, state='closed')], 'abc'),
-                               ([pr, []], 'abc'),
-                               ([pr, [{'changes': 1}]], 'abc')):
+                               ([pr, {'permission': 'write'}, []], 'abc'),
+                               ([pr, {'permission': 'write'}, [{'changes': 1}]], 'abc')):
             with self.subTest(responses=responses), self.assertRaises(ValueError):
                 ai_review.collect(Mock(side_effect=responses), 40, 'team/repo', sha)
 
     def test_pr_references_are_not_treated_as_story_issues(self):
-        github = Mock(side_effect=[self.fixture(), [{'changes': 0}], {'pull_request': {}}])
+        github = Mock(side_effect=[self.fixture(), {'permission': 'write'}, [{'changes': 0}], {'pull_request': {}}])
         self.assertEqual(ai_review.collect(github, 40, 'team/repo', 'abc')['issues'], [])
 
     def test_successful_request_parses_json(self):
@@ -100,7 +115,7 @@ class AIReviewTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             event = Path(directory, 'event.json')
             event.write_text(json.dumps({'number': 40, 'pull_request': {'head': {'sha': 'abc'}}}))
-            replies = [dict(self.fixture(), body=''), [{'changes': 0}],
+            replies = [dict(self.fixture(), body=''), {'permission': 'write'}, [{'changes': 0}],
                        {'status': 'completed', 'output': [{'type': 'message', 'content': [
                            {'type': 'output_text', 'text': 'No supported findings.'}]}]},
                        self.fixture(), {}]
@@ -109,7 +124,7 @@ class AIReviewTests(unittest.TestCase):
                     patch.object(ai_review, 'request_json', side_effect=replies) as request, \
                     patch('builtins.print') as log:
                 ai_review.main()
-                self.assertEqual(request.call_count, 5)
+                self.assertEqual(request.call_count, 6)
                 self.assertEqual(request.call_args.args[0],
                                  'https://api.github.com/repos/team/repo/issues/40/comments')
                 messages = [call.args[0] for call in log.call_args_list]
