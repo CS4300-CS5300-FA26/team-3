@@ -10,7 +10,7 @@ class IncomeForm(forms.ModelForm):
     class Meta:
         model = Transaction
         fields = ["amount", "date", "description"]
-        labels = {"description": "Source"}
+        labels = {"amount": "Amount ($)", "description": "Source"}
         widgets = {
             "amount": forms.NumberInput(attrs={"step": "0.01"}),
             "date": forms.DateInput(attrs={"type": "date"}),
