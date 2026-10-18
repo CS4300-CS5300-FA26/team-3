@@ -16,14 +16,21 @@ def request_json(url, token, data=None):
                                'Accept': 'application/vnd.github+json' if url.startswith(
                                    'https://api.github.com/') else 'application/json',
                                'Content-Type': 'application/json'})
+    operation = f'{request.get_method()} to {request.host}'
     try:
         # No automatic retries: a timed-out generation may still incur a charge.
         with urlopen(request, timeout=120) as response:
             return json.load(response)
     except HTTPError as error:
-        raise RuntimeError(f'API request failed: HTTP {error.code}') from None
+        request_id = error.headers.get('x-request-id') or error.headers.get('x-github-request-id', 'unavailable')
+        if not re.fullmatch(r'[A-Za-z0-9_:-]{1,128}', request_id):
+            request_id = 'unavailable'
+        raise RuntimeError(f'API request failed: HTTP {error.code} during {operation}; '
+                           f'request ID: {request_id}') from None
     except (URLError, TimeoutError):
-        raise RuntimeError('API request failed or timed out; inspect service status before rerunning') from None
+        raise RuntimeError(f'{operation} failed or timed out; inspect service status before rerunning') from None
+    except json.JSONDecodeError:
+        raise RuntimeError(f'Invalid JSON response during {operation}') from None
 
 
 def issue_numbers(body, repository):
@@ -76,6 +83,8 @@ def review(context, api):
     result = api({'model': MODEL, 'instructions': prompt, 'input': content,
                   'reasoning': {'effort': 'medium'}, 'max_output_tokens': 6000, 'store': False})
     if result.get('status') != 'completed':
+        if (result.get('incomplete_details') or {}).get('reason') == 'max_output_tokens':
+            raise ValueError('OpenAI review reached its output token limit; no partial review was posted')
         raise ValueError('OpenAI review did not complete; this is not a clean review')
     parts = [part for item in result.get('output', []) if item.get('type') == 'message'
              for part in item.get('content', [])]
@@ -111,9 +120,12 @@ def main():
     def github(path, data=None):
         return request_json(f'https://api.github.com/repos/{repository}{path}', github_token, data)
 
+    print(f'Collecting PR #{number} at {sha}', flush=True)
     context = collect(github, number, repository, sha)
+    print(f'Generating review with {MODEL}', flush=True)
     output = review(context, lambda data: request_json(
         'https://api.openai.com/v1/responses', api_key, data))
+    print(f'Publishing review for PR #{number}', flush=True)
     publish(github, number, sha, output)
     print(f'Posted advisory review for PR #{number} at {sha}')
 
