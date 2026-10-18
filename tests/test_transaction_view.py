@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from transactions.models import Transaction
@@ -30,6 +30,66 @@ class IncomeFormTests(TestCase):
 
 
 class RecordIncomeViewTests(TestCase):
+    def test_post_without_csrf_token_is_rejected_without_saving(self):
+        student = get_user_model().objects.create_user(username="student")
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(student)
+
+        response = csrf_client.post(
+            reverse("record_income"),
+            {"amount": "5.00", "date": "2026-10-20", "description": "CSRF attempt"},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Transaction.objects.filter(description="CSRF attempt").exists())
+
+    def test_post_cannot_override_income_kind(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
+
+        self.client.post(
+            reverse("record_income"),
+            {
+                "amount": "5.00",
+                "date": "2026-10-20",
+                "description": "Kind override attempt",
+                "kind": "expense",
+                "category": "Food",
+            },
+        )
+
+        income = Transaction.objects.get(description="Kind override attempt")
+        self.assertEqual(income.kind, Transaction.Kind.INCOME)
+        self.assertEqual(income.category, "")
+
+    def test_post_cannot_mark_income_as_demo(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
+
+        self.client.post(
+            reverse("record_income"),
+            {
+                "amount": "5.00",
+                "date": "2026-10-20",
+                "description": "Demo override attempt",
+                "is_demo": "on",
+            },
+        )
+
+        income = Transaction.objects.get(description="Demo override attempt")
+        self.assertFalse(income.is_demo)
+
+    def test_anonymous_post_redirects_without_saving_income(self):
+        response = self.client.post(
+            reverse("record_income"),
+            {"amount": "5.00", "date": "2026-10-20", "description": "Anonymous attempt"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            Transaction.objects.filter(description="Anonymous attempt").exists()
+        )
+
     def test_signed_in_student_can_open_income_form(self):
         student = get_user_model().objects.create_user(username="student")
         self.client.force_login(student)
@@ -64,6 +124,20 @@ class RecordIncomeViewTests(TestCase):
         self.assertContains(response, "Amount must be greater than zero")
         self.assertFalse(
             Transaction.objects.filter(description="Invalid paycheck", is_demo=False).exists()
+        )
+
+    def test_negative_amount_post_shows_error_and_saves_nothing(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
+
+        response = self.client.post(
+            reverse("record_income"),
+            {"amount": "-0.01", "date": "2026-10-02", "description": "Negative paycheck"},
+        )
+
+        self.assertContains(response, "Amount must be greater than zero")
+        self.assertFalse(
+            Transaction.objects.filter(description="Negative paycheck", is_demo=False).exists()
         )
 
 
