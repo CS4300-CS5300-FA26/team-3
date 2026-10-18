@@ -1,6 +1,22 @@
-from django.shortcuts import render
+from django import forms
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect, render
 
 from .models import Transaction
+
+
+class IncomeForm(forms.ModelForm):
+    class Meta:
+        model = Transaction
+        fields = ["amount", "date", "description"]
+        labels = {"description": "Source"}
+        widgets = {
+            "amount": forms.NumberInput(attrs={"step": "0.01"}),
+            "date": forms.DateInput(attrs={"type": "date"}),
+        }
+        error_messages = {
+            "amount": {"min_value": "Amount must be greater than zero"},
+        }
 
 
 def transaction_list(request):
@@ -12,3 +28,19 @@ def transaction_list(request):
         "transactions/transaction_list.html",
         {"transactions": transactions},
     )
+
+
+@login_required
+def record_income(request):
+    if request.method == "POST":
+        form = IncomeForm(request.POST)
+    else:
+        form = IncomeForm(None)
+
+    if request.method == "POST" and form.is_valid():
+        income = form.save(commit=False)
+        income.kind = Transaction.Kind.INCOME
+        income.save()
+        return redirect("record_income")
+
+    return render(request, "transactions/record_income.html", {"form": form})

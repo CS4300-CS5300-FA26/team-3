@@ -1,10 +1,70 @@
 from datetime import date
 from decimal import Decimal
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
 from transactions.models import Transaction
+from transactions.views import IncomeForm
+
+
+class IncomeFormTests(TestCase):
+    def test_accepts_paycheck_details_as_exact_money(self):
+        form = IncomeForm(
+            {"amount": "1200.00", "date": "2026-10-02", "description": "Part-time job"}
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["amount"], Decimal("1200.00"))
+        self.assertEqual(form.cleaned_data["date"], date(2026, 10, 2))
+        self.assertEqual(form.cleaned_data["description"], "Part-time job")
+
+    def test_rejects_zero_amount_with_story_message(self):
+        form = IncomeForm(
+            {"amount": "0.00", "date": "2026-10-02", "description": "Part-time job"}
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("Amount must be greater than zero", form.errors["amount"])
+
+
+class RecordIncomeViewTests(TestCase):
+    def test_signed_in_student_can_open_income_form(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
+
+        response = self.client.get(reverse("record_income"))
+
+        self.assertContains(response, "Source")
+
+    def test_submitting_paycheck_saves_an_income_transaction(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
+
+        self.client.post(
+            reverse("record_income"),
+            {"amount": "1200.00", "date": "2026-10-02", "description": "Part-time job"},
+        )
+
+        income = Transaction.objects.get(description="Part-time job", is_demo=False)
+        self.assertEqual(income.kind, Transaction.Kind.INCOME)
+        self.assertEqual(income.amount, Decimal("1200.00"))
+        self.assertEqual(income.date, date(2026, 10, 2))
+
+    def test_zero_amount_post_shows_error_and_saves_nothing(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
+
+        response = self.client.post(
+            reverse("record_income"),
+            {"amount": "0.00", "date": "2026-10-02", "description": "Invalid paycheck"},
+        )
+
+        self.assertContains(response, "Amount must be greater than zero")
+        self.assertFalse(
+            Transaction.objects.filter(description="Invalid paycheck", is_demo=False).exists()
+        )
 
 
 class TransactionListViewTests(TestCase):
