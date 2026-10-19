@@ -170,7 +170,7 @@ class TransactionListViewTests(TestCase):
         """The landing page should handle an empty transaction database."""
         response = self.client.get(reverse("transaction_list"))
 
-        self.assertContains(response, "No transactions yet.")
+        self.assertContains(response, "No transactions in this period")
 
     def test_transaction_list_displays_demo_transaction(self):
         """Demo transactions stored in the database should appear publicly."""
@@ -183,7 +183,7 @@ class TransactionListViewTests(TestCase):
             is_demo=True,
         )
 
-        response = self.client.get(reverse("transaction_list"))
+        response = self.client.get(reverse("transaction_list"), {"month": "2026-10"})
 
         self.assertContains(response, "Demo Lunch")
         self.assertContains(response, "Food")
@@ -199,7 +199,7 @@ class TransactionListViewTests(TestCase):
             category="Personal",
         )
 
-        response = self.client.get(reverse("transaction_list"))
+        response = self.client.get(reverse("transaction_list"), {"month": "2026-10"})
 
         self.assertNotContains(response, "Private Transaction")
         self.assertNotContains(response, "99.99")
