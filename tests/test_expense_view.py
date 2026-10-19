@@ -82,7 +82,12 @@ class ExpenseFormTests(TestCase):
     def test_blank_or_whitespace_description_is_rejected(self):
         # Each displays as nothing: a zero-width space, joiner and byte-order mark,
         # a control character, and combining marks with no letter to attach to.
-        for value in ["", "   ", "​", " ‍﻿ ", "\x07", "́", "⃝"]:
+        # Also the blank Braille pattern and Hangul fillers, which are letters or
+        # symbols in Unicode but draw as empty space.
+        for value in [
+            "", "   ", "​", " ‍﻿ ", "\x07", "́", "⃝",
+            "⠀", "ㅤ", "ᅟᅠ", "ﾠ",
+        ]:
             with self.subTest(description=value):
                 form = ExpenseForm({**RENT, "description": value})
 
@@ -165,12 +170,14 @@ class RecordExpenseViewTests(TestCase):
         self.assertFalse(Transaction.objects.filter(is_demo=False).exists())
 
     def test_invisible_only_description_shows_error_and_saves_nothing(self):
-        response = self.client.post(
-            reverse("record_expense"), {**RENT, "description": "​"}
-        )
+        for description in ["​", "⠀"]:
+            with self.subTest(description=description):
+                response = self.client.post(
+                    reverse("record_expense"), {**RENT, "description": description}
+                )
 
-        self.assertContains(response, "Enter an expense description.")
-        self.assertFalse(Transaction.objects.filter(is_demo=False).exists())
+                self.assertContains(response, "Enter an expense description.")
+                self.assertFalse(Transaction.objects.filter(is_demo=False).exists())
 
     def test_description_with_visible_text_keeps_its_characters(self):
         # Joiners and combining accents inside visible text are kept as typed.
