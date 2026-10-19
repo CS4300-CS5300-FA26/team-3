@@ -80,8 +80,9 @@ class ExpenseFormTests(TestCase):
                 self.assertIn("date", form.errors)
 
     def test_blank_or_whitespace_description_is_rejected(self):
-        # Zero-width space, zero-width joiner and byte-order mark display as nothing.
-        for value in ["", "   ", "​", " ‍﻿ "]:
+        # Each displays as nothing: a zero-width space, joiner and byte-order mark,
+        # a control character, and combining marks with no letter to attach to.
+        for value in ["", "   ", "​", " ‍﻿ ", "\x07", "́", "⃝"]:
             with self.subTest(description=value):
                 form = ExpenseForm({**RENT, "description": value})
 
@@ -172,10 +173,12 @@ class RecordExpenseViewTests(TestCase):
         self.assertFalse(Transaction.objects.filter(is_demo=False).exists())
 
     def test_description_with_visible_text_keeps_its_characters(self):
-        # Joiners inside visible text, as in some emoji and scripts, are kept as typed.
-        self.client.post(reverse("record_expense"), {**RENT, "description": "Caf‍e"})
+        # Joiners and combining accents inside visible text are kept as typed.
+        for description in ["Caf‍e", "Café"]:
+            with self.subTest(description=description):
+                self.client.post(reverse("record_expense"), {**RENT, "description": description})
 
-        self.assertEqual(Transaction.objects.get(is_demo=False).description, "Caf‍e")
+                self.assertTrue(Transaction.objects.filter(description=description).exists())
 
     def test_html_and_sql_like_descriptions_are_stored_as_plain_text(self):
         description = "<script>alert(1)</script>'; DROP TABLE transactions_transaction; --"

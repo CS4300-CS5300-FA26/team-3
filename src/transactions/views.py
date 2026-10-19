@@ -27,6 +27,7 @@ class IncomeForm(forms.ModelForm):
 
 
 EXPENSE_CATEGORIES = ["Housing", "Food", "Books", "Transportation", "Other"]
+INVISIBLE_CATEGORIES = {"Cc", "Cf", "Mn", "Me"}
 
 
 class ExpenseForm(forms.ModelForm):
@@ -59,10 +60,14 @@ class ExpenseForm(forms.ModelForm):
 
     def clean_description(self):
         description = self.cleaned_data["description"]
-        # Format characters such as a zero-width space (Unicode category "Cf") pass
-        # Django's whitespace strip but display as nothing, so a description made
-        # only of them would look blank in the budget.
-        if all(char.isspace() or unicodedata.category(char) == "Cf" for char in description):
+        # These pass Django's whitespace strip but display as nothing on their own:
+        # control (Cc) and format (Cf) characters such as a zero-width space, and
+        # combining marks (Mn, Me) with no letter to attach to. Reject a description
+        # made only of them; inside visible text they are kept as typed.
+        if all(
+            char.isspace() or unicodedata.category(char) in INVISIBLE_CATEGORIES
+            for char in description
+        ):
             raise forms.ValidationError("Enter an expense description.")
         return description
 
