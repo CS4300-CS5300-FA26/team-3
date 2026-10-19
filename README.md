@@ -256,6 +256,17 @@ eligibility checks with visible failures.
 **How we used the result:** Checked the workflow boundaries and exercised eligible,
 ineligible, and failure cases locally before human delivery.
 
+### Sprint 1: Oct 18, 2026 — Account foundation
+
+**Tool:** Codex
+
+**What it helped with:** Reviewed the shared email identity contract, prepared focused
+tests, and foundation Behave scenarios for #10.
+
+**How we used the result:** Added email normalization and account creation using
+the existing Django user model, with tests for input validation, password handling,
+and duplicate protection.
+
 ### Sprint 1: Oct 19, 2026 — Calendar month budget integration
 
 **Tool:** Codex
