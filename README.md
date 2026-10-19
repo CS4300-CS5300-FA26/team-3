@@ -270,3 +270,22 @@ ineligible, and failure cases locally before human delivery.
 
 We reviewed the dashboard locally and retained the demo-only scope while combining
 it with the team's income form and landing-page styling.
+
+### Sprint 1: Oct 19, 2026 — Recording Expenses
+
+**Tool:** Claude Code
+
+**What it helped with:**
+
+- Reviewed the D-4 acceptance criteria and the existing income form, view, and tests.
+- Drafted the expense form, protected view, URL, page, and focused tests, written
+  before the implementation.
+- Reviewed the change for access control, field tampering, and markup issues, and
+  added the missing-category Behave scenario.
+
+**How we used the result:**
+
+We followed the income pattern so the two pages behave the same, kept the category
+list in the form so the change needed no migration, and left out the transaction-list
+and remaining-budget criteria until expenses are tied to users. Noah chose the
+category list and the issue reference.
