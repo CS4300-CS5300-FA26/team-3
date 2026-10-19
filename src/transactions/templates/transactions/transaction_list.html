@@ -52,6 +52,18 @@
 <body>
     <header><h1>BudgetWise</h1></header>
     <main>
+        <form method="get" action="{% url 'transaction_list' %}">
+            <label for="month">Timeframe</label>
+            <input type="month" id="month" name="month" value="{{ selected_month }}" required>
+            <button type="submit">View budget</button>
+        </form>
+
+        <section aria-labelledby="remaining-budget-heading">
+            <h2 id="remaining-budget-heading">Remaining budget</h2>
+            <p>{{ period_start|date:"F Y" }}</p>
+            <p><strong>${{ remaining_budget|floatformat:"2u" }}</strong></p>
+        </section>
+
         <h2>Transactions <small>Demo transactions</small></h2>
         {% if transactions %}
             <table aria-label="Demo transactions">
@@ -77,7 +89,7 @@
                 </tbody>
             </table>
         {% else %}
-            <p>No transactions yet.</p>
+            <p>No transactions in this period</p>
         {% endif %}
     </main>
 </body>

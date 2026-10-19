@@ -14,6 +14,17 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-19 — Calendar month budget summary
+
+- **Reference:** [Issue #21](https://github.com/CS4300-CS5300-FA26/team-3/issues/21); PR pending.
+- Add a month selector and exact income-minus-expenses total to the
+  [demo dashboard](../src/transactions/views.py), with current-month fallback and
+  an empty-period message. See the [acceptance scenarios](../features/remaining_budget.feature).
+- Add a repeatable [demo command](../src/transactions/management/commands/seed_demo_transactions.py)
+  for January 2027 examples, preserving existing records.
+- **Limits:** Only demo transactions contribute; user-entered income remains
+  excluded from the public dashboard.
+
 ### 2026-10-17 — Record income regression coverage and page feedback
 
 - **Reference:** [Issue #12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12); follow-up PR pending.

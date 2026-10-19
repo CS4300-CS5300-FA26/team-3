@@ -53,6 +53,25 @@ criteria. Reviews become available once the workflow reaches `main`.
 Drafts skip normally. Other review failures appear in the Actions summary;
 current author/repository eligibility is checked using GitHub metadata.
 
+## Optional demo transactions
+
+To add shared examples for testing the month selector, run this command from the
+project root in your activated virtual environment after running migrations:
+
+```bash
+python src/manage.py seed_demo_transactions
+```
+
+This adds a $900.00 paycheck on January 5, 2027 and a $275.00 grocery expense on
+January 10, 2027. Both are demo transactions visible on the public dashboard.
+Select January 2027 to see $625.00 remaining if that month has no other demo data.
+Matching examples already present are skipped, including those added manually;
+rerunning the command does not duplicate them. Existing transactions are not
+updated or deleted. This command writes to the database configured for that
+terminal; each developer runs it against their own development database.
+
+Run its tests with `python src/manage.py test tests --pattern="test_seed_demo_transactions.py"`.
+
 ## Source layout
 
 - `src/budgetwise/`: Django project settings and URLs.
@@ -236,3 +255,18 @@ eligibility checks with visible failures.
 
 **How we used the result:** Checked the workflow boundaries and exercised eligible,
 ineligible, and failure cases locally before human delivery.
+
+### Sprint 1: Oct 19, 2026 — Calendar month budget integration
+
+**Tool:** Codex
+
+**What it helped with:**
+
+- Integrated the monthly budget work with the latest main branch and resolved conflicts.
+- Verified the budget and demo-data behavior, added issue #21 acceptance scenarios,
+  and prepared the commit and pull request.
+
+**How we used the result:**
+
+We reviewed the dashboard locally and retained the demo-only scope while combining
+it with the team's income form and landing-page styling.
