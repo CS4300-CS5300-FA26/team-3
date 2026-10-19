@@ -14,6 +14,17 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-19 — Record an expense (D-4)
+
+- **Reference:** [Issue #18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); PR pending.
+- Add a signed-in-only [expense page](../src/transactions/templates/transactions/record_expense.html)
+  at `/expense/` with amount, date, description, a required category (Housing,
+  Food, Books, Transportation, or Other), and a Fixed/Variable choice, so rent
+  can be told apart from coffee. Descriptions made only of invisible characters,
+  such as a zero-width space, are rejected. See the [acceptance scenario](../features/record_expense.feature).
+- **Limits:** Expenses are not yet tied to a user, so they do not appear on the
+  dashboard or change its remaining budget, which counts demo transactions only (#21).
+
 ### 2026-10-19 — Calendar month budget summary
 
 - **Reference:** [Issue #21](https://github.com/CS4300-CS5300-FA26/team-3/issues/21); PR pending.
