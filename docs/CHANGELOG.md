@@ -31,6 +31,10 @@ Keep validation results and execution history out of this record.
 - Add [shared identity helpers](../src/accounts/identity.py) for canonical email and
   ordinary Django user creation after mailbox verification, supported by
   [foundation scenarios](../features/account_identity.feature).
+- Enforce nonempty email uniqueness in the database across usernames, ignoring
+  ASCII case, surrounding spaces, and a trailing domain dot. Store international
+  domains as punycode;
+  direct database writes must use printable ASCII. Empty emails remain allowed.
 - Callers must verify mailbox ownership before creating an account.
 
 ### 2026-10-17 — Record income regression coverage and page feedback

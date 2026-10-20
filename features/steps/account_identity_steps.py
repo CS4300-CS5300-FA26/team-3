@@ -93,3 +93,33 @@ def original_account(context):
     assert user.pk == context.account.pk
     assert user.username == user.email == "student@example.com"
     assert user.check_password(PASSWORD)
+
+
+@when('a Django user is saved with username "{username}" and email "{email}"')
+def direct_account(context, username, email):
+    from django.contrib.auth import get_user_model
+
+    context.account = get_user_model().objects.create(username=username, email=email)
+
+
+@when('another username tries to use "{email}"')
+def duplicate_email(context, email):
+    from django.contrib.auth import get_user_model
+    from django.db import IntegrityError, transaction
+
+    context.account_duplicate = False
+    try:
+        with transaction.atomic():
+            get_user_model().objects.create(username="second-account", email=email)
+    except IntegrityError:
+        context.account_duplicate = True
+
+
+@then("the database rejects the duplicate email and keeps the first user")
+def original_email_owner(context):
+    from django.contrib.auth import get_user_model
+
+    assert context.account_duplicate
+    user = get_user_model().objects.get()
+    assert user.pk == context.account.pk
+    assert user.username == "first-account" and user.email == "Student@Example.COM"

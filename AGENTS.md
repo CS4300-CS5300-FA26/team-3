@@ -18,7 +18,7 @@ docs/
 ├── ARCHITECTURE.pdf               Overview; verify against source
 └── DEPLOYMENT.md                  Deployment configuration and rollback
 src/
-├── accounts/                     Email normalization and user creation using Django auth
+├── accounts/                     Email identity helpers; migrations enforce auth.User email uniqueness
 ├── budgetwise/                   Settings, root URLs, CI settings
 │   └── db/aurora/                PostgreSQL IAM connection backend
 ├── transactions/                 Model/constraints, views, URLs, templates, migrations

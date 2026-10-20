@@ -281,3 +281,13 @@ and duplicate protection.
 
 We reviewed the dashboard locally and retained the demo-only scope while combining
 it with the team's income form and landing-page styling.
+
+### 2026-10-19 — Database email uniqueness
+
+**Tool:** Codex
+
+**What it helped with:** Added database enforcement of unique email identities and
+ASCII normalization with international-domain conversion.
+
+**How we used the result:** Kept Django's default user model and checked duplicate
+inserts and updates on SQLite and PostgreSQL.
