@@ -14,6 +14,20 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-21 — Pending success scenarios for income and expense
+
+- **Reference:** [#12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12) and
+  [#18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); blocked on
+  [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11); PR pending.
+- Add "Paycheck is recorded" and "Fixed expense is recorded", worded as in the
+  issues, to the [income](../features/record_income.feature) and
+  [expense](../features/record_expense.feature) features, with steps that check
+  the dashboard list and remaining budget for the new entry.
+- Both are tagged `@wip` and skipped by default through [behave.ini](../behave.ini).
+  Run them with `behave --tags=wip`.
+- **Limits:** They fail at the list step until transactions belong to users,
+  because the dashboard shows demo transactions only. Remove `@wip` once #11 lands.
+
 ### 2026-10-19 — Record an expense (D-4)
 
 - **Reference:** [Issue #18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); PR pending.
