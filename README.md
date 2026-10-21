@@ -289,3 +289,20 @@ We followed the income pattern so the two pages behave the same, kept the catego
 list in the form so the change needed no migration, and left out the transaction-list
 and remaining-budget criteria until expenses are tied to users. Noah chose the
 category list and the issue reference.
+
+### Sprint 1: Oct 21, 2026 — Pending success scenarios and shared Behave steps
+
+**Tool:** Claude Code
+
+**What it helped with:**
+
+- Drafted the "Paycheck is recorded" and "Fixed expense is recorded" Behave
+  scenarios and their steps, and the `behave.ini` setting that skips `@wip`.
+- Moved the shared sign-in setup and checks into `common_steps.py`.
+
+**How we used the result:**
+
+Following Pardot's advice, we added both scenarios now as pending instead of waiting
+for D2, and kept them skipped in CI rather than faking a passing step. We checked
+that both pass once the dashboard shows the student's own transactions, and that a
+wrong error message still fails the expense scenario.

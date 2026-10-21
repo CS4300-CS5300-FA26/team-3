@@ -14,7 +14,7 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
-### 2026-10-21 — Pending success scenarios for income and expense
+### 2026-10-21 — Pending success scenarios and shared Behave steps
 
 - **Reference:** [#12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12) and
   [#18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); blocked on
@@ -23,7 +23,11 @@ Keep validation results and execution history out of this record.
   issues, to the [income](../features/record_income.feature) and
   [expense](../features/record_expense.feature) features, with steps that check
   the dashboard list and remaining budget for the new entry.
-- Both are tagged `@wip` and skipped by default through [behave.ini](../behave.ini).
+- Move the sign-in setup and shared checks into
+  [common_steps.py](../features/steps/common_steps.py), so the income and expense
+  steps no longer import each other. All four scenarios now start with the issues'
+  wording, `Given I am signed in`.
+- Both new scenarios are tagged `@wip` and skipped by default through [behave.ini](../behave.ini).
   Run them with `behave --tags=wip`.
 - **Limits:** They fail at the list step until transactions belong to users,
   because the dashboard shows demo transactions only. Remove `@wip` once #11 lands.

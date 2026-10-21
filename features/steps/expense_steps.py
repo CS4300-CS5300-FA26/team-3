@@ -1,14 +1,8 @@
-"""Issue #18 expense acceptance checks using an isolated Django test database."""
+"""Issue #18 expense acceptance checks. Shared steps are in common_steps.py."""
 
-from behave import given, when
+from behave import when
 
-# Reuse the isolated database, login setup, and success-scenario helpers.
-from income_steps import money, remember_budget_before, signed_in
-
-
-@given("I am signed in to record expenses")
-def signed_in_for_expenses(context):
-    signed_in(context)
+from common_steps import money, remember_budget_before
 
 
 @when("I add an expense of ${amount} with no category selected")
