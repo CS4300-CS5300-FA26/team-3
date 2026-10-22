@@ -63,8 +63,9 @@ python src/manage.py seed_demo_transactions
 ```
 
 This adds a $900.00 paycheck on January 5, 2027 and a $275.00 grocery expense on
-January 10, 2027. Both are demo transactions visible on the public dashboard.
-Select January 2027 to see $625.00 remaining if that month has no other demo data.
+January 10, 2027. These are synthetic demo rows, not student-owned transactions.
+D2 (#53) replaces the legacy demo homepage with the private dashboard; seeded rows
+can remain stored but must not appear on student accounts.
 Matching examples already present are skipped, including those added manually;
 rerunning the command does not duplicate them. Existing transactions are not
 updated or deleted. This command writes to the database configured for that
@@ -90,10 +91,19 @@ Planned request flow: `Browser → API Gateway → Lambda → Django → Aurora 
 | API Gateway and AWS Lambda | Receive HTTPS requests and run Django without maintaining an application server. Mangum translates requests for Django. |
 | Aurora PostgreSQL | Keep deployed data independent of Lambda releases. IAM provides temporary database authentication; separate app and migration users limit who can change the schema. |
 | SQLite locally; temporary PostgreSQL in CI | Let teammates develop without AWS accounts and test PostgreSQL compatibility without using Aurora credits. These databases do not share data. |
-| Cloudflare DNS and Resend | Cloudflare manages our domain. Resend is selected for application email; its Django integration is still planned. |
+| Cloudflare DNS and Resend | Cloudflare manages our domain. Django sends signup email through Resend SMTP. |
 | GitHub Actions | Test pull requests and automate releases from `main`, using temporary AWS credentials instead of stored access keys. |
 
-The transaction model and migrations are implemented. The public application page displays synthetic demo transactions from the database while excluding non-demo transactions. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
+The transaction model and migrations are implemented. Signed-out application
+visits lead to `/sign-in/`, which links to `/accounts/signup/`. Signup sends a
+verification link; password setup ends at `/accounts/created/` and requires a
+separate sign-in. Django's `/admin/login/` retains its separate administrator login.
+
+`/income/` and `/expense/` save entries to the signed-in student's account;
+protected-page visits resume after sign-in. Sign out uses a CSRF-protected POST.
+D2 (#53) owns the private dashboard, its recording links, and replacing the demo
+homepage; this change keeps the existing `dashboard` route as the integration point.
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for signup mail configuration and rollback.
 
 ## Deployment
 
@@ -343,3 +353,15 @@ Following Pardot's advice, we added both scenarios now as pending instead of wai
 for D2, and kept them skipped in CI rather than faking a passing step. We checked
 that both pass once the dashboard shows the student's own transactions, and that a
 wrong error message still fails the expense scenario.
+
+### Sprint 1: Oct 22, 2026 — Complete D1 and connect D2 navigation
+
+**Tool:** Codex
+
+**What it helped with:** Signup email, single-use verification, the password form,
+and integration of D1 signup with D2 sign-in and transaction navigation.
+
+**How we used the result:** Reused Django auth/mail and the shared identity helpers,
+combined the unshipped D1 migrations after D2, and added focused route and
+acceptance checks. Added the application sign-in gate and shared account/recording
+navigation; dashboard changes remain in D2 (#53).

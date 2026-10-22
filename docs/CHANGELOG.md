@@ -14,6 +14,22 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-22 — Complete signup and connect account navigation
+
+- **Reference:** [#10](https://github.com/CS4300-CS5300-FA26/team-3/issues/10),
+  integrated with [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11); PR pending.
+- Add [email-only signup](../src/accounts/signup.py), 24-hour single-use verification,
+  password setup, and existing-account notices with identical public confirmations.
+  Shared database limits bound email delivery; application logs redact tokens.
+- Connect signup, sign-in, dashboard, income, expense, and POST sign-out through
+  shared navigation. Require sign-in for application URLs except signup and keep
+  Django admin login separate. D2 (#53) owns the dashboard and replacing the demo
+  homepage; this change retains its existing `dashboard` route.
+  See the [signup journey](../features/signup.feature).
+- Sequence the unshipped verification/rate-limit tables after D2's migrations.
+  Real mail requires configured Resend credentials. The deployment candidate probe
+  checks the public sign-in page because the homepage now redirects anonymous users.
+
 ### 2026-10-21 — Assign new transactions to students
 
 - **Reference:** [Issue #12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12) and [Issue #18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); PR pending.

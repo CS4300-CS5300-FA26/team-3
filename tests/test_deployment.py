@@ -2,6 +2,7 @@
 import base64
 import hashlib
 import io
+import json
 import os
 from pathlib import Path
 import re
@@ -64,6 +65,13 @@ class DeploymentTests(unittest.TestCase):
             {"Payload": io.BytesIO(b'{"statusCode":404}')},
         ]
         return client
+
+    def test_candidate_checks_public_sign_in(self):
+        client = self.client()
+        self.run_release(client)
+        event = json.loads(client.invoke.call_args.kwargs["Payload"])
+        self.assertEqual(event["rawPath"], "/sign-in/")
+        self.assertEqual(event["requestContext"]["http"]["path"], "/sign-in/")
 
     def test_publication_uses_verified_revision(self):
         client = self.client()

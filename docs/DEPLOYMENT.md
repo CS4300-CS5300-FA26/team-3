@@ -16,6 +16,20 @@ Set `DJANGO_SECRET_KEY` in Lambda to a private, randomly generated value of at l
 
 GitHub Actions builds the deployment ZIP from `src/` and Linux-compatible dependencies, excluding local databases, `.env` files, virtual environments, and caches.
 
+## Signup email
+
+Chase owns BudgetWise's Resend setup. The app sends from `accounts@budget-wise.dev`
+through Resend SMTP over TLS. Set `RESEND_API_KEY` to a sending-only key restricted
+to `budget-wise.dev` in Lambda's environment before deploying signup. Keep its
+value out of source and CI. `SIGNUP_BASE_URL` defaults to `https://budget-wise.dev`;
+for local delivery checks, set it to the local server URL and export the key in
+that shell. Tests use Django's in-memory mail backend and send no real email.
+
+Resend's Emails dashboard shows delivery failures; a failed send also gives the
+visitor a generic retry message. Revoke the BudgetWise key in Resend to disable
+sending without changing other applications. Deployed code still needs the key
+configured; local integration does not configure Lambda.
+
 ## Database
 
 Aurora PostgreSQL cluster `budgetwise` is our application database in `us-east-1`, configured for 0–1 ACU and automatic pause after five idle minutes. Use local tests to conserve credits.
@@ -44,7 +58,7 @@ CI uses `budgetwise.ci_settings` and a temporary PostgreSQL 17 service. Its fixe
 1. Run CI and build one ZIP in a job without AWS access.
 2. Download that exact ZIP, reject stale `main` revisions, and obtain temporary AWS credentials through GitHub OIDC.
 3. Apply Aurora migrations from the ZIP and publish it as a new Lambda version.
-4. Check that version's database connection and homepage before moving `live` to it.
+4. Check that version's database connection and public sign-in page before moving `live` to it.
 5. Check the public URL; restore the previous version if this check fails.
 
 The package is retained in GitHub Actions for one day. If it expires, rerun the entire workflow to rebuild it. If an alias-update response is lost, CD reads the alias back before continuing; it does not overwrite a conflicting change.
@@ -56,14 +70,14 @@ GitHub Actions settings:
 | Setting | Purpose |
 | --- | --- |
 | Variable `AWS_DEPLOY_ROLE_ARN` | Deployment role ARN |
-| Variable `ROOT_STATUS` | Expected homepage status: `200` |
+| Variable `ROOT_STATUS` | Expected sign-in page status: `200` (legacy variable name) |
 | Secret `DB_HOST` | Same Aurora writer endpoint as Lambda |
 
 The workflow reports the previous Lambda version. For a later code rollback, point `live` back to it in Lambda's Aliases tab. This does not undo migrations: keep schema changes compatible with the previous release.
 
 ## Current status
 
-- The application is deployed; `/` returns 200 and lists the demo transactions stored in Aurora.
+- This candidate redirects signed-out application visits to `/sign-in/`. D2 (#53) owns replacing the legacy demo homepage with the private dashboard and excluding seeded rows; those rows remain stored.
 - Aurora, its database users, Lambda environment, and GitHub deployment permissions are configured. Migrations, including the demo data, have been applied to Aurora.
 - The first Actions deployment succeeded on Oct 6, 2026. Later merges to `main` that change application or workflow files deploy automatically.
-- Verify a release with a small number of requests and check `/aws/lambda/budgetwise` logs for failures. A 404 at `/` now indicates a failed or rolled-back release.
+- Verify a release with a small number of requests and check `/aws/lambda/budgetwise` logs for failures. The public root check follows the expected sign-in redirect; the direct candidate check uses `/sign-in/`.
