@@ -289,3 +289,19 @@ We followed the income pattern so the two pages behave the same, kept the catego
 list in the form so the change needed no migration, and left out the transaction-list
 and remaining-budget criteria until expenses are tied to users. Noah chose the
 category list and the issue reference.
+
+### Sprint 1: Oct 21, 2026 — Transaction ownership
+
+**Tool:** Codex
+
+**What it helped with:**
+
+- Added ownership assertions to the existing income and expense save tests.
+- Added the signed-in user to each transaction before saving it.
+
+**How we used the result:**
+
+Fabian ran each focused test with the ownership assertion failing before the view
+change, then passing after it. New income and expense entries now belong to the
+signed-in student. The optional owner field still allows older and demo records
+without an owner; the public dashboard continues to show demo data only.
