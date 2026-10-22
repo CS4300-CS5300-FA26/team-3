@@ -54,6 +54,7 @@
         .eye-slash { visibility: hidden; }
         input[type="text"] + .password-toggle .eye-slash { visibility: visible; }
     </style>
+    {% block extra_style %}{% endblock %}
 </head>
 <body>
     <header><a href="{% if request.user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'sign_in' %}{% endif %}">BudgetWise</a></header>
