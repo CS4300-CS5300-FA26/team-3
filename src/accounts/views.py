@@ -1,25 +1,26 @@
+from datetime import date
+from decimal import Decimal
 from smtplib import SMTPException
 
+from django.conf import settings
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_not_required, login_required
-from django.conf import settings
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.shortcuts import redirect, render, resolve_url
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from transactions.models import Transaction
-
-from accounts.identity import normalize_email
-from accounts.lockout import check_login
-
 from accounts.forms import SetPasswordForm, SignupForm
+from accounts.identity import normalize_email
+from accounts.lockout import SignInRateLimited, check_login
 from accounts.signup import send_signup_email
 from accounts.verification import complete_registration, email_from_verification_token
+from transactions.models import Transaction
 
 
 @sensitive_post_parameters("email")
@@ -115,7 +116,15 @@ def sign_in(request):
 
         # Check the login credentials and lockout status
         if email is not None:
-            user, blocked = check_login(request, email, password)
+            try:
+                user, blocked = check_login(request, email, password)
+            except SignInRateLimited:
+                response = render(request, "accounts/sign_in.html", {
+                    "error": "Too many sign-in requests. Try again in a minute.",
+                    "next": destination,
+                }, status=429)
+                response["Retry-After"] = "60"
+                return response
         else:
             user, blocked = None, False
 
@@ -147,19 +156,44 @@ def sign_out(request):
     return redirect("sign_in")
 
 
-# Require login before accessing the dashboard
+# Show the current user's monthly budget dashboard
+@never_cache
 @login_required(login_url="sign_in")
 def dashboard(request):
+    # Default to the current calendar month
+    selected_month = timezone.localdate().replace(day=1)
+    month_value = request.GET.get("month", "")
 
-    # Get only the current user's transactions
+    # Allow the user to select a different month
+    if month_value:
+        try:
+            if len(month_value) != 7 or month_value[4] != "-":
+                raise ValueError("Month must use YYYY-MM format.")
+
+            selected_month = date.fromisoformat(f"{month_value}-01")
+        except ValueError:
+            pass
+
+    # Get only this user's real transactions for the selected month
     transactions = Transaction.objects.filter(
         owner=request.user,
         is_demo=False,
+        date__year=selected_month.year,
+        date__month=selected_month.month,
+    ).order_by("-date", "-id")
+
+    # Calculate the remaining balance using existing model logic
+    remaining_budget = sum(
+        (item.signed_amount for item in transactions),
+        Decimal("0.00"),
     )
 
-    # Display the dashboard with the user's transactions
     return render(
         request,
         "accounts/dashboard.html",
-        {"transactions": transactions},
+        {
+            "transactions": transactions,
+            "remaining_budget": remaining_budget,
+            "selected_month": selected_month.isoformat()[:7],
+        },
     )

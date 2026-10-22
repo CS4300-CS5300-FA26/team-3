@@ -1,4 +1,4 @@
-"""Issue #21 acceptance checks against an isolated demo database."""
+"""Issue #21 acceptance checks against an isolated personal dashboard."""
 
 from datetime import datetime
 from decimal import Decimal
@@ -9,8 +9,8 @@ import sys
 from behave import given, then, when
 
 
-@given("an isolated demo dashboard")
-def demo_dashboard(context):
+@given("an isolated personal dashboard")
+def personal_dashboard(context):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "budgetwise.settings")
 
@@ -31,21 +31,22 @@ def demo_dashboard(context):
 
     Transaction.objects.all().delete()
     context.client = Client()
-    context.client.force_login(get_user_model().objects.create_user(username="budget-student"))
     context.Transaction = Transaction
+    context.student = get_user_model().objects.create_user(username="budget-student")
+    context.client.force_login(context.student)
 
 
-@given("I have demo income of ${income} and expenses of ${expenses} dated in {month}")
-def demo_totals(context, income, expenses, month):
+@given("I have income of ${income} and expenses of ${expenses} dated in {month}")
+def personal_totals(context, income, expenses, month):
     period = datetime.strptime(month, "%B %Y").date()
     for kind, amount, category in [("income", income, ""), ("expense", expenses, "Food")]:
         context.Transaction.objects.create(
             kind=kind,
             amount=Decimal(amount.replace(",", "")),
             date=period,
-            description=f"Demo {kind}",
+            description=f"Personal {kind}",
             category=category,
-            is_demo=True,
+            owner=context.student,
         )
 
 
@@ -53,7 +54,7 @@ def demo_totals(context, income, expenses, month):
 def empty_period(context, month):
     period = datetime.strptime(month, "%B %Y").date()
     assert not context.Transaction.objects.filter(
-        date__year=period.year, date__month=period.month
+        owner=context.student, date__year=period.year, date__month=period.month
     ).exists()
 
 
@@ -63,7 +64,7 @@ def select_month(context, month):
     from django.urls import reverse
 
     period = datetime.strptime(month, "%B %Y").strftime("%Y-%m")
-    context.response = context.client.get(reverse("transaction_list"), {"month": period})
+    context.response = context.client.get(reverse("dashboard"), {"month": period})
 
 
 @then("I see a remaining budget of ${amount}")

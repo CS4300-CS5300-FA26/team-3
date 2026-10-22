@@ -58,7 +58,7 @@ CI uses `budgetwise.ci_settings` and a temporary PostgreSQL 17 service. Its fixe
 1. Run CI and build one ZIP in a job without AWS access.
 2. Download that exact ZIP, reject stale `main` revisions, and obtain temporary AWS credentials through GitHub OIDC.
 3. Apply Aurora migrations from the ZIP and publish it as a new Lambda version.
-4. Check that version's database connection and public sign-in page before moving `live` to it.
+4. Check that version's database connection and public `/sign-in/` page before moving `live` to it.
 5. Check the public URL; restore the previous version if this check fails.
 
 The package is retained in GitHub Actions for one day. If it expires, rerun the entire workflow to rebuild it. If an alias-update response is lost, CD reads the alias back before continuing; it does not overwrite a conflicting change.
@@ -75,9 +75,13 @@ GitHub Actions settings:
 
 The workflow reports the previous Lambda version. For a later code rollback, point `live` back to it in Lambda's Aliases tab. This does not undo migrations: keep schema changes compatible with the previous release.
 
-## Current status
+## Release verification
 
-- This candidate redirects signed-out application visits to `/sign-in/`. D2 (#53) owns replacing the legacy demo homepage with the private dashboard and excluding seeded rows; those rows remain stored.
-- Aurora, its database users, Lambda environment, and GitHub deployment permissions are configured. Migrations, including the demo data, have been applied to Aurora.
-- The first Actions deployment succeeded on Oct 6, 2026. Later merges to `main` that change application or workflow files deploy automatically.
-- Verify a release with a small number of requests and check `/aws/lambda/budgetwise` logs for failures. The public root check follows the expected sign-in redirect; the direct candidate check uses `/sign-in/`.
+The root redirects anonymous visitors to `/sign-in/`; authenticated visitors see
+their private dashboard. The candidate probe checks `/sign-in/` directly, while
+the public check follows the root redirect. Retained demo rows are excluded from
+student dashboards, and `/demo/` is no longer a route.
+
+Verify a release with a small number of requests and check
+`/aws/lambda/budgetwise` logs for failures. Local checks do not establish which
+version is currently deployed.

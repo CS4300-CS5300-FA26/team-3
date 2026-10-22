@@ -26,3 +26,11 @@ class SignupRateLimit(models.Model):
     key = models.CharField(max_length=64, primary_key=True)
     attempts = models.PositiveIntegerField(default=0)
     expires_at = models.DateTimeField(db_index=True)
+
+
+class SignInBudget(models.Model):
+    # One shared row bounds work across email addresses and application workers.
+    id = models.PositiveSmallIntegerField(primary_key=True)
+    requests = models.PositiveIntegerField(default=0)
+    sources = models.JSONField(default=dict)
+    resets_at = models.DateTimeField()

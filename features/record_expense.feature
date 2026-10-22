@@ -6,9 +6,6 @@ Feature: Record an expense
     Then I see "Choose a category"
     And no entry is created
 
-  # Pending until transactions belong to users (D2, #11): the dashboard
-  # shows demo transactions only, so the list and budget steps fail today.
-  @wip
   Scenario: Fixed expense is recorded
     Given I am signed in
     When I add an expense of $650.00 for "Rent" in category Housing marked Fixed

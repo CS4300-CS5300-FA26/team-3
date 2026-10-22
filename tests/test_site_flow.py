@@ -67,6 +67,27 @@ class SiteFlowTests(TestCase):
         for route in ["sign_in", "accounts:signup"]:
             self.assertRedirects(self.client.get(reverse(route)), reverse("dashboard"))
 
+    def test_throttled_signin_preserves_the_requested_destination_for_retry(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from accounts.models import SignInBudget
+
+        create_verified_user("student@example.com", PASSWORD)
+        SignInBudget.objects.create(
+            pk=1, requests=100, resets_at=timezone.now() + timedelta(minutes=1),
+        )
+        response = self.client.post(reverse("sign_in"), {
+            "email": "student@example.com", "password": PASSWORD, "next": "/income/",
+        })
+        self.assertContains(response, 'name="next" value="/income/"', status_code=429)
+        self.assertIn("no-store", response["Cache-Control"])
+        self.assertNotIn("_auth_user_id", self.client.session)
+        SignInBudget.objects.update(resets_at=timezone.now() - timedelta(seconds=1))
+        response = self.client.post(reverse("sign_in"), {
+            "email": "student@example.com", "password": PASSWORD, "next": response.context["next"],
+        })
+        self.assertRedirects(response, reverse("record_income"))
+
     def test_public_pages_link_to_signup_and_signin(self):
         for route in ["sign_in", "accounts:signup", "accounts:check_email", "accounts:created"]:
             with self.subTest(route=route):

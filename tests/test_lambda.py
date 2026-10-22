@@ -1,5 +1,6 @@
 """Check the private deployment event without AWS or a real database."""
 import os
+from io import BytesIO
 from pathlib import Path
 import subprocess
 import sys
@@ -41,3 +42,19 @@ with patch.object(lambda_entry, "connection", db):
     db.close.assert_called_once()
 '''], env=env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_signin_source_address_comes_from_gateway_not_forwarded_header(self):
+        from django.core.handlers.asgi import ASGIRequest
+        from mangum.handlers.api_gateway import HTTPGateway
+
+        event = {
+            "version": "2.0", "rawQueryString": "",
+            "headers": {"host": "example.com", "x-forwarded-for": "198.51.100.1"},
+            "requestContext": {"http": {
+                "method": "POST", "path": "/sign-in/", "sourceIp": "192.0.2.1",
+            }},
+        }
+        scope = HTTPGateway(event, None, {"api_gateway_base_path": "/"}).scope
+        request = ASGIRequest(scope, BytesIO())
+        self.assertEqual(request.META["REMOTE_ADDR"], "192.0.2.1")
+        self.assertEqual(request.META["HTTP_X_FORWARDED_FOR"], "198.51.100.1")

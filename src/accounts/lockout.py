@@ -1,129 +1,91 @@
 from datetime import timedelta
+
 from django.contrib.auth import authenticate
-from django.db import connection
-from django.db import transaction
+from django.db import connection, transaction
+from django.db.models import F, Q
 from django.utils import timezone
+from django.utils.crypto import salted_hmac
 
-from .models import LoginAttempt, FailedSignIn
-
-
-# Check whether an email is currently blocked
-def is_blocked(email):
-    attempt = LoginAttempt.objects.filter(email=email).first()
-
-    return bool(
-        attempt
-        and attempt.blocked_until
-        and attempt.blocked_until > timezone.now()
-    )
+from .models import FailedSignIn, LoginAttempt, SignInBudget
 
 
-# Record a failed sign in attempt
-def record_failure(email):
+SIGN_IN_LIMIT = 100
+SOURCE_LIMIT = 10
+
+
+class SignInRateLimited(Exception):
+    pass
+
+
+def claim_sign_in_request(remote_address):
+    """Admit sources fairly within one bounded, shared minute counter."""
+    source = salted_hmac("accounts.signin.source", remote_address, algorithm="sha256").hexdigest()
+    with transaction.atomic():
+        if connection.vendor == "sqlite":
+            SignInBudget.objects.filter(pk=1).update(requests=F("requests"))
+        now = timezone.now()
+        budget, created = SignInBudget.objects.select_for_update().get_or_create(
+            pk=1, defaults={"resets_at": now + timedelta(minutes=1)},
+        )
+        if created or budget.resets_at <= now:
+            budget.requests = 0
+            budget.sources = {}
+            budget.resets_at = now + timedelta(minutes=1)
+            cleanup_stale_attempts()
+        if budget.sources.get(source, 0) >= SOURCE_LIMIT or budget.requests >= SIGN_IN_LIMIT:
+            return False
+        budget.sources[source] = budget.sources.get(source, 0) + 1
+        budget.requests += 1
+        budget.save()
+        return True
+
+
+def cleanup_stale_attempts():
+    """Expire failure history and idle identities without clearing active locks."""
     now = timezone.now()
     cutoff = now - timedelta(minutes=15)
-
     with transaction.atomic():
-        attempt, _ = LoginAttempt.objects.select_for_update().get_or_create(
-            email=email
-        )
-
-        # Remove failures older than 15 minutes
-        FailedSignIn.objects.filter(
-            email=email,
-            created_at__lte=cutoff,
+        # Match sign-in lock order: parent first, then failure history.
+        LoginAttempt.objects.filter(
+            Q(first_failed_at__isnull=True) | Q(first_failed_at__lte=cutoff),
+            Q(blocked_until__isnull=True) | Q(blocked_until__lte=now),
         ).delete()
-
-        # Save the new failed attempt
-        FailedSignIn.objects.create(email=email, created_at=now)
-
-        # Count failures within the last 15 minutes
-        attempt.failed_count = FailedSignIn.objects.filter(
-            email=email,
-            created_at__gt=cutoff,
-        ).count()
-
-        # Block the email after five failures
-        if attempt.failed_count >= 5:
-            attempt.blocked_until = now + timedelta(minutes=15)
-
-        attempt.first_failed_at = now
-        attempt.save()
+        FailedSignIn.objects.filter(created_at__lte=cutoff).delete()
 
 
-# Clear failures after a successful sign in
-def clear_failures(email):
-    with transaction.atomic():
-        FailedSignIn.objects.filter(email=email).delete()
-        LoginAttempt.objects.filter(email=email).delete()
-
-
-# Check credentials while protecting the login attempt record
 def check_login(request, email, password):
-    # SQLite cannot provide the required row-level lock
-    if connection.vendor == "sqlite":
-        if is_blocked(email):
-            return None, True
-
-        user = authenticate(
-            request,
-            username=email,
-            password=password,
-        )
-
-        if user is not None:
-            clear_failures(email)
-        else:
-            record_failure(email)
-
-        return user, False
-
-    # Lock the email record during authentication on PostgreSQL
+    # REMOTE_ADDR comes from the server/API Gateway, never a forwarded header.
+    if not claim_sign_in_request(request.META.get("REMOTE_ADDR", "")):
+        raise SignInRateLimited
     with transaction.atomic():
-        attempt, _ = LoginAttempt.objects.get_or_create(email=email)
+        if connection.vendor == "sqlite":
+            # SQLite has no row locks. Take its write lock before reading so
+            # concurrent connections serialize the whole check and update.
+            LoginAttempt.objects.filter(email=email).update(email=F("email"))
 
-        attempt = LoginAttempt.objects.select_for_update().get(
-            pk=attempt.pk
-        )
-
-        if attempt.blocked_until and attempt.blocked_until > timezone.now():
+        # Lock as part of the lookup: cleanup may delete an idle row before
+        # this query, in which case get_or_create safely creates its replacement.
+        attempt, _ = LoginAttempt.objects.select_for_update().get_or_create(email=email)
+        now = timezone.now()
+        if attempt.blocked_until and attempt.blocked_until > now:
             return None, True
 
-        user = authenticate(
-            request,
-            username=email,
-            password=password,
-        )
-
+        user = authenticate(request, username=email, password=password)
         if user is not None:
-            # Clear failure history without deleting the locked row
             FailedSignIn.objects.filter(email=email).delete()
             attempt.failed_count = 0
             attempt.first_failed_at = None
             attempt.blocked_until = None
-            attempt.save()
         else:
             now = timezone.now()
             cutoff = now - timedelta(minutes=15)
-
-            # Remove expired failures
-            FailedSignIn.objects.filter(
-                email=email,
-                created_at__lte=cutoff,
-            ).delete()
-
-            # Record the failed attempt
+            FailedSignIn.objects.filter(email=email, created_at__lte=cutoff).delete()
             FailedSignIn.objects.create(email=email, created_at=now)
-
             attempt.failed_count = FailedSignIn.objects.filter(
-                email=email,
-                created_at__gt=cutoff,
+                email=email, created_at__gt=cutoff,
             ).count()
-
             if attempt.failed_count >= 5:
                 attempt.blocked_until = now + timedelta(minutes=15)
-
             attempt.first_failed_at = now
-            attempt.save()
-
+        attempt.save()
         return user, False

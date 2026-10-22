@@ -17,30 +17,48 @@ Keep validation results and execution history out of this record.
 ### 2026-10-22 — Complete signup and connect account navigation
 
 - **Reference:** [#10](https://github.com/CS4300-CS5300-FA26/team-3/issues/10),
-  integrated with [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11); PR pending.
+  integrated with [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11);
+  [PR #55](https://github.com/CS4300-CS5300-FA26/team-3/pull/55).
 - Add [email-only signup](../src/accounts/signup.py), 24-hour single-use verification,
   password setup, and existing-account notices with identical public confirmations.
   Shared database limits bound email delivery; application logs redact tokens.
 - Connect signup, sign-in, dashboard, income, expense, and POST sign-out through
   shared navigation. Require sign-in for application URLs except signup and keep
-  Django admin login separate. D2 (#53) owns the dashboard and replacing the demo
-  homepage; this change retains its existing `dashboard` route.
+  Django admin login separate. Use the private dashboard provided by D2 (#53).
   See the [signup journey](../features/signup.feature).
-- Sequence the unshipped verification/rate-limit tables after D2's migrations.
+- Merge the independent signup and sign-in migrations without rewriting their history.
   Real mail requires configured Resend credentials. The deployment candidate probe
   checks the public sign-in page because the homepage now redirects anonymous users.
 
+### 2026-10-22 — Complete sign-in and the personal budget dashboard
+
+- **Reference:** [PR #53](https://github.com/CS4300-CS5300-FA26/team-3/pull/53),
+  [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11), and
+  [#21](https://github.com/CS4300-CS5300-FA26/team-3/issues/21).
+- Add email sign-in, POST sign-out, and a 15-minute lockout after five failures.
+  Serialize sign-in decisions; allow 10 attempts per source IP and 100 overall
+  per minute using expiring hashed counters in one shared row. Shared networks
+  share their source allowance. Prune expired records on the first sign-in each minute.
+- Serve the user's monthly transactions and remaining budget at `/` and
+  `/dashboard/`, with private cache headers. Remove `/demo/`; retained synthetic
+  rows stay excluded. Connect income, expense, and sign-out.
+- Exercise real user-owned data in the [D6 scenarios](../features/remaining_budget.feature)
+  and enable the income/expense success scenarios. See the
+  [sign-in scenarios](../features/sign_in_lockout.feature) and
+  [lockout implementation](../src/accounts/lockout.py).
+- Probe the public sign-in page before deployment promotion, since anonymous
+  requests to `/` now redirect.
+
 ### 2026-10-21 — Assign new transactions to students
 
-- **Reference:** [Issue #12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12) and [Issue #18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); PR pending.
+- **Reference:** [Issue #12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12) and [Issue #18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); [PR #52](https://github.com/CS4300-CS5300-FA26/team-3/pull/52).
 - The [income and expense save paths](../src/transactions/views.py) now assign the signed-in student to each new transaction before saving it. The [income](../tests/test_transaction_view.py) and [expense](../tests/test_expense_view.py) view tests check that ownership.
-- **Limits:** Existing and demo transactions may have no owner. The public dashboard still shows demo data only; a student-specific transaction list and budget are not yet implemented.
+- Existing and demo transactions may have no owner; the D2 dashboard excludes them.
 
-### 2026-10-21 — Pending success scenarios and shared Behave steps
+### 2026-10-21 — Income/expense success scenarios and shared Behave steps
 
 - **Reference:** [#12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12) and
-  [#18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); blocked on
-  [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11); PR pending.
+  [#18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); [PR #51](https://github.com/CS4300-CS5300-FA26/team-3/pull/51).
 - Add "Paycheck is recorded" and "Fixed expense is recorded", worded as in the
   issues, to the [income](../features/record_income.feature) and
   [expense](../features/record_expense.feature) features, with steps that check
@@ -49,10 +67,7 @@ Keep validation results and execution history out of this record.
   [common_steps.py](../features/steps/common_steps.py), so the income and expense
   steps no longer import each other. All four scenarios now start with the issues'
   wording, `Given I am signed in`.
-- Both new scenarios are tagged `@wip` and skipped by default through [behave.ini](../behave.ini).
-  Run them with `behave --tags=wip`.
-- **Limits:** They fail at the list step until transactions belong to users,
-  because the dashboard shows demo transactions only. Remove `@wip` once #11 lands.
+- Initially pending D2; both scenarios are now enabled against the private dashboard.
 
 ### 2026-10-19 — Record an expense (D-4)
 
@@ -62,19 +77,17 @@ Keep validation results and execution history out of this record.
   Food, Books, Transportation, or Other), and a Fixed/Variable choice, so rent
   can be told apart from coffee. Descriptions made only of invisible characters,
   such as a zero-width space, are rejected. See the [acceptance scenario](../features/record_expense.feature).
-- **Limits:** Expenses are not yet tied to a user, so they do not appear on the
-  dashboard or change its remaining budget, which counts demo transactions only (#21).
+- Student ownership and dashboard integration were added in the entries above.
 
 ### 2026-10-19 — Calendar month budget summary
 
-- **Reference:** [Issue #21](https://github.com/CS4300-CS5300-FA26/team-3/issues/21); PR pending.
+- **Reference:** [Issue #21](https://github.com/CS4300-CS5300-FA26/team-3/issues/21); [PR #48](https://github.com/CS4300-CS5300-FA26/team-3/pull/48).
 - Add a month selector and exact income-minus-expenses total to the
-  [demo dashboard](../src/transactions/views.py), with current-month fallback and
+  initial demo dashboard, with current-month fallback and
   an empty-period message. See the [acceptance scenarios](../features/remaining_budget.feature).
 - Add a repeatable [demo command](../src/transactions/management/commands/seed_demo_transactions.py)
   for January 2027 examples, preserving existing records.
-- **Limits:** Only demo transactions contribute; user-entered income remains
-  excluded from the public dashboard.
+- The later D2 integration applies this behavior to user-owned transactions.
 
 ### 2026-10-18 — Shared account foundation
 
@@ -96,7 +109,7 @@ Keep validation results and execution history out of this record.
   for the non-positive amount criterion.
 - Show source errors and save confirmation on the [income page](../src/transactions/templates/transactions/record_income.html),
   with clearer styling and a BudgetWise home link.
-- **Limits:** Income is not yet associated with a user or reflected in the budget.
+- Student ownership and dashboard integration were added in the entries above.
 
 ### 2026-10-17 — Fix unexpected AI-review skips
 
