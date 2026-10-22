@@ -13,3 +13,10 @@ class LoginAttempt(models.Model):
 class FailedSignIn(models.Model):
     email = models.CharField(max_length=254, db_index=True)
     created_at = models.DateTimeField(default=timezone.now)
+
+
+class SignInBudget(models.Model):
+    # One shared row bounds work across email addresses and application workers.
+    id = models.PositiveSmallIntegerField(primary_key=True)
+    requests = models.PositiveIntegerField(default=0)
+    resets_at = models.DateTimeField()

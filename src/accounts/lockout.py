@@ -5,7 +5,34 @@ from django.db import connection, transaction
 from django.db.models import F, Q
 from django.utils import timezone
 
-from .models import FailedSignIn, LoginAttempt
+from .models import FailedSignIn, LoginAttempt, SignInBudget
+
+
+SIGN_IN_LIMIT = 100
+
+
+class SignInRateLimited(Exception):
+    pass
+
+
+def claim_sign_in_request():
+    """Bound credential checks and prune idle records once per active minute."""
+    with transaction.atomic():
+        if connection.vendor == "sqlite":
+            SignInBudget.objects.filter(pk=1).update(requests=F("requests"))
+        now = timezone.now()
+        budget, created = SignInBudget.objects.select_for_update().get_or_create(
+            pk=1, defaults={"resets_at": now + timedelta(minutes=1)},
+        )
+        if created or budget.resets_at <= now:
+            budget.requests = 0
+            budget.resets_at = now + timedelta(minutes=1)
+            cleanup_stale_attempts()
+        if budget.requests >= SIGN_IN_LIMIT:
+            return False
+        budget.requests += 1
+        budget.save()
+        return True
 
 
 def cleanup_stale_attempts():
@@ -22,6 +49,8 @@ def cleanup_stale_attempts():
 
 
 def check_login(request, email, password):
+    if not claim_sign_in_request():
+        raise SignInRateLimited
     with transaction.atomic():
         if connection.vendor == "sqlite":
             # SQLite has no row locks. Take its write lock before reading so

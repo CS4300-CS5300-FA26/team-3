@@ -75,12 +75,6 @@ class ExpenseForm(forms.ModelForm):
         return description
 
 
-@login_required(login_url="sign_in")
-def transaction_list(request):
-    """Keep the former demo URL pointing to the student's private dashboard."""
-    return redirect("dashboard")
-
-
 @login_required
 def record_income(request):
     if request.method == "POST":

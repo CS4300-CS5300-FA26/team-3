@@ -10,7 +10,7 @@ from threading import Barrier, Event
 from django.db import connection, connections, close_old_connections
 from django.test import Client, TransactionTestCase
 from unittest import skipUnless
-from accounts.models import FailedSignIn, LoginAttempt
+from accounts.models import FailedSignIn, LoginAttempt, SignInBudget
 from transactions.models import Transaction
 
 
@@ -236,6 +236,51 @@ class LoginLockoutTests(TestCase):
         )
 
 
+    def test_distinct_emails_share_a_request_limit_before_authentication(self):
+        SIGN_IN_LIMIT = 100
+
+        with patch("accounts.lockout.authenticate", return_value=None) as authenticate:
+            for index in range(SIGN_IN_LIMIT):
+                response = self.fail_login(f"distinct-{index}@example.com")
+                self.assertEqual(response.status_code, 200)
+            response = self.fail_login("over-limit@example.com")
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response["Retry-After"], "60")
+        self.assertContains(response, "Try again in a minute", status_code=429)
+        self.assertEqual(authenticate.call_count, SIGN_IN_LIMIT)
+        self.assertEqual(LoginAttempt.objects.count(), SIGN_IN_LIMIT)
+        self.assertEqual(FailedSignIn.objects.count(), SIGN_IN_LIMIT)
+
+    def test_shared_budget_resets_and_cleanup_runs_on_the_next_active_minute(self):
+        now = timezone.now()
+        SignInBudget.objects.create(pk=1, requests=100, resets_at=now - timedelta(seconds=1))
+        LoginAttempt.objects.create(
+            email="stale@example.com", failed_count=1,
+            first_failed_at=now - timedelta(minutes=20),
+        )
+        with patch("accounts.lockout.authenticate", return_value=None):
+            response = self.fail_login("after-reset@example.com")
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(LoginAttempt.objects.filter(email="stale@example.com").exists())
+        budget = SignInBudget.objects.get(pk=1)
+        self.assertEqual(budget.requests, 1)
+        self.assertGreater(budget.resets_at, now)
+
+    def test_signin_automatically_prunes_idle_records_and_preserves_lockouts(self):
+        old = timezone.now() - timedelta(minutes=30)
+        LoginAttempt.objects.create(email="stale@example.com", failed_count=1, first_failed_at=old)
+        FailedSignIn.objects.create(email="stale@example.com", created_at=old)
+        LoginAttempt.objects.create(
+            email="blocked@example.com", failed_count=5, first_failed_at=old,
+            blocked_until=timezone.now() + timedelta(minutes=10),
+        )
+        with patch("accounts.lockout.authenticate", return_value=None):
+            self.fail_login("new@example.com")
+        self.assertFalse(LoginAttempt.objects.filter(email="stale@example.com").exists())
+        self.assertFalse(FailedSignIn.objects.filter(email="stale@example.com").exists())
+        self.assertTrue(LoginAttempt.objects.filter(email="blocked@example.com").exists())
+
+
     def test_cleanup_removes_stale_failures_and_idle_attempts(self):
         # Create an old inactive login record
         LoginAttempt.objects.create(
@@ -412,6 +457,7 @@ class LoginConcurrencyTests(TransactionTestCase):
     def test_cleanup_waits_for_signin_without_deleting_its_active_record(self):
         from django.db.models.query import QuerySet
 
+        SignInBudget.objects.create(pk=1, resets_at=timezone.now() + timedelta(minutes=1))
         email = "cleanup-race@example.com"
         old = timezone.now() - timedelta(minutes=30)
         LoginAttempt.objects.create(email=email, failed_count=1, first_failed_at=old)
@@ -455,3 +501,27 @@ class LoginConcurrencyTests(TransactionTestCase):
                 cleanup_result.result(timeout=15)
         self.assertEqual(LoginAttempt.objects.get(email=email).failed_count, 1)
         self.assertEqual(FailedSignIn.objects.filter(email=email).count(), 1)
+
+    def test_concurrent_distinct_emails_cannot_exceed_shared_budget(self):
+        SignInBudget.objects.create(
+            pk=1, requests=99, resets_at=timezone.now() + timedelta(minutes=1),
+        )
+        barrier = Barrier(2)
+
+        def attempt_login(index):
+            close_old_connections()
+            try:
+                barrier.wait(timeout=10)
+                return Client().post(reverse("sign_in"), {
+                    "email": f"budget-{index}@example.com", "password": "wrong",
+                }).status_code
+            finally:
+                connections.close_all()
+
+        with patch("accounts.lockout.authenticate", return_value=None) as authenticate:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                results = list(executor.map(attempt_login, range(2)))
+        self.assertEqual(sorted(results), [200, 429])
+        self.assertEqual(authenticate.call_count, 1)
+        self.assertEqual(LoginAttempt.objects.count(), 1)
+        self.assertEqual(SignInBudget.objects.get(pk=1).requests, 100)

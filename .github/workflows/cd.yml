@@ -71,7 +71,7 @@ jobs:
       id-token: write
     env:
       AWS_REGION: us-east-1
-      # The homepage is expected to return 200.
+      # The public sign-in page is expected to return 200.
       ROOT_STATUS: ${{ vars.ROOT_STATUS }}
     steps:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -173,14 +173,14 @@ jobs:
               raise RuntimeError("Candidate database check failed")
           # Simulate API Gateway's HTTP event to check Django before switching traffic.
           event = {
-              "version": "2.0", "routeKey": "$default", "rawPath": "/", "rawQueryString": "",
+              "version": "2.0", "routeKey": "$default", "rawPath": "/sign-in/", "rawQueryString": "",
               "headers": {"host": "budget-wise.dev", "x-forwarded-proto": "https"},
               "requestContext": {"stage": "$default", "domainName": "budget-wise.dev",
-                  "http": {"method": "GET", "path": "/", "sourceIp": "127.0.0.1", "protocol": "HTTP/1.1"}},
+                  "http": {"method": "GET", "path": "/sign-in/", "sourceIp": "127.0.0.1", "protocol": "HTTP/1.1"}},
               "isBase64Encoded": False,
           }
           if invoke(event).get("statusCode") != expected:
-              raise RuntimeError("Candidate homepage returned an unexpected status")
+              raise RuntimeError("Candidate sign-in page returned an unexpected status")
 
           def move_live(target, revision):
               try:

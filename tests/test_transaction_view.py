@@ -156,28 +156,18 @@ class RecordIncomeViewTests(TestCase):
         self.assertFalse(Transaction.objects.filter(is_demo=False).exists())
 
 
-class TransactionListViewTests(TestCase):
-    def test_legacy_demo_requires_sign_in(self):
-        response = self.client.get(reverse("transaction_list"))
-
-        self.assertRedirects(
-            response, reverse("sign_in") + "?next=/demo/", fetch_redirect_response=False
-        )
-
-    def test_legacy_demo_redirects_to_private_dashboard(self):
+class TransactionNavigationTests(TestCase):
+    def test_removed_demo_page_is_not_found(self):
         student = get_user_model().objects.create_user(username="student")
         self.client.force_login(student)
-        Transaction.objects.create(
-            kind=Transaction.Kind.EXPENSE,
-            amount=Decimal("25.50"),
-            date=date(2026, 10, 5),
-            description="Demo Lunch",
-            category="Food",
-            is_demo=True,
-        )
 
-        response = self.client.get(reverse("transaction_list"), follow=True)
+        self.assertEqual(self.client.get("/demo/").status_code, 404)
 
-        self.assertRedirects(response, reverse("dashboard"))
-        self.assertNotContains(response, "Demo Lunch")
-        self.assertContains(response, "No transactions in this period")
+    def test_recording_pages_link_to_private_dashboard(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
+
+        for page in ("record_income", "record_expense"):
+            with self.subTest(page=page):
+                response = self.client.get(reverse(page))
+                self.assertContains(response, f'href="{reverse("dashboard")}"')

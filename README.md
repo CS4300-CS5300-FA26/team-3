@@ -49,71 +49,45 @@ coverage reports as workflow artifacts.
 
 Luna reviews team PRs using the `OPENAI_API_KEY` GitHub secret. Reference issues
 in the PR description (for example, `Related: #12`) to include their Gherkin
-criteria. Reviews become available once the workflow reaches `main`.
+criteria.
 Drafts skip normally. Other review failures appear in the Actions summary;
 current author/repository eligibility is checked using GitHub metadata.
 
-## D2 — Student sign-in and account lockout (#11)
+## Student sign-in and dashboard (#11, #21)
 
-Returning students can sign in with their email and password at `/sign-in/` and access their personal dashboard at `/dashboard/`.
+Sign in with an existing account's email and password at `/sign-in/`. Both `/`
+and `/dashboard/` show only that student's transactions and remaining budget for
+the selected month. Record income or expenses from the dashboard; sign-out uses
+POST and ends the session. The separate `/admin/login/` remains available for
+staff accounts, including those without an email.
 
-- The dashboard requires authentication and displays only the signed-in student's transactions for the selected calendar month.
-- Incorrect credentials and unknown email addresses receive the same error message.
-- Five failed sign-ins within 15 minutes trigger a 15-minute lockout. Password authentication is skipped while the lockout is active.
-- Signing out through `/sign-out/` invalidates the authenticated session.
-- Stale login-attempt records can be removed without clearing active lockouts.
+Incorrect credentials and unknown emails receive the same error. Five failed
+sign-ins within 15 minutes lock that email for 15 minutes. A shared database
+budget allows 100 sign-in attempts per minute across all emails; further attempts
+receive HTTP 429 and can retry after a minute. This small-app limit also means a
+traffic burst can temporarily delay legitimate sign-ins.
 
-Run the cleanup command manually or schedule it periodically:
+The first sign-in attempt each minute removes expired failure records and idle
+email records without clearing active lockouts. No scheduled job is needed.
+`python src/manage.py cleanup_login_attempts` remains available for manual cleanup.
+PostgreSQL and file-backed SQLite serialize concurrent sign-in decisions;
+concurrency tests skip shared in-memory SQLite.
 
-```bash
-python src/manage.py cleanup_login_attempts
-```
-
-Run the D2 Django tests:
-
-```bash
-python src/manage.py test tests.test_login_lockout
-```
-
-Run the five acceptance scenarios from GitHub issue #11:
-
-```bash
-python -m behave features/sign_in_lockout.feature
-```
-
-Concurrency tests run against PostgreSQL or file-backed SQLite; they skip the shared in-memory SQLite test database. SQLite serializes sign-in writes at the database level; PostgreSQL locks only the attempted email. Run cleanup periodically to remove expired failures and inactive email records without clearing active lockouts.
-
-## Optional demo transactions
-
-To add shared examples for testing the month selector, run this command from the
-project root in your activated virtual environment after running migrations:
-
-```bash
-python src/manage.py seed_demo_transactions
-```
-
-This adds a $900.00 paycheck on January 5, 2027 and a $275.00 grocery expense on
-January 10, 2027. These synthetic rows remain available for development tests but
-are excluded from every student dashboard. The old `/demo/` URL redirects to
-the signed-in student's dashboard.
-Matching examples already present are skipped, including those added manually;
-rerunning the command does not duplicate them. Existing transactions are not
-updated or deleted. This command writes to the database configured for that
-terminal; each developer runs it against their own development database.
-
-Run its tests with `python src/manage.py test tests --pattern="test_seed_demo_transactions.py"`.
+Retained synthetic transactions are excluded from student dashboards. `/demo/`
+has been removed; the old seed command is only a development fixture helper.
 
 ## Source layout
 
 - `src/budgetwise/`: Django project settings and URLs.
 - `src/budgetwise/db/aurora/`: PostgreSQL connection with AWS IAM authentication.
-- `src/transactions/`: transaction model, migrations, and admin registration.
+- `src/accounts/`: email identity, sign-in, lockout, and the private dashboard.
+- `src/transactions/`: transaction model, recording forms, migrations, and admin registration.
 - `src/integrations/`: future Resend, OpenAI, and other service connections.
 - `tests/`: transaction, database connection, Lambda, and deployment tests.
 
 ## Architecture decisions
 
-Planned request flow: `Browser → API Gateway → Lambda → Django → Aurora PostgreSQL`
+Request flow: `Browser → API Gateway → Lambda → Django → Aurora PostgreSQL`
 
 | Choice | Reason |
 | --- | --- |
@@ -124,15 +98,13 @@ Planned request flow: `Browser → API Gateway → Lambda → Django → Aurora 
 | Cloudflare DNS and Resend | Cloudflare manages our domain. Resend is selected for application email; its Django integration is still planned. |
 | GitHub Actions | Test pull requests and automate releases from `main`, using temporary AWS credentials instead of stored access keys. |
 
-The transaction model and migrations are implemented. The public application page displays synthetic demo transactions from the database while excluding non-demo transactions. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
-
 ## Deployment
 
 Pull requests to `main` run Django checks, migrations, and tests against a temporary PostgreSQL database in GitHub Actions. This uses no AWS credentials or Aurora credits. Teammates can run local tests with `python src/manage.py test tests src`.
 
 Public URL: https://budget-wise.dev/
 
-API Gateway sends requests to Django on AWS Lambda. The root application view returns a 200 response and displays synthetic demo transactions from the database. The deployment workflow tests changes to `main`, applies migrations, and releases them to Lambda. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
+API Gateway sends requests to Django on AWS Lambda. Anonymous visitors are redirected from `/` to sign-in. The deployment workflow tests changes to `main`, applies migrations, checks the candidate sign-in page, and releases it to Lambda. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
 
 ## Planned Features (as of Sprint 0-2, subject to change)
 
@@ -356,7 +328,7 @@ inserts and updates on SQLite and PostgreSQL.
 Fabian ran each focused test with the ownership assertion failing before the view
 change, then passing after it. New income and expense entries now belong to the
 signed-in student. The optional owner field still allows older and demo records
-without an owner; the public dashboard continues to show demo data only.
+without an owner. The later D2 dashboard displays only user-owned records.
 
 ### Sprint 1: Oct 21, 2026 — Pending success scenarios and shared Behave steps
 
@@ -389,4 +361,15 @@ wrong error message still fails the expense scenario.
 
 **How we used the result:**
 
-We reviewed and adapted the suggested code to the existing Django project. We ran all five D2 acceptance scenarios and the full Behave suite successfully. Nine focused Django tests passed locally; the PostgreSQL concurrency test was skipped because the local database uses SQLite. We also verified the cleanup management command.
+We reviewed and adapted the suggestions to the existing Django project and its acceptance criteria.
+
+### Sprint 1: Oct 22, 2026 — Sign-in follow-up and dashboard integration
+
+**Tool:** Codex
+
+**What it helped with:** Reviewed PR #53 feedback, prepared focused regressions,
+and simplified sign-in retention, request limits, routes, and deployment checks.
+
+**How we used the result:** Kept one private dashboard, removed the legacy demo
+route, and used the database for shared limits and automatic cleanup without new
+services. Retained focused tests and the existing deployment rollback path.

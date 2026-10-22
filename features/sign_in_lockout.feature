@@ -34,4 +34,3 @@ Feature: Student sign in and sign out
     When I sign in again with any password
     Then I see "Too many attempts. Try again in 15 minutes."
     And the password is not checked
-

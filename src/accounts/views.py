@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
@@ -8,7 +8,7 @@ from decimal import Decimal
 from django.utils import timezone
 from accounts.identity import normalize_email
 from transactions.models import Transaction
-from .lockout import check_login
+from .lockout import SignInRateLimited, check_login
 from django.views.decorators.cache import never_cache
 
 
@@ -29,7 +29,14 @@ def sign_in(request):
 
         # Check the login credentials and lockout status
         if email is not None:
-            user, blocked = check_login(request, email, password)
+            try:
+                user, blocked = check_login(request, email, password)
+            except SignInRateLimited:
+                response = render(request, "accounts/sign_in.html", {
+                    "error": "Too many sign-in requests. Try again in a minute.",
+                }, status=429)
+                response["Retry-After"] = "60"
+                return response
         else:
             user, blocked = None, False
 
