@@ -1,0 +1,31 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BudgetWise - Dashboard</title>
+</head>
+<body>
+    <h1>My Dashboard</h1>
+
+    <p>Signed in as {{ request.user.email }}</p>
+
+    <h2>My Transactions</h2>
+
+    <ul>
+        {% for transaction in transactions %}
+            <li>
+                {{ transaction.description }} - ${{ transaction.amount }}
+            </li>
+        {% empty %}
+            <li>No transactions found</li>
+        {% endfor %}
+    </ul>
+
+    <!-- Sign out using a POST request -->
+    <form method="POST" action="{% url 'sign_out' %}">
+        {% csrf_token %}
+        <button type="submit">Sign Out</button>
+    </form>
+</body>
+</html>
