@@ -53,6 +53,36 @@ criteria. Reviews become available once the workflow reaches `main`.
 Drafts skip normally. Other review failures appear in the Actions summary;
 current author/repository eligibility is checked using GitHub metadata.
 
+## D2 — Student sign-in and account lockout (#11)
+
+Returning students can sign in with their email and password at `/sign-in/` and access their personal dashboard at `/dashboard/`.
+
+- The dashboard requires authentication and displays only the signed-in student's transactions for the selected calendar month.
+- Incorrect credentials and unknown email addresses receive the same error message.
+- Five failed sign-ins within 15 minutes trigger a 15-minute lockout. Password authentication is skipped while the lockout is active.
+- Signing out through `/sign-out/` invalidates the authenticated session.
+- Stale login-attempt records can be removed without clearing active lockouts.
+
+Run the cleanup command manually or schedule it periodically:
+
+```bash
+python src/manage.py cleanup_login_attempts
+```
+
+Run the D2 Django tests:
+
+```bash
+python src/manage.py test tests.test_login_lockout
+```
+
+Run the five acceptance scenarios from GitHub issue #11:
+
+```bash
+python -m behave features/sign_in_lockout.feature
+```
+
+The PostgreSQL concurrency test is included but skips on SQLite. It must run against PostgreSQL to verify concurrent sign-in protection.
+
 ## Optional demo transactions
 
 To add shared examples for testing the month selector, run this command from the
@@ -343,3 +373,19 @@ Following Pardot's advice, we added both scenarios now as pending instead of wai
 for D2, and kept them skipped in CI rather than faking a passing step. We checked
 that both pass once the dashboard shows the student's own transactions, and that a
 wrong error message still fails the expense scenario.
+
+### Sprint 1: Oct 22, 2026 — Student sign-in and account lockout
+
+**Tool:** ChatGPT
+
+**What it helped with:**
+
+- Reviewed D2 implementation against GitHub issue #11 and PR feedback.
+- Added Django tests for login lockout, expiration, rolling failure windows, logout, dashboard privacy, and stale-attempt cleanup.
+- Implemented the five official Gherkin acceptance scenarios using Behave.
+- Added a PostgreSQL-specific concurrency test and a management command for cleaning up stale login attempts.
+- Helped integrate the authenticated monthly dashboard with existing transaction ownership.
+
+**How we used the result:**
+
+We reviewed and adapted the suggested code to the existing Django project. We ran all five D2 acceptance scenarios and the full Behave suite successfully. Nine focused Django tests passed locally; the PostgreSQL concurrency test was skipped because the local database uses SQLite. We also verified the cleanup management command.

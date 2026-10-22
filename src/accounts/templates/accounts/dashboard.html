@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,23 +5,48 @@
     <title>BudgetWise - Dashboard</title>
 </head>
 <body>
-    <h1>My Dashboard</h1>
+    <h1>My Budget Dashboard</h1>
 
     <p>Signed in as {{ request.user.email }}</p>
+
+    <h2>Monthly Budget</h2>
+
+    <!-- Select a calendar month -->
+    <form method="GET" action="{% url 'dashboard' %}">
+        <label for="month">Select Month:</label>
+        <input
+            type="month"
+            id="month"
+            name="month"
+            value="{{ selected_month }}"
+        >
+        <button type="submit">View Month</button>
+    </form>
+
+    <h3>Monthly Balance: ${{ remaining_budget|floatformat:2 }}</h3>
 
     <h2>My Transactions</h2>
 
     <ul>
         {% for transaction in transactions %}
             <li>
-                {{ transaction.description }} - ${{ transaction.amount }}
+                {{ transaction.date }} -
+                {{ transaction.description }} -
+                {{ transaction.kind }} -
+                ${{ transaction.amount }}
             </li>
         {% empty %}
-            <li>No transactions found</li>
+            <li>No transactions found for this month.</li>
         {% endfor %}
     </ul>
 
-    <!-- Sign out using a POST request -->
+    <!-- Navigation to existing transaction pages -->
+    <nav>
+        <a href="{% url 'record_income' %}">Add Income</a>
+        <a href="{% url 'record_expense' %}">Add Expense</a>
+    </nav>
+
+    <!-- End the authenticated session -->
     <form method="POST" action="{% url 'sign_out' %}">
         {% csrf_token %}
         <button type="submit">Sign Out</button>
