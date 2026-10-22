@@ -20,9 +20,9 @@ Keep validation results and execution history out of this record.
   [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11), and
   [#21](https://github.com/CS4300-CS5300-FA26/team-3/issues/21).
 - Add email sign-in, POST sign-out, and a 15-minute lockout after five failures.
-  Serialize sign-in decisions, cap shared traffic at 100 attempts per minute,
-  and automatically prune expired records on the first sign-in each minute.
-  The shared limit can temporarily delay legitimate sign-ins during a burst.
+  Serialize sign-in decisions; allow 10 attempts per source IP and 100 overall
+  per minute using expiring hashed counters in one shared row. Shared networks
+  share their source allowance. Prune expired records on the first sign-in each minute.
 - Serve the user's monthly transactions and remaining budget at `/` and
   `/dashboard/`, with private cache headers. Remove `/demo/`; retained synthetic
   rows stay excluded. Connect income, expense, and sign-out.

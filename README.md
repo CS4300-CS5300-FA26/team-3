@@ -63,9 +63,11 @@ staff accounts, including those without an email.
 
 Incorrect credentials and unknown emails receive the same error. Five failed
 sign-ins within 15 minutes lock that email for 15 minutes. A shared database
-budget allows 100 sign-in attempts per minute across all emails; further attempts
-receive HTTP 429 and can retry after a minute. This small-app limit also means a
-traffic burst can temporarily delay legitimate sign-ins.
+budget allows 10 sign-in attempts per source IP and 100 overall per minute.
+Requests over either limit receive HTTP 429 and can retry after a minute;
+source-blocked requests do not consume the overall allowance. Users sharing a
+network share its source allowance. Source counters store hashed addresses,
+expire with the shared minute window, and ignore client-supplied forwarded headers.
 
 The first sign-in attempt each minute removes expired failure records and idle
 email records without clearing active lockouts. No scheduled job is needed.

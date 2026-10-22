@@ -4,19 +4,22 @@ from django.contrib.auth import authenticate
 from django.db import connection, transaction
 from django.db.models import F, Q
 from django.utils import timezone
+from django.utils.crypto import salted_hmac
 
 from .models import FailedSignIn, LoginAttempt, SignInBudget
 
 
 SIGN_IN_LIMIT = 100
+SOURCE_LIMIT = 10
 
 
 class SignInRateLimited(Exception):
     pass
 
 
-def claim_sign_in_request():
-    """Bound credential checks and prune idle records once per active minute."""
+def claim_sign_in_request(remote_address):
+    """Admit sources fairly within one bounded, shared minute counter."""
+    source = salted_hmac("accounts.signin.source", remote_address, algorithm="sha256").hexdigest()
     with transaction.atomic():
         if connection.vendor == "sqlite":
             SignInBudget.objects.filter(pk=1).update(requests=F("requests"))
@@ -26,10 +29,12 @@ def claim_sign_in_request():
         )
         if created or budget.resets_at <= now:
             budget.requests = 0
+            budget.sources = {}
             budget.resets_at = now + timedelta(minutes=1)
             cleanup_stale_attempts()
-        if budget.requests >= SIGN_IN_LIMIT:
+        if budget.sources.get(source, 0) >= SOURCE_LIMIT or budget.requests >= SIGN_IN_LIMIT:
             return False
+        budget.sources[source] = budget.sources.get(source, 0) + 1
         budget.requests += 1
         budget.save()
         return True
@@ -49,7 +54,8 @@ def cleanup_stale_attempts():
 
 
 def check_login(request, email, password):
-    if not claim_sign_in_request():
+    # REMOTE_ADDR comes from the server/API Gateway, never a forwarded header.
+    if not claim_sign_in_request(request.META.get("REMOTE_ADDR", "")):
         raise SignInRateLimited
     with transaction.atomic():
         if connection.vendor == "sqlite":

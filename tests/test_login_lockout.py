@@ -236,24 +236,52 @@ class LoginLockoutTests(TestCase):
         )
 
 
+    def test_one_source_cannot_spend_other_sources_signin_capacity(self):
+        with patch("accounts.lockout.authenticate", return_value=None) as authenticate:
+            for index in range(10):
+                response = self.client.post(reverse("sign_in"), {
+                    "email": f"source-{index}@example.com", "password": "wrong",
+                }, REMOTE_ADDR="192.0.2.1")
+                self.assertEqual(response.status_code, 200)
+            for index in range(20):
+                response = self.client.post(reverse("sign_in"), {
+                    "email": f"excess-{index}@example.com", "password": "wrong",
+                }, REMOTE_ADDR="192.0.2.1", HTTP_X_FORWARDED_FOR=f"198.51.100.{index}")
+                self.assertEqual(response.status_code, 429)
+            response = self.client.post(reverse("sign_in"), {
+                "email": "other-source@example.com", "password": "wrong",
+            }, REMOTE_ADDR="192.0.2.2")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(authenticate.call_count, 11)
+        self.assertEqual(SignInBudget.objects.get(pk=1).requests, 11)
+        self.assertEqual(LoginAttempt.objects.count(), 11)
+        self.assertEqual(FailedSignIn.objects.count(), 11)
+
     def test_distinct_emails_share_a_request_limit_before_authentication(self):
         SIGN_IN_LIMIT = 100
 
         with patch("accounts.lockout.authenticate", return_value=None) as authenticate:
             for index in range(SIGN_IN_LIMIT):
-                response = self.fail_login(f"distinct-{index}@example.com")
+                response = self.client.post(reverse("sign_in"), {
+                    "email": f"distinct-{index}@example.com", "password": "wrong",
+                }, REMOTE_ADDR=f"192.0.2.{index + 1}")
                 self.assertEqual(response.status_code, 200)
-            response = self.fail_login("over-limit@example.com")
+            response = self.client.post(reverse("sign_in"), {
+                "email": "over-limit@example.com", "password": "wrong",
+            }, REMOTE_ADDR="198.51.100.1")
         self.assertEqual(response.status_code, 429)
         self.assertEqual(response["Retry-After"], "60")
         self.assertContains(response, "Try again in a minute", status_code=429)
         self.assertEqual(authenticate.call_count, SIGN_IN_LIMIT)
+        budget = SignInBudget.objects.get(pk=1)
+        self.assertEqual(len(budget.sources), SIGN_IN_LIMIT)
+        self.assertTrue(all(len(key) == 64 for key in budget.sources))
         self.assertEqual(LoginAttempt.objects.count(), SIGN_IN_LIMIT)
         self.assertEqual(FailedSignIn.objects.count(), SIGN_IN_LIMIT)
 
     def test_shared_budget_resets_and_cleanup_runs_on_the_next_active_minute(self):
         now = timezone.now()
-        SignInBudget.objects.create(pk=1, requests=100, resets_at=now - timedelta(seconds=1))
+        SignInBudget.objects.create(pk=1, requests=100, sources={"expired": 10}, resets_at=now - timedelta(seconds=1))
         LoginAttempt.objects.create(
             email="stale@example.com", failed_count=1,
             first_failed_at=now - timedelta(minutes=20),
@@ -264,6 +292,8 @@ class LoginLockoutTests(TestCase):
         self.assertFalse(LoginAttempt.objects.filter(email="stale@example.com").exists())
         budget = SignInBudget.objects.get(pk=1)
         self.assertEqual(budget.requests, 1)
+        self.assertNotIn("expired", budget.sources)
+        self.assertEqual(list(budget.sources.values()), [1])
         self.assertGreater(budget.resets_at, now)
 
     def test_signin_automatically_prunes_idle_records_and_preserves_lockouts(self):
@@ -525,3 +555,30 @@ class LoginConcurrencyTests(TransactionTestCase):
         self.assertEqual(authenticate.call_count, 1)
         self.assertEqual(LoginAttempt.objects.count(), 1)
         self.assertEqual(SignInBudget.objects.get(pk=1).requests, 100)
+
+    def test_concurrent_requests_cannot_exceed_one_sources_allowance(self):
+        with patch("accounts.lockout.authenticate", return_value=None):
+            for index in range(9):
+                self.client.post(reverse("sign_in"), {
+                    "email": f"source-seed-{index}@example.com", "password": "wrong",
+                }, REMOTE_ADDR="192.0.2.1")
+        barrier = Barrier(2)
+
+        def attempt_login(index):
+            close_old_connections()
+            try:
+                barrier.wait(timeout=10)
+                return Client().post(reverse("sign_in"), {
+                    "email": f"source-race-{index}@example.com", "password": "wrong",
+                }, REMOTE_ADDR="192.0.2.1").status_code
+            finally:
+                connections.close_all()
+
+        with patch("accounts.lockout.authenticate", return_value=None) as authenticate:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                results = list(executor.map(attempt_login, range(2)))
+        self.assertEqual(sorted(results), [200, 429])
+        self.assertEqual(authenticate.call_count, 1)
+        budget = SignInBudget.objects.get(pk=1)
+        self.assertEqual(budget.requests, 10)
+        self.assertEqual(list(budget.sources.values()), [10])
