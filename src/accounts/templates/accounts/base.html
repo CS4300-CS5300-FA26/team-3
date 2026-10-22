@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BudgetWise{% endblock %}</title>
+    <style>
+        body {
+            margin: 0;
+            background: #f3f6f1;
+            color: #101820;
+            font: 18px/1.5 Arial, sans-serif;
+        }
+        header {
+            padding: 18px 3%;
+            background: #e9efe6;
+            border-bottom: 1px solid #afc0ad;
+            color: #104b25;
+            font: 32px/1.2 Georgia, serif;
+        }
+        header a { color: inherit; text-decoration: none; }
+        header a:hover, header a:focus-visible { text-decoration: underline; }
+        main { max-width: 480px; margin: 48px auto; padding: 0 20px; }
+        main > p { overflow-wrap: anywhere; }
+        h1 { margin: 0 0 24px; color: #104b25; font: 36px/1.2 Georgia, serif; }
+        form { padding: 24px; background: white; border: 1px solid #afc0ad; border-radius: 8px; }
+        form p { margin: 0 0 20px; }
+        label { display: block; margin-bottom: 6px; font-weight: bold; }
+        input {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #56616b;
+            border-radius: 4px;
+            font: inherit;
+        }
+        input:focus-visible, button:focus-visible { outline: 3px solid #104b25; outline-offset: 2px; }
+        button, .button {
+            padding: 10px 18px;
+            border: 0;
+            border-radius: 4px;
+            background: #104b25;
+            color: white;
+            font: inherit;
+            cursor: pointer;
+            display: inline-block;
+            text-decoration: none;
+        }
+        .errorlist { margin: 0 0 8px; padding: 0; list-style: none; color: #9b1c1c; }
+        .password-field { position: relative; display: block; }
+        .password-field input { padding-right: 48px; }
+        .password-toggle { position: absolute; top: 1px; right: 1px; bottom: 1px; width: 44px; padding: 10px; background: transparent; color: #104b25; }
+        .password-toggle svg { display: block; width: 22px; height: 22px; }
+        .eye-slash { visibility: hidden; }
+        input[type="text"] + .password-toggle .eye-slash { visibility: visible; }
+    </style>
+</head>
+<body>
+    <header><a href="{% if request.user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'sign_in' %}{% endif %}">BudgetWise</a></header>
+    {% include "accounts/navigation.html" %}
+    <main>{% block content %}{% endblock %}</main>
+    <script>
+        document.querySelectorAll('input[type="password"]').forEach((input) => {
+            const field = document.createElement('span');
+            const button = document.createElement('button');
+            const label = input.labels[0].textContent.replace(/:$/, '').toLowerCase();
+            button.type = 'button';
+            button.className = 'password-toggle';
+            button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="eye-slash" d="m3 3 18 18"/></svg>';
+            button.setAttribute('aria-label', `Show ${label}`);
+            button.setAttribute('aria-controls', input.id);
+            button.addEventListener('click', () => {
+                const show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                button.setAttribute('aria-label', `${show ? 'Hide' : 'Show'} ${label}`);
+            });
+            field.className = 'password-field';
+            input.before(field);
+            field.append(input, button);
+        });
+    </script>
+</body>
+</html>
