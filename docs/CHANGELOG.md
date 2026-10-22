@@ -14,6 +14,22 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-22 — Complete signup and connect account navigation
+
+- **Reference:** [#10](https://github.com/CS4300-CS5300-FA26/team-3/issues/10),
+  integrated with [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11);
+  [PR #55](https://github.com/CS4300-CS5300-FA26/team-3/pull/55).
+- Add [email-only signup](../src/accounts/signup.py), 24-hour single-use verification,
+  password setup, and existing-account notices with identical public confirmations.
+  Shared database limits bound email delivery; application logs redact tokens.
+- Connect signup, sign-in, dashboard, income, expense, and POST sign-out through
+  shared navigation. Require sign-in for application URLs except signup and keep
+  Django admin login separate. Use the private dashboard provided by D2 (#53).
+  See the [signup journey](../features/signup.feature).
+- Merge the independent signup and sign-in migrations without rewriting their history.
+  Real mail requires configured Resend credentials. The deployment candidate probe
+  checks the public sign-in page because the homepage now redirects anonymous users.
+
 ### 2026-10-22 — Complete sign-in and the personal budget dashboard
 
 - **Reference:** [PR #53](https://github.com/CS4300-CS5300-FA26/team-3/pull/53),

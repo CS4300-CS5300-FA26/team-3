@@ -110,8 +110,7 @@ class RecordExpenseViewTests(TestCase):
     def test_anonymous_get_redirects_to_login(self):
         response = Client().get(reverse("record_expense"))
 
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("login", response.url)
+        self.assertRedirects(response, reverse("sign_in") + "?next=" + reverse("record_expense"))
 
     def test_negative_amount_shows_error_and_saves_nothing(self):
         response = self.client.post(reverse("record_expense"), {**RENT, "amount": "-5.00"})

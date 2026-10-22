@@ -53,6 +53,14 @@ criteria.
 Drafts skip normally. Other review failures appear in the Actions summary;
 current author/repository eligibility is checked using GitHub metadata.
 
+## Create an account (#10)
+
+Open `/accounts/signup/` and enter your email. Follow the single-use link within
+24 hours, choose a password, then sign in. Signed-out application visits lead to
+sign-in, and successful sign-in resumes supported protected pages.
+See [signup email configuration](docs/DEPLOYMENT.md#signup-email) for local links
+and the Resend sending credential; automated tests use in-memory email.
+
 ## Student sign-in and dashboard (#11, #21)
 
 Sign in with an existing account's email and password at `/sign-in/`. Both `/`
@@ -97,7 +105,7 @@ Request flow: `Browser → API Gateway → Lambda → Django → Aurora PostgreS
 | API Gateway and AWS Lambda | Receive HTTPS requests and run Django without maintaining an application server. Mangum translates requests for Django. |
 | Aurora PostgreSQL | Keep deployed data independent of Lambda releases. IAM provides temporary database authentication; separate app and migration users limit who can change the schema. |
 | SQLite locally; temporary PostgreSQL in CI | Let teammates develop without AWS accounts and test PostgreSQL compatibility without using Aurora credits. These databases do not share data. |
-| Cloudflare DNS and Resend | Cloudflare manages our domain. Resend is selected for application email; its Django integration is still planned. |
+| Cloudflare DNS and Resend | Cloudflare manages our domain. Django sends signup email through Resend SMTP. |
 | GitHub Actions | Test pull requests and automate releases from `main`, using temporary AWS credentials instead of stored access keys. |
 
 ## Deployment
@@ -348,6 +356,18 @@ Following Pardot's advice, we added both scenarios now as pending instead of wai
 for D2, and kept them skipped in CI rather than faking a passing step. We checked
 that both pass once the dashboard shows the student's own transactions, and that a
 wrong error message still fails the expense scenario.
+
+### Sprint 1: Oct 22, 2026 — Complete D1 and connect D2 navigation
+
+**Tool:** Codex
+
+**What it helped with:** Signup email, single-use verification, the password form,
+and integration of D1 signup with D2 sign-in and transaction navigation.
+
+**How we used the result:** Reused Django auth/mail and the shared identity helpers,
+combined the unshipped D1 migrations after D2, and added focused route and
+acceptance checks. Added the application sign-in gate and shared account/recording
+navigation; dashboard changes remain in D2 (#53).
 
 ### Sprint 1: Oct 22, 2026 — Student sign-in and account lockout
 

@@ -49,6 +49,7 @@
 </head>
 <body>
     <header><a href="{% url 'dashboard' %}">BudgetWise</a></header>
+    {% include "accounts/navigation.html" %}
     <main>
         <h1>Record income</h1>
         {% for message in messages %}

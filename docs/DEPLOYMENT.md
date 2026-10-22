@@ -16,6 +16,20 @@ Set `DJANGO_SECRET_KEY` in Lambda to a private, randomly generated value of at l
 
 GitHub Actions builds the deployment ZIP from `src/` and Linux-compatible dependencies, excluding local databases, `.env` files, virtual environments, and caches.
 
+## Signup email
+
+Chase owns BudgetWise's Resend setup. The app sends from `accounts@budget-wise.dev`
+through Resend SMTP over TLS. Set `RESEND_API_KEY` to a sending-only key restricted
+to `budget-wise.dev` in Lambda's environment before deploying signup. Keep its
+value out of source and CI. `SIGNUP_BASE_URL` defaults to `https://budget-wise.dev`;
+for local delivery checks, set it to the local server URL and export the key in
+that shell. Tests use Django's in-memory mail backend and send no real email.
+
+Resend's Emails dashboard shows delivery failures; a failed send also gives the
+visitor a generic retry message. Revoke the BudgetWise key in Resend to disable
+sending without changing other applications. Deployed code still needs the key
+configured; local integration does not configure Lambda.
+
 ## Database
 
 Aurora PostgreSQL cluster `budgetwise` is our application database in `us-east-1`, configured for 0–1 ACU and automatic pause after five idle minutes. Use local tests to conserve credits.
