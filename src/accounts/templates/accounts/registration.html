@@ -7,7 +7,7 @@
             <form method="post">
                 {% csrf_token %}
                 {{ form.as_p }}
-                <button type="submit">Continue</button>
+                <button type="submit" data-pending-label="Sending email…">Continue</button>
             </form>
         {% elif check_email %}
             <h1>Check your email</h1>
@@ -26,7 +26,7 @@
             <form method="post">
                 {% csrf_token %}
                 {{ form.as_p }}
-                <button type="submit">Create account</button>
+                <button type="submit" data-pending-label="Creating account…">Create account</button>
             </form>
         {% endif %}
 {% endblock %}

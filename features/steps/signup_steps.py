@@ -4,6 +4,25 @@ from django.test import override_settings
 from verification_steps import PASSWORD
 
 
+@when("the student requests signup while the email service is unavailable")
+def unavailable_email(context):
+    from smtplib import SMTPException
+    from unittest.mock import patch
+
+    with patch("accounts.signup.send_mail", side_effect=SMTPException("Unavailable")):
+        request_signup(context, "student@example.org")
+
+
+@then("signup shows the email error and an enabled Continue button")
+def signup_retry(context):
+    from django.test import SimpleTestCase
+
+    check = SimpleTestCase()
+    check.assertContains(context.signup_response, "Unable to send email right now.")
+    check.assertContains(context.signup_response,
+        '<button type="submit" data-pending-label="Sending email…">Continue</button>', html=True)
+
+
 @given('signup already has an account for "{email}"')
 def existing_account(context, email):
     from accounts.identity import create_verified_user

@@ -14,6 +14,15 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-22 — Show account form submission progress
+
+- [#10](https://github.com/CS4300-CS5300-FA26/team-3/issues/10) and
+  [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11); PR pending.
+  [Account forms](../src/accounts/templates/accounts/base.html) show progress and
+  prevent repeat submissions while waiting. Restore controls on browser Back;
+  [email failures](../features/signup.feature) leave signup ready to retry.
+  Email sending still completes before the confirmation redirect.
+
 ### 2026-10-22 — Identify the deployment health probe
 
 - Deployment follow-up; PR pending. Give the public health probe a BudgetWise
