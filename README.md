@@ -256,6 +256,17 @@ eligibility checks with visible failures.
 **How we used the result:** Checked the workflow boundaries and exercised eligible,
 ineligible, and failure cases locally before human delivery.
 
+### Sprint 1: Oct 18, 2026 — Account foundation
+
+**Tool:** Codex
+
+**What it helped with:** Reviewed the shared email identity contract, prepared focused
+tests, and foundation Behave scenarios for #10.
+
+**How we used the result:** Added email normalization and account creation using
+the existing Django user model, with tests for input validation, password handling,
+and duplicate protection.
+
 ### Sprint 1: Oct 19, 2026 — Calendar month budget integration
 
 **Tool:** Codex
@@ -289,6 +300,16 @@ We followed the income pattern so the two pages behave the same, kept the catego
 list in the form so the change needed no migration, and left out the transaction-list
 and remaining-budget criteria until expenses are tied to users. Noah chose the
 category list and the issue reference.
+
+### 2026-10-19 — Database email uniqueness
+
+**Tool:** Codex
+
+**What it helped with:** Added database enforcement of unique email identities and
+ASCII normalization with international-domain conversion.
+
+**How we used the result:** Kept Django's default user model and checked duplicate
+inserts and updates on SQLite and PostgreSQL.
 
 ### Sprint 1: Oct 21, 2026 — Transaction ownership
 
