@@ -158,8 +158,9 @@ class RecordIncomeViewTests(TestCase):
 
 class TransactionListViewTests(TestCase):
     def setUp(self):
-        """Start each view test with an empty transaction table."""
+        """Start each view test with an empty transaction table and a session."""
         Transaction.objects.all().delete()
+        self.client.force_login(get_user_model().objects.create_user(username="list-student"))
 
     def test_transaction_list_returns_success(self):
         """The transaction landing page should be accessible."""
@@ -174,7 +175,7 @@ class TransactionListViewTests(TestCase):
         self.assertContains(response, "No transactions in this period")
 
     def test_transaction_list_displays_demo_transaction(self):
-        """Demo transactions stored in the database should appear publicly."""
+        """The legacy demo page still renders its synthetic rows until D2 replaces it."""
         Transaction.objects.create(
             kind=Transaction.Kind.EXPENSE,
             amount=Decimal("25.50"),
@@ -191,7 +192,7 @@ class TransactionListViewTests(TestCase):
         self.assertContains(response, "25.50")
 
     def test_transaction_list_hides_non_demo_transaction(self):
-        """Non-demo transactions should not appear on the public landing page."""
+        """The legacy demo page must not expose private transactions."""
         Transaction.objects.create(
             kind=Transaction.Kind.EXPENSE,
             amount=Decimal("99.99"),

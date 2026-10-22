@@ -18,6 +18,7 @@ def demo_dashboard(context):
 
     django.setup()
 
+    from django.contrib.auth import get_user_model
     from django.test import Client
     from django.test.runner import DiscoverRunner
     from transactions.models import Transaction
@@ -30,6 +31,7 @@ def demo_dashboard(context):
 
     Transaction.objects.all().delete()
     context.client = Client()
+    context.client.force_login(get_user_model().objects.create_user(username="budget-student"))
     context.Transaction = Transaction
 
 

@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
@@ -9,6 +10,9 @@ from transactions.models import Transaction
 
 
 class RemainingBudgetViewTests(TestCase):
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user(username="budget-student"))
+
     @classmethod
     def setUpTestData(cls):
         # Replace seeded demo data with predictable acceptance-test examples.

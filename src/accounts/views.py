@@ -7,6 +7,7 @@ from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.shortcuts import redirect, render, resolve_url
+from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
@@ -87,9 +88,19 @@ def created(request):
     })
 
 
-# Handle user sign in
+@sensitive_post_parameters("email", "password")
+@never_cache
+@require_http_methods(["GET", "POST"])
+@login_not_required
 def sign_in(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard")
     error = None
+    # Resume only the protected pages that send users here. This also prevents
+    # external redirects and loops through signup, sign-in, or sign-out.
+    destination = request.POST.get("next", request.GET.get("next", ""))
+    if destination not in {reverse(name) for name in ("dashboard", "record_income", "record_expense")}:
+        destination = reverse("dashboard")
 
     # Check if the sign in form was submitted
     if request.method == "POST":
@@ -115,7 +126,7 @@ def sign_in(request):
         # Sign in if the credentials are correct
         elif user is not None:
             login(request, user)
-            return redirect("dashboard")
+            return redirect(destination)
 
         # Show an error for incorrect credentials
         else:
@@ -125,7 +136,7 @@ def sign_in(request):
     return render(
         request,
         "accounts/sign_in.html",
-        {"error": error},
+        {"error": error, "next": destination},
     )
 
 
