@@ -11,7 +11,10 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+from copy import deepcopy
 from pathlib import Path
+
+from django.utils.log import DEFAULT_LOGGING
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -141,12 +144,42 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+LOGIN_URL = "sign_in"
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
 MAILERS = {
     "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "OPTIONS": {
+            "host": "smtp.resend.com",
+            "port": 465,
+            "username": "resend",
+            "password": os.environ.get("RESEND_API_KEY", ""),
+            "use_ssl": True,
+            "timeout": 5,
+        },
     },
 }
+DEFAULT_FROM_EMAIL = "BudgetWise <accounts@budget-wise.dev>"
+# A configured origin prevents request headers from changing verification links.
+SIGNUP_BASE_URL = os.environ.get("SIGNUP_BASE_URL", "https://budget-wise.dev").rstrip("/")
+
+
+# Preserve Django's console, server and admin-email handlers while redacting at
+# emitters: ancestor logger filters do not run on propagated records.
+LOGGING = deepcopy(DEFAULT_LOGGING)
+LOGGING["filters"]["verification_token"] = {
+    "()": "accounts.logging.VerificationTokenFilter",
+}
+# Django emits SuspiciousOperation at a leaf named for the exception class.
+for logger_name in [
+    "django.request", "django.server", "mangum.http", "django.security.csrf",
+    "django.security.SuspiciousOperation", "django.security.SuspiciousMultipartForm",
+    "django.security.SuspiciousFileOperation", "django.security.DisallowedHost",
+    "django.security.DisallowedRedirect", "django.security.TooManyFieldsSent",
+    "django.security.TooManyFilesSent", "django.security.RequestDataTooBig",
+]:
+    LOGGING["loggers"].setdefault(logger_name, {})["filters"] = ["verification_token"]
