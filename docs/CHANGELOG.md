@@ -14,6 +14,22 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-22 — Complete sign-in and the personal budget dashboard
+
+- **Reference:** [PR #53](https://github.com/CS4300-CS5300-FA26/team-3/pull/53),
+  [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11), and
+  [#21](https://github.com/CS4300-CS5300-FA26/team-3/issues/21).
+- Add email sign-in, POST sign-out, and a 15-minute lockout after five failures.
+  Serialize sign-in decisions and safely prune idle records with
+  `cleanup_login_attempts`; run that command periodically.
+- Serve the user's monthly transactions and remaining budget at `/` and
+  `/dashboard/`, with private cache headers. Redirect `/demo/` to that dashboard;
+  retained synthetic rows stay excluded. Connect income, expense, and sign-out.
+- Exercise real user-owned data in the [D6 scenarios](../features/remaining_budget.feature)
+  and enable the income/expense success scenarios. See the
+  [sign-in scenarios](../features/sign_in_lockout.feature) and
+  [lockout implementation](../src/accounts/lockout.py).
+
 ### 2026-10-21 — Assign new transactions to students
 
 - **Reference:** [Issue #12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12) and [Issue #18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); PR pending.

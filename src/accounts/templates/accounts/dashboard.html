@@ -23,7 +23,7 @@
         <button type="submit">View Month</button>
     </form>
 
-    <h3>Monthly Balance: ${{ remaining_budget|floatformat:2 }}</h3>
+    <h3>Remaining budget: ${{ remaining_budget|floatformat:2 }}</h3>
 
     <h2>My Transactions</h2>
 
@@ -36,7 +36,7 @@
                 ${{ transaction.amount }}
             </li>
         {% empty %}
-            <li>No transactions found for this month.</li>
+            <li>No transactions in this period</li>
         {% endfor %}
     </ul>
 

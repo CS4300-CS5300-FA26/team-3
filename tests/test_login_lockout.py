@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from concurrent.futures import ThreadPoolExecutor
-from threading import Barrier
+from threading import Barrier, Event
 from django.db import connection, connections, close_old_connections
 from django.test import Client, TransactionTestCase
 from unittest import skipUnless
@@ -236,7 +236,7 @@ class LoginLockoutTests(TestCase):
         )
 
 
-    def test_cleanup_removes_stale_failures(self):
+    def test_cleanup_removes_stale_failures_and_idle_attempts(self):
         # Create an old inactive login record
         LoginAttempt.objects.create(
             email="old@example.com",
@@ -251,8 +251,8 @@ class LoginLockoutTests(TestCase):
 
         cleanup_stale_attempts()
 
-        # Keep the parent record to avoid racing with sign-in
-        self.assertTrue(
+        # Inactive identities must not remain permanently.
+        self.assertFalse(
             LoginAttempt.objects.filter(
                 email="old@example.com"
             ).exists()
@@ -263,6 +263,16 @@ class LoginLockoutTests(TestCase):
                 email="old@example.com"
             ).exists()
         )
+
+    def test_cleanup_removes_successful_identities_but_keeps_recent_failures(self):
+        LoginAttempt.objects.create(email="successful@example.com")
+        LoginAttempt.objects.create(
+            email="recent@example.com", failed_count=1,
+            first_failed_at=timezone.now(),
+        )
+        cleanup_stale_attempts()
+        self.assertFalse(LoginAttempt.objects.filter(email="successful@example.com").exists())
+        self.assertTrue(LoginAttempt.objects.filter(email="recent@example.com").exists())
 
     def test_cleanup_preserves_active_lockouts(self):
         # Create an active lockout with old failures
@@ -288,10 +298,14 @@ class LoginLockoutTests(TestCase):
 
 
 @skipUnless(
-    connection.vendor == "postgresql",
-    "Concurrency test requires PostgreSQL",
+    connection.vendor == "postgresql" or (
+        connection.vendor == "sqlite"
+        and connection.settings_dict["TEST"].get("NAME")
+        and "memory" not in str(connection.settings_dict["TEST"]["NAME"])
+    ),
+    "Concurrency test requires PostgreSQL or file-backed SQLite",
 )
-class PostgreSQLLoginConcurrencyTests(TransactionTestCase):
+class LoginConcurrencyTests(TransactionTestCase):
 
     def test_simultaneous_failed_logins_trigger_lockout(self):
         email = "concurrent@example.com"
@@ -360,3 +374,84 @@ class PostgreSQLLoginConcurrencyTests(TransactionTestCase):
             response,
             "Too many attempts. Try again in 15 minutes.",
         )
+
+    def test_concurrent_requests_do_not_check_password_after_fifth_failure(self):
+        email = "last-attempt@example.com"
+        for _ in range(4):
+            self.client.post(reverse("sign_in"), {"email": email, "password": "wrong"})
+        barrier = Barrier(2)
+
+        def attempt_login():
+            close_old_connections()
+            try:
+                barrier.wait(timeout=10)
+                return Client(raise_request_exception=False).post(reverse("sign_in"), {
+                    "email": email, "password": "wrong",
+                }).content.decode()
+            finally:
+                connections.close_all()
+
+        second_password_check = Event()
+        def check_password(*args, **kwargs):
+            if authenticate.call_count == 1:
+                # The old SQLite path lets another password check enter before
+                # this failure is saved. A serialized path makes it wait.
+                second_password_check.wait(timeout=1)
+            else:
+                second_password_check.set()
+            return None
+
+        with patch("accounts.lockout.authenticate", side_effect=check_password) as authenticate:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                results = list(executor.map(lambda _: attempt_login(), range(2)))
+        self.assertEqual(authenticate.call_count, 1)
+        self.assertEqual(sum("Too many attempts" in result for result in results), 1)
+        self.assertEqual(FailedSignIn.objects.filter(email=email).count(), 5)
+
+    @skipUnless(connection.vendor == "postgresql", "Requires PostgreSQL row locks")
+    def test_cleanup_waits_for_signin_without_deleting_its_active_record(self):
+        from django.db.models.query import QuerySet
+
+        email = "cleanup-race@example.com"
+        old = timezone.now() - timedelta(minutes=30)
+        LoginAttempt.objects.create(email=email, failed_count=1, first_failed_at=old)
+        FailedSignIn.objects.create(email=email, created_at=old)
+        authenticating = Event()
+        cleanup_deleting_parent = Event()
+        original_delete = QuerySet.delete
+
+        def authenticate_while_cleanup_starts(*args, **kwargs):
+            authenticating.set()
+            self.assertTrue(cleanup_deleting_parent.wait(timeout=10))
+            return None
+
+        def observe_delete(queryset):
+            if queryset.model is LoginAttempt:
+                cleanup_deleting_parent.set()
+            return original_delete(queryset)
+
+        def sign_in():
+            close_old_connections()
+            try:
+                return Client().post(reverse("sign_in"), {
+                    "email": email, "password": "wrong",
+                }).status_code
+            finally:
+                connections.close_all()
+
+        def cleanup():
+            close_old_connections()
+            try:
+                self.assertTrue(authenticating.wait(timeout=10))
+                cleanup_stale_attempts()
+            finally:
+                connections.close_all()
+
+        with patch("accounts.lockout.authenticate", side_effect=authenticate_while_cleanup_starts), patch.object(QuerySet, "delete", observe_delete):
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                login_result = executor.submit(sign_in)
+                cleanup_result = executor.submit(cleanup)
+                self.assertEqual(login_result.result(timeout=15), 200)
+                cleanup_result.result(timeout=15)
+        self.assertEqual(LoginAttempt.objects.get(email=email).failed_count, 1)
+        self.assertEqual(FailedSignIn.objects.filter(email=email).count(), 1)

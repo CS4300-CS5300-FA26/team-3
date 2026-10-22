@@ -25,7 +25,7 @@ python src/manage.py migrate
 python src/manage.py runserver 0.0.0.0:3000
 ```
 
-`check` validates the Django project, and `migrate` creates or updates local SQLite tables. The development server uses port 3000 for DevEdu; open `http://localhost:3000/` for a local setup. Stop it with `Ctrl+C`. The root page displays synthetic demo transactions stored in the database.
+`check` validates the Django project, and `migrate` creates or updates local SQLite tables. The development server uses port 3000 for DevEdu; open `http://localhost:3000/` for a local setup. Stop it with `Ctrl+C`. The root page requires sign-in and displays the current student's transactions and monthly remaining budget.
 
 Development always accepts `localhost`, `127.0.0.1`, and `[::1]`. Set
 `DJANGO_DEVELOPMENT_HOSTS` only if you access the server through another hostname,
@@ -81,7 +81,7 @@ Run the five acceptance scenarios from GitHub issue #11:
 python -m behave features/sign_in_lockout.feature
 ```
 
-The PostgreSQL concurrency test is included but skips on SQLite. It must run against PostgreSQL to verify concurrent sign-in protection.
+Concurrency tests run against PostgreSQL or file-backed SQLite; they skip the shared in-memory SQLite test database. SQLite serializes sign-in writes at the database level; PostgreSQL locks only the attempted email. Run cleanup periodically to remove expired failures and inactive email records without clearing active lockouts.
 
 ## Optional demo transactions
 
@@ -93,8 +93,9 @@ python src/manage.py seed_demo_transactions
 ```
 
 This adds a $900.00 paycheck on January 5, 2027 and a $275.00 grocery expense on
-January 10, 2027. Both are demo transactions visible on the public dashboard.
-Select January 2027 to see $625.00 remaining if that month has no other demo data.
+January 10, 2027. These synthetic rows remain available for development tests but
+are excluded from every student dashboard. The old `/demo/` URL redirects to
+the signed-in student's dashboard.
 Matching examples already present are skipped, including those added manually;
 rerunning the command does not duplicate them. Existing transactions are not
 updated or deleted. This command writes to the database configured for that

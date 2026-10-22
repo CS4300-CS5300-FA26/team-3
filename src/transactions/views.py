@@ -1,12 +1,9 @@
-from datetime import date
-from decimal import Decimal
 import unicodedata
 
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
-from django.utils import timezone
 
 from .models import Transaction
 
@@ -78,39 +75,10 @@ class ExpenseForm(forms.ModelForm):
         return description
 
 
+@login_required(login_url="sign_in")
 def transaction_list(request):
-    """Show demo transactions and the remaining budget for one calendar month."""
-    selected_month = timezone.localdate().replace(day=1)
-    month_value = request.GET.get("month", "")
-    if month_value:
-        try:
-            if len(month_value) != 7 or month_value[4] != "-":
-                raise ValueError("Month must use YYYY-MM format.")
-            selected_month = date.fromisoformat(f"{month_value}-01")
-        except ValueError:
-            # Invalid query parameters fall back to the current month.
-            pass
-
-    transactions = Transaction.objects.filter(
-        is_demo=True,
-        date__year=selected_month.year,
-        date__month=selected_month.month,
-    )
-    remaining_budget = sum(
-        (transaction.signed_amount for transaction in transactions),
-        Decimal("0.00"),
-    )
-
-    return render(
-        request,
-        "transactions/transaction_list.html",
-        {
-            "transactions": transactions,
-            "remaining_budget": remaining_budget,
-            "selected_month": selected_month.isoformat()[:7],
-            "period_start": selected_month,
-        },
-    )
+    """Keep the former demo URL pointing to the student's private dashboard."""
+    return redirect("dashboard")
 
 
 @login_required
