@@ -9,6 +9,7 @@ from django.utils import timezone
 from accounts.identity import normalize_email
 from transactions.models import Transaction
 from .lockout import check_login
+from django.views.decorators.cache import never_cache
 
 
 # Handle user sign in
@@ -61,6 +62,7 @@ def sign_out(request):
 
 
 # Show the current user's monthly budget dashboard
+@never_cache
 @login_required(login_url="sign_in")
 def dashboard(request):
     # Default to the current calendar month

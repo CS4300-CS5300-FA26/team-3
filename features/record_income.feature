@@ -6,9 +6,6 @@ Feature: Record income
     Then I see "Amount must be greater than zero"
     And no entry is created
 
-  # Pending until transactions belong to users (D2, #11): the dashboard
-  # shows demo transactions only, so the list and budget steps fail today.
-  @wip
   Scenario: Paycheck is recorded
     Given I am signed in
     When I add income of $1,200.00 dated 2026-10-02 with source "Part-time job"

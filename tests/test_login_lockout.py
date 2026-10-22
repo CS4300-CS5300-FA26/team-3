@@ -236,7 +236,7 @@ class LoginLockoutTests(TestCase):
         )
 
 
-    def test_cleanup_removes_stale_attempts(self):
+    def test_cleanup_removes_stale_failures(self):
         # Create an old inactive login record
         LoginAttempt.objects.create(
             email="old@example.com",
@@ -251,7 +251,8 @@ class LoginLockoutTests(TestCase):
 
         cleanup_stale_attempts()
 
-        self.assertFalse(
+        # Keep the parent record to avoid racing with sign-in
+        self.assertTrue(
             LoginAttempt.objects.filter(
                 email="old@example.com"
             ).exists()

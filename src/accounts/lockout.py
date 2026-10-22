@@ -3,7 +3,6 @@ from django.contrib.auth import authenticate
 from django.db import connection
 from django.db import transaction
 from django.utils import timezone
-from django.db import models
 from .models import LoginAttempt, FailedSignIn
 
 
@@ -59,24 +58,16 @@ def clear_failures(email):
 
 
 
-# Remove old login records without affecting active lockouts
+
+# Remove expired individual failures without deleting login lock records
 def cleanup_stale_attempts():
     now = timezone.now()
     cutoff = now - timedelta(minutes=15)
 
-    # Remove expired individual failures
     FailedSignIn.objects.filter(
         created_at__lte=cutoff
     ).delete()
 
-    # Remove inactive login records with no recent failures
-    LoginAttempt.objects.filter(
-        failed_count__gt=0,
-        first_failed_at__lte=cutoff,
-    ).filter(
-        models.Q(blocked_until__isnull=True)
-        | models.Q(blocked_until__lte=now)
-    ).delete()
 
 
 # Check credentials while protecting the login attempt record
