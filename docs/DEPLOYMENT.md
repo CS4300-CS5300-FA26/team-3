@@ -6,7 +6,7 @@ Chase will maintain the AWS setup for Team 3. Local development follows the READ
 
 `budget-wise.dev → Cloudflare DNS → API Gateway → Lambda → Django`
 
-Cloudflare manages DNS. API Gateway calls the `live` alias of Lambda function `budgetwise` in `us-east-1`. Lambda uses Python 3.13, x86_64, and handler `lambda_entry.handler`.
+Cloudflare manages DNS and filters public HTTP traffic. API Gateway calls the `live` alias of Lambda function `budgetwise` in `us-east-1`. Lambda uses Python 3.13, x86_64, and handler `lambda_entry.handler`.
 
 `src/lambda_entry.py` uses Mangum to translate requests for Django. It disables debug output, accepts our domain, and requires HTTPS and secure cookies. These overrides only apply when Lambda loads the adapter.
 
@@ -81,6 +81,10 @@ The root redirects anonymous visitors to `/sign-in/`; authenticated visitors see
 their private dashboard. The candidate probe checks `/sign-in/` directly, while
 the public check follows the root redirect. Retained demo rows are excluded from
 student dashboards, and `/demo/` is no longer a route.
+
+The public probe identifies itself as `BudgetWise-Deployment-Check/1.0` because
+Cloudflare can block Python's default user agent. Unexpected HTTP statuses still
+fail deployment and restore the previous live version.
 
 Verify a release with a small number of requests and check
 `/aws/lambda/budgetwise` logs for failures. Local checks do not establish which

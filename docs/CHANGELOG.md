@@ -14,6 +14,12 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-22 — Identify the deployment health probe
+
+- Deployment follow-up; PR pending. Give the public health probe a BudgetWise
+  user agent so Cloudflare does not reject Python's default client signature.
+  Report the actual failing HTTP status and retain automatic rollback.
+
 ### 2026-10-22 — Match dashboard styling to the account pages
 
 - **Reference:** [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11)

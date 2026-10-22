@@ -124,7 +124,7 @@ jobs:
           import os
           from pathlib import Path
           from urllib.error import HTTPError
-          from urllib.request import urlopen
+          from urllib.request import Request, urlopen
           import boto3
           from botocore.exceptions import BotoCoreError, ClientError
 
@@ -199,13 +199,17 @@ jobs:
           try:
               # Check the full public path, including DNS, HTTPS, and API Gateway.
               try:
-                  with urlopen("https://budget-wise.dev/", timeout=35) as response:
+                  # Identify this health probe: Cloudflare can reject urllib's default user agent.
+                  request = Request("https://budget-wise.dev/", headers={
+                      "User-Agent": "BudgetWise-Deployment-Check/1.0",
+                  })
+                  with urlopen(request, timeout=35) as response:
                       status = response.status
               except HTTPError as response:
                   status = response.code
                   response.close()
               if status != expected:
-                  raise RuntimeError("Public URL returned an unexpected status")
+                  raise RuntimeError(f"Public URL returned HTTP {status}; expected {expected}")
           except Exception:
               # Restore the previous code if the public check fails; migrations are not undone.
               # The revision check prevents overwriting a later operator change.
