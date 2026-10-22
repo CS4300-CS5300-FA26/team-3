@@ -20,6 +20,24 @@ Keep validation results and execution history out of this record.
 - The [income and expense save paths](../src/transactions/views.py) now assign the signed-in student to each new transaction before saving it. The [income](../tests/test_transaction_view.py) and [expense](../tests/test_expense_view.py) view tests check that ownership.
 - **Limits:** Existing and demo transactions may have no owner. The public dashboard still shows demo data only; a student-specific transaction list and budget are not yet implemented.
 
+### 2026-10-21 — Pending success scenarios and shared Behave steps
+
+- **Reference:** [#12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12) and
+  [#18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); blocked on
+  [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11); PR pending.
+- Add "Paycheck is recorded" and "Fixed expense is recorded", worded as in the
+  issues, to the [income](../features/record_income.feature) and
+  [expense](../features/record_expense.feature) features, with steps that check
+  the dashboard list and remaining budget for the new entry.
+- Move the sign-in setup and shared checks into
+  [common_steps.py](../features/steps/common_steps.py), so the income and expense
+  steps no longer import each other. All four scenarios now start with the issues'
+  wording, `Given I am signed in`.
+- Both new scenarios are tagged `@wip` and skipped by default through [behave.ini](../behave.ini).
+  Run them with `behave --tags=wip`.
+- **Limits:** They fail at the list step until transactions belong to users,
+  because the dashboard shows demo transactions only. Remove `@wip` once #11 lands.
+
 ### 2026-10-19 — Record an expense (D-4)
 
 - **Reference:** [Issue #18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); PR pending.

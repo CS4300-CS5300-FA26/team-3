@@ -305,3 +305,20 @@ Fabian ran each focused test with the ownership assertion failing before the vie
 change, then passing after it. New income and expense entries now belong to the
 signed-in student. The optional owner field still allows older and demo records
 without an owner; the public dashboard continues to show demo data only.
+
+### Sprint 1: Oct 21, 2026 — Pending success scenarios and shared Behave steps
+
+**Tool:** Claude Code
+
+**What it helped with:**
+
+- Drafted the "Paycheck is recorded" and "Fixed expense is recorded" Behave
+  scenarios and their steps, and the `behave.ini` setting that skips `@wip`.
+- Moved the shared sign-in setup and checks into `common_steps.py`.
+
+**How we used the result:**
+
+Following Pardot's advice, we added both scenarios now as pending instead of waiting
+for D2, and kept them skipped in CI rather than faking a passing step. We checked
+that both pass once the dashboard shows the student's own transactions, and that a
+wrong error message still fails the expense scenario.
