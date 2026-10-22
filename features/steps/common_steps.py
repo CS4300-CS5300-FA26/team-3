@@ -46,7 +46,7 @@ def money(amount):
 def remaining_budget(context, month):
     from django.urls import reverse
 
-    response = context.client.get(reverse("transaction_list"), {"month": month})
+    response = context.client.get(reverse("dashboard"), {"month": month})
     return response.context["remaining_budget"]
 
 
@@ -74,7 +74,7 @@ def entry_listed(context):
 
     # Look for the saved row itself: the demo data already has a "Part-time job".
     saved = context.Transaction.objects.get(is_demo=False, description=context.entry)
-    response = context.client.get(reverse("transaction_list"), {"month": context.month})
+    response = context.client.get(reverse("dashboard"), {"month": context.month})
     assert saved in response.context["transactions"], f"{context.entry!r} is not listed"
 
 

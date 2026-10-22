@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
@@ -11,8 +12,10 @@ from transactions.models import Transaction
 class RemainingBudgetViewTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        # Replace seeded demo data with predictable acceptance-test examples.
+        # Use predictable personal transactions alongside unrelated demo/user rows.
         Transaction.objects.all().delete()
+        cls.student = get_user_model().objects.create_user(username="budget-student")
+        other = get_user_model().objects.create_user(username="other-student")
         rows = [
             ("income", "1200.00", date(2026, 10, 1), "October pay", ""),
             ("expense", "650.00", date(2026, 10, 2), "October rent", "Housing"),
@@ -29,21 +32,33 @@ class RemainingBudgetViewTests(TestCase):
                 date=transaction_date,
                 description=description,
                 category=category,
-                is_demo=True,
+                owner=cls.student,
             )
 
-        # The current public dashboard must exclude private data from totals too.
+        # Other users and retained demo data must never affect this budget.
         Transaction.objects.create(
             kind=Transaction.Kind.INCOME,
             amount=Decimal("100.00"),
             date=date(2026, 10, 10),
-            description="Private pay",
-            is_demo=False,
+            description="Other student pay",
+            owner=other,
         )
+
+        Transaction.objects.create(
+            kind=Transaction.Kind.INCOME,
+            amount=Decimal("999.00"),
+            date=date(2026, 10, 10),
+            description="Retained demo pay",
+            owner=cls.student,
+            is_demo=True,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.student)
 
     def test_october_displays_remaining_budget_for_selected_month(self):
         response = self.client.get(
-            reverse("transaction_list"), {"month": "2026-10"}
+            reverse("dashboard"), {"month": "2026-10"}
         )
 
         self.assertContains(response, "Remaining budget")
@@ -54,12 +69,13 @@ class RemainingBudgetViewTests(TestCase):
         self.assertNotContains(response, "September pay")
         self.assertNotContains(response, "November groceries")
         self.assertNotContains(response, "Previous October pay")
-        self.assertNotContains(response, "Private pay")
+        self.assertNotContains(response, "Other student pay")
+        self.assertNotContains(response, "Retained demo pay")
         self.assertNotContains(response, "No transactions in this period")
 
     def test_december_displays_zero_and_empty_period_message(self):
         response = self.client.get(
-            reverse("transaction_list"), {"month": "2026-12"}
+            reverse("dashboard"), {"month": "2026-12"}
         )
 
         self.assertContains(response, "Remaining budget")
@@ -77,7 +93,7 @@ class RemainingBudgetViewTests(TestCase):
         ]:
             with self.subTest(month=month):
                 response = self.client.get(
-                    reverse("transaction_list"), {"month": month}
+                    reverse("dashboard"), {"month": month}
                 )
 
                 self.assertEqual(response.status_code, 200)
@@ -85,7 +101,7 @@ class RemainingBudgetViewTests(TestCase):
                 self.assertEqual(response.context["selected_month"], month)
                 self.assertEqual(len(response.context["transactions"]), count)
 
-    @patch("transactions.views.timezone.localdate", return_value=date(2026, 10, 16))
+    @patch("accounts.views.timezone.localdate", return_value=date(2026, 10, 16))
     def test_missing_or_invalid_month_defaults_to_current_month(self, _localdate):
         for params in [
             {},
@@ -96,7 +112,7 @@ class RemainingBudgetViewTests(TestCase):
             {"month": "0000-10"},
         ]:
             with self.subTest(params=params):
-                response = self.client.get(reverse("transaction_list"), params)
+                response = self.client.get(reverse("dashboard"), params)
 
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.context["selected_month"], "2026-10")

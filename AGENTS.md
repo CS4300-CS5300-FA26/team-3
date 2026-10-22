@@ -18,14 +18,15 @@ docs/
 ├── ARCHITECTURE.pdf               Overview; verify against source
 └── DEPLOYMENT.md                  Deployment configuration and rollback
 src/
-├── accounts/                     Email identity helpers; migrations enforce auth.User email uniqueness
+├── accounts/                     Email identity, sign-in/lockout, shared request budget, and private dashboard
 ├── budgetwise/                   Settings, root URLs, CI settings
 │   └── db/aurora/                PostgreSQL IAM connection backend
 ├── transactions/                 Model/constraints, views, URLs, templates, migrations
 ├── lambda_entry.py               API Gateway/Lambda request adapter
 └── manage.py                     Django command entry point
 tests/                            Model/view, host, database, Lambda, deployment tests;
-                                  test_accounts.py: shared identity and duplicate writes
+                                  test_accounts.py: identity; test_login_lockout.py: sign-in and cleanup;
+                                  test_remaining_budget.py: private monthly budget
 features/                         Behave scenarios tagged with issue numbers;
 .github/scripts/                  Luna review/issue context and line-coverage gate
 .github/workflows/                ci.yml: tests/coverage; ai-review.yml: Luna review;
