@@ -14,6 +14,14 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-22 — Match dashboard styling to the account pages
+
+- **Reference:** [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11)
+  and [#21](https://github.com/CS4300-CS5300-FA26/team-3/issues/21); PR pending.
+- Reuse the shared account layout and navigation on the dashboard. Style the
+  month summary and transaction list for desktop and narrow screens, removing
+  the duplicate navigation and sign-out form.
+
 ### 2026-10-22 — Complete signup and connect account navigation
 
 - **Reference:** [#10](https://github.com/CS4300-CS5300-FA26/team-3/issues/10),
