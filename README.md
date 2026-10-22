@@ -311,6 +311,22 @@ ASCII normalization with international-domain conversion.
 **How we used the result:** Kept Django's default user model and checked duplicate
 inserts and updates on SQLite and PostgreSQL.
 
+### Sprint 1: Oct 21, 2026 — Transaction ownership
+
+**Tool:** Codex
+
+**What it helped with:**
+
+- Added ownership assertions to the existing income and expense save tests.
+- Added the signed-in user to each transaction before saving it.
+
+**How we used the result:**
+
+Fabian ran each focused test with the ownership assertion failing before the view
+change, then passing after it. New income and expense entries now belong to the
+signed-in student. The optional owner field still allows older and demo records
+without an owner; the public dashboard continues to show demo data only.
+
 ### Sprint 1: Oct 21, 2026 — Pending success scenarios and shared Behave steps
 
 **Tool:** Claude Code

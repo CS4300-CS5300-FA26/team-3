@@ -14,6 +14,12 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-21 — Assign new transactions to students
+
+- **Reference:** [Issue #12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12) and [Issue #18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); PR pending.
+- The [income and expense save paths](../src/transactions/views.py) now assign the signed-in student to each new transaction before saving it. The [income](../tests/test_transaction_view.py) and [expense](../tests/test_expense_view.py) view tests check that ownership.
+- **Limits:** Existing and demo transactions may have no owner. The public dashboard still shows demo data only; a student-specific transaction list and budget are not yet implemented.
+
 ### 2026-10-21 — Pending success scenarios and shared Behave steps
 
 - **Reference:** [#12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12) and

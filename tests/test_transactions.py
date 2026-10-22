@@ -143,3 +143,17 @@ class TransactionSignedAmountTests(TestCase):
         remaining = sum(t.signed_amount for t in Transaction.objects.all())
 
         self.assertEqual(remaining, Decimal("370.00"))
+
+
+class TransactionOwnerTests(TestCase):
+    def test_transaction_can_belong_to_one_student(self):
+        from django.contrib.auth import get_user_model
+
+        student = get_user_model().objects.create_user(username="owner_student")
+        other = get_user_model().objects.create_user(username="other_student")
+        owned = make_transaction(owner=student)
+        owned.save()
+
+        self.assertEqual(owned.owner, student)
+        self.assertEqual(Transaction.objects.filter(owner=student).count(), 1)
+        self.assertFalse(Transaction.objects.filter(owner=other).exists())
