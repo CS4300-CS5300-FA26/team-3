@@ -1,13 +1,8 @@
-"""Issue #18 expense acceptance checks using an isolated Django test database."""
+"""Issue #18 expense acceptance checks. Shared steps are in common_steps.py."""
 
-from behave import given, when
+from behave import when
 
-from income_steps import signed_in  # reuse the isolated database and login setup
-
-
-@given("I am signed in to record expenses")
-def signed_in_for_expenses(context):
-    signed_in(context)
+from common_steps import money, remember_budget_before
 
 
 @when("I add an expense of ${amount} with no category selected")
@@ -17,4 +12,21 @@ def add_expense_without_category(context, amount):
     context.response = context.client.post(
         reverse("record_expense"),
         {"amount": amount, "date": "2026-10-01", "description": "Snack", "category": "", "is_fixed": "variable"},
+    )
+
+
+@when('I add an expense of ${amount} for "{description}" in category {category} marked {kind}')
+def add_expense(context, amount, description, category, kind):
+    from django.urls import reverse
+
+    remember_budget_before(context, description, "2026-10-01")
+    context.response = context.client.post(
+        reverse("record_expense"),
+        {
+            "amount": money(amount),
+            "date": "2026-10-01",
+            "description": description,
+            "category": category,
+            "is_fixed": kind.lower(),
+        },
     )
