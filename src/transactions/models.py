@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -14,6 +15,12 @@ class Transaction(models.Model):
         INCOME = "income", "Income"
         EXPENSE = "expense", "Expense"
 
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
     kind = models.CharField(max_length=7, choices=Kind.choices)
     amount = models.DecimalField(
         max_digits=10,

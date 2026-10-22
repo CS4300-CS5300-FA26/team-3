@@ -112,6 +112,7 @@ class RecordIncomeViewTests(TestCase):
         self.assertEqual(income.kind, Transaction.Kind.INCOME)
         self.assertEqual(income.amount, Decimal("1200.00"))
         self.assertEqual(income.date, date(2026, 10, 2))
+        self.assertEqual(income.owner, student)
         self.assertContains(response, "Income saved.")
 
     def test_zero_amount_post_shows_error_and_saves_nothing(self):

@@ -146,6 +146,7 @@ class RecordExpenseViewTests(TestCase):
 
         expense = Transaction.objects.get(description="Rent", is_demo=False)
         self.assertEqual(expense.kind, Transaction.Kind.EXPENSE)
+        self.assertEqual(expense.owner, self.student)
         self.assertEqual(expense.amount, Decimal("650.00"))
         self.assertEqual(expense.category, "Housing")
         self.assertTrue(expense.is_fixed)

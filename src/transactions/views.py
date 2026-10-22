@@ -123,6 +123,7 @@ def record_income(request):
     if request.method == "POST" and form.is_valid():
         income = form.save(commit=False)
         income.kind = Transaction.Kind.INCOME
+        income.owner = request.user
         income.save()
         messages.success(request, "Income saved.")
         return redirect("record_income")
@@ -140,6 +141,7 @@ def record_expense(request):
     if request.method == "POST" and form.is_valid():
         expense = form.save(commit=False)
         expense.kind = Transaction.Kind.EXPENSE
+        expense.owner = request.user
         expense.save()
         messages.success(request, "Expense saved.")
         return redirect("record_expense")
