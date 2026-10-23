@@ -19,6 +19,21 @@ PASSWORD = "Copper-tide-with-bright-clouds-42!"
     "BACKEND": "django.core.mail.backends.locmem.EmailBackend",
 }})
 class SiteFlowTests(TestCase):
+    def test_account_forms_remain_ready_after_rejected_input(self):
+        cases = [
+            (reverse("accounts:signup"), {"email": "invalid"}, "Continue", "Sending email…"),
+            (reverse("sign_in"), {"email": "invalid", "password": "wrong"}, "Sign in", "Signing in…"),
+            (reverse("accounts:verify", args=[issue_verification_token("student@example.org")]),
+             {"password": PASSWORD, "password_confirmation": "different"},
+             "Create account", "Creating account…"),
+        ]
+        for url, data, label, pending in cases:
+            with self.subTest(url=url):
+                for response in [self.client.get(url), self.client.post(url, data)]:
+                    self.assertContains(response,
+                        f'<button type="submit" data-pending-label="{pending}">{label}</button>',
+                        html=True)
+
     def test_anonymous_urls_require_login_except_registration_and_admin_login(self):
         for path in ["/", "/dashboard/", "/income/", "/expense/", "/sign-out/", "/not-a-page/", "/accounts/not-a-page/"]:
             with self.subTest(path=path):

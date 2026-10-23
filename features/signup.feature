@@ -1,5 +1,10 @@
 @issue_10
 Feature: Request a BudgetWise signup email
+  Scenario: An email service failure leaves signup ready to retry
+    Given the verification core has an isolated database
+    When the student requests signup while the email service is unavailable
+    Then signup shows the email error and an enabled Continue button
+
   Scenario: Start signup with any valid email domain and finish from the email
     Given the verification core has an isolated database
     When the student requests signup for "student@example.org"

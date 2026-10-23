@@ -46,6 +46,7 @@
             display: inline-block;
             text-decoration: none;
         }
+        button:disabled { cursor: wait; opacity: 0.75; }
         .errorlist { margin: 0 0 8px; padding: 0; list-style: none; color: #9b1c1c; }
         .password-field { position: relative; display: block; }
         .password-field input { padding-right: 48px; }
@@ -61,6 +62,32 @@
     {% include "accounts/navigation.html" %}
     <main>{% block content %}{% endblock %}</main>
     <script>
+        document.querySelectorAll('button[data-pending-label]').forEach((button) => {
+            const form = button.form;
+            const label = button.textContent;
+            const status = document.createElement('p');
+            status.setAttribute('role', 'status');
+            form.after(status);
+            // Native validation runs before submit, including keyboard submission.
+            form.addEventListener('submit', (event) => {
+                if (event.defaultPrevented) return;
+                if (button.disabled) {
+                    event.preventDefault();
+                    return;
+                }
+                button.textContent = button.dataset.pendingLabel;
+                button.disabled = true;
+                form.setAttribute('aria-busy', 'true');
+                status.textContent = 'Please wait. This may take a few moments.';
+            });
+            // A page restored with Back may retain its previous disabled state.
+            window.addEventListener('pageshow', () => {
+                button.textContent = label;
+                button.disabled = false;
+                form.removeAttribute('aria-busy');
+                status.textContent = '';
+            });
+        });
         document.querySelectorAll('input[type="password"]').forEach((input) => {
             const field = document.createElement('span');
             const button = document.createElement('button');

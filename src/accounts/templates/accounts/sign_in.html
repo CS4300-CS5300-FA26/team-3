@@ -14,7 +14,7 @@
             <label for="password">Password</label>
             <input type="password" id="password" name="password" autocomplete="current-password" required>
         </p>
-        <button type="submit">Sign in</button>
+        <button type="submit" data-pending-label="Signing in…">Sign in</button>
     </form>
     <p>New to BudgetWise? <a href="{% url 'accounts:signup' %}">Create account</a></p>
 {% endblock %}
