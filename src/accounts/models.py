@@ -1,3 +1,7 @@
+from decimal import Decimal
+
+from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -34,3 +38,26 @@ class SignInBudget(models.Model):
     requests = models.PositiveIntegerField(default=0)
     sources = models.JSONField(default=dict)
     resets_at = models.DateTimeField()
+
+
+class LowBalanceThreshold(models.Model):
+    """An optional safety threshold belonging to one student."""
+
+    owner = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="low_balance_threshold",
+    )
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gte=0),
+                name="low_balance_threshold_nonnegative",
+            ),
+        ]

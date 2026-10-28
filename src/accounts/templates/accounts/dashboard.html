@@ -12,6 +12,14 @@
     .month-picker input { margin-bottom: 16px; }
     .budget-summary p { flex: 1 1 220px; margin: 0; }
     .budget-summary strong { display: block; font-size: 32px; overflow-wrap: anywhere; }
+    .threshold-setting { margin-top: 14px; }
+    .threshold-summary { color: #56616b; cursor: pointer; }
+    .threshold-summary:hover { text-decoration: underline; }
+    .threshold-summary strong { color: #104b25; font-variant-numeric: tabular-nums; }
+    .threshold-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-top: 12px; }
+    .threshold-form div { flex: 1 1 180px; }
+    .threshold-form input { margin: 0; }
+    .threshold-form .errorlist { flex-basis: 100%; }
     .transactions { padding: 0 24px; list-style: none; background: white; border: 1px solid #afc0ad; border-radius: 8px; }
     .transactions li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; padding: 20px 0; }
     .transactions li + li { border-top: 1px solid #afc0ad; }
@@ -34,6 +42,18 @@
     </div>
     <p>Remaining budget: <strong>${{ remaining_budget|floatformat:2 }}</strong></p>
 </form>
+<details class="threshold-setting"{% if threshold_form.errors %} open{% endif %}>
+    <summary class="threshold-summary">Safety threshold: {% if current_threshold %}<strong>${{ current_threshold.amount|floatformat:2 }}</strong>{% else %}Not set{% endif %}</summary>
+    <form class="threshold-form" method="post" action="{% url 'dashboard' %}?month={{ selected_month }}">
+        {% csrf_token %}
+        {{ threshold_form.amount.errors }}
+        <div>
+            <label for="{{ threshold_form.amount.id_for_label }}">Safety threshold ($)</label>
+            {{ threshold_form.amount }}
+        </div>
+        <button type="submit">Save threshold</button>
+    </form>
+</details>
 
 <h2>My transactions</h2>
 <ul class="transactions">
