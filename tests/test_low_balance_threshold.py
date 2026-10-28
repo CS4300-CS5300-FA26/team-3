@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -7,6 +8,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.models import LowBalanceThreshold
+from accounts.views import LowBalanceThresholdForm
 
 
 class LowBalanceThresholdTests(TestCase):
@@ -115,6 +117,27 @@ class LowBalanceThresholdTests(TestCase):
             LowBalanceThreshold.objects.get(owner=student).amount, Decimal("200.00")
         )
         self.assertContains(response, "$200.00")
+
+    def test_first_save_handles_another_tab_creating_threshold_after_validation(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
+        dashboard_url = reverse("dashboard") + "?month=2026-10"
+        original_is_valid = LowBalanceThresholdForm.is_valid
+
+        def validate_after_competing_save(form):
+            valid = original_is_valid(form)
+            if valid:
+                LowBalanceThreshold.objects.create(owner=student, amount=Decimal("90.00"))
+            return valid
+
+        with patch.object(LowBalanceThresholdForm, "is_valid", validate_after_competing_save):
+            response = self.client.post(dashboard_url, {"amount": "150.00"}, follow=True)
+
+        self.assertRedirects(response, dashboard_url)
+        self.assertEqual(LowBalanceThreshold.objects.filter(owner=student).count(), 1)
+        self.assertEqual(
+            LowBalanceThreshold.objects.get(owner=student).amount, Decimal("150.00")
+        )
 
     def test_invalid_amount_shows_error_and_does_not_save(self):
         student = get_user_model().objects.create_user(username="student")

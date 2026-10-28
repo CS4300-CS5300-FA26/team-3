@@ -190,9 +190,10 @@ def dashboard(request):
         instance=current_threshold,
     )
     if request.method == "POST" and threshold_form.is_valid():
-        threshold = threshold_form.save(commit=False)
-        threshold.owner = request.user
-        threshold.save()
+        LowBalanceThreshold.objects.update_or_create(
+            owner=request.user,
+            defaults={"amount": threshold_form.cleaned_data["amount"]},
+        )
         return redirect(f"{reverse('dashboard')}?month={selected_month:%Y-%m}")
 
     # Get only this user's real transactions for the selected month
