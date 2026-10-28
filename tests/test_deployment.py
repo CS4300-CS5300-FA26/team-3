@@ -2,6 +2,7 @@
 import base64
 import hashlib
 import io
+import json
 import os
 from pathlib import Path
 import re
@@ -10,6 +11,7 @@ import tempfile
 import textwrap
 import unittest
 from unittest.mock import MagicMock, patch
+from urllib.error import HTTPError
 
 from botocore.exceptions import ReadTimeoutError
 
@@ -35,7 +37,7 @@ class DeploymentTests(unittest.TestCase):
                                         capture_output=True, text=True)
                 self.assertEqual(result.returncode, expected, result.stderr)
 
-    def run_release(self, client, public_status=404):
+    def run_release(self, client, public_status=404, public_probe=None):
         script = workflow_script("Publish, check, and promote")
         code = script.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
         with tempfile.TemporaryDirectory() as directory:
@@ -44,7 +46,7 @@ class DeploymentTests(unittest.TestCase):
             response.__enter__.return_value.status = public_status
             with patch.dict(os.environ, RUNNER_TEMP=directory, ROOT_STATUS="404", GITHUB_SHA="current"), \
                  patch("boto3.client", return_value=client), \
-                 patch("urllib.request.urlopen", return_value=response), patch("builtins.print"):
+                 patch("urllib.request.urlopen", return_value=response, side_effect=public_probe), patch("builtins.print"):
                 exec(compile(code, "cd.yml", "exec"), {})
 
     def client(self):
@@ -64,6 +66,36 @@ class DeploymentTests(unittest.TestCase):
             {"Payload": io.BytesIO(b'{"statusCode":404}')},
         ]
         return client
+
+    def test_candidate_checks_public_sign_in(self):
+        client = self.client()
+        self.run_release(client)
+        event = json.loads(client.invoke.call_args.kwargs["Payload"])
+        self.assertEqual(event["rawPath"], "/sign-in/")
+        self.assertEqual(event["requestContext"]["http"]["path"], "/sign-in/")
+
+    def test_public_probe_identifies_itself_to_the_edge_filter(self):
+        def edge_response(request, **kwargs):
+            # Reproduce the edge rejecting urllib's default client signature.
+            user_agent = request.get_header("User-agent") if hasattr(request, "get_header") else None
+            if not user_agent or user_agent.startswith("Python-urllib/"):
+                raise HTTPError("https://budget-wise.dev/", 403, "Forbidden", {}, None)
+            response = MagicMock()
+            response.__enter__.return_value.status = 404
+            return response
+
+        client = self.client()
+        self.run_release(client, public_probe=edge_response)
+        client.update_alias.assert_called_once()
+
+    def test_edge_rejection_reports_status_and_still_rolls_back(self):
+        client = self.client()
+        blocked = HTTPError("https://budget-wise.dev/", 403, "Forbidden", {}, None)
+        with self.assertRaisesRegex(RuntimeError, "Public URL returned HTTP 403; expected 404"):
+            self.run_release(client, public_probe=blocked)
+        self.assertEqual(client.update_alias.call_count, 2)
+        self.assertEqual(client.update_alias.call_args.kwargs["FunctionVersion"], "1")
+        self.assertEqual(client.update_alias.call_args.kwargs["RevisionId"], "promoted")
 
     def test_publication_uses_verified_revision(self):
         client = self.client()

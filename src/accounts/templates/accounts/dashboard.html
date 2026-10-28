@@ -1,0 +1,52 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}My dashboard | BudgetWise{% endblock %}
+
+{% block extra_style %}
+<style>
+    main { max-width: 800px; }
+    h1 { margin-bottom: 12px; }
+    h2 { margin: 32px 0 16px; color: #104b25; font: 28px/1.2 Georgia, serif; }
+    .budget-summary { display: flex; flex-wrap: wrap; align-items: end; gap: 24px; }
+    .month-picker { flex: 1 1 220px; }
+    .month-picker input { margin-bottom: 16px; }
+    .budget-summary p { flex: 1 1 220px; margin: 0; }
+    .budget-summary strong { display: block; font-size: 32px; overflow-wrap: anywhere; }
+    .transactions { padding: 0 24px; list-style: none; background: white; border: 1px solid #afc0ad; border-radius: 8px; }
+    .transactions li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; padding: 20px 0; }
+    .transactions li + li { border-top: 1px solid #afc0ad; }
+    .transaction-details { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+    .transaction-details small { display: block; color: #56616b; }
+    .transaction-amount { margin-left: auto; font-variant-numeric: tabular-nums; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>My budget dashboard</h1>
+<p>Signed in as {{ request.user.email|default:request.user.username }}</p>
+
+<h2>Monthly budget</h2>
+<form class="budget-summary" method="get" action="{% url 'dashboard' %}">
+    <div class="month-picker">
+        <label for="month">Select month</label>
+        <input type="month" id="month" name="month" value="{{ selected_month }}">
+        <button type="submit">View month</button>
+    </div>
+    <p>Remaining budget: <strong>${{ remaining_budget|floatformat:2 }}</strong></p>
+</form>
+
+<h2>My transactions</h2>
+<ul class="transactions">
+    {% for transaction in transactions %}
+        <li>
+            <div class="transaction-details">
+                {{ transaction.description }}
+                <small>{{ transaction.date }} · {{ transaction.get_kind_display }}</small>
+            </div>
+            <strong class="transaction-amount">${{ transaction.amount|floatformat:2 }}</strong>
+        </li>
+    {% empty %}
+        <li>No transactions in this period</li>
+    {% endfor %}
+</ul>
+{% endblock %}

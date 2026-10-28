@@ -112,6 +112,7 @@ class RecordIncomeViewTests(TestCase):
         self.assertEqual(income.kind, Transaction.Kind.INCOME)
         self.assertEqual(income.amount, Decimal("1200.00"))
         self.assertEqual(income.date, date(2026, 10, 2))
+        self.assertEqual(income.owner, student)
         self.assertContains(response, "Income saved.")
 
     def test_zero_amount_post_shows_error_and_saves_nothing(self):
@@ -155,51 +156,18 @@ class RecordIncomeViewTests(TestCase):
         self.assertFalse(Transaction.objects.filter(is_demo=False).exists())
 
 
-class TransactionListViewTests(TestCase):
-    def setUp(self):
-        """Start each view test with an empty transaction table."""
-        Transaction.objects.all().delete()
+class TransactionNavigationTests(TestCase):
+    def test_removed_demo_page_is_not_found(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
 
-    def test_transaction_list_returns_success(self):
-        """The transaction landing page should be accessible."""
-        response = self.client.get(reverse("transaction_list"))
+        self.assertEqual(self.client.get("/demo/").status_code, 404)
 
-        self.assertEqual(response.status_code, 200)
+    def test_recording_pages_link_to_private_dashboard(self):
+        student = get_user_model().objects.create_user(username="student")
+        self.client.force_login(student)
 
-    def test_transaction_list_displays_empty_state(self):
-        """The landing page should handle an empty transaction database."""
-        response = self.client.get(reverse("transaction_list"))
-
-        self.assertContains(response, "No transactions yet.")
-
-    def test_transaction_list_displays_demo_transaction(self):
-        """Demo transactions stored in the database should appear publicly."""
-        Transaction.objects.create(
-            kind=Transaction.Kind.EXPENSE,
-            amount=Decimal("25.50"),
-            date=date(2026, 10, 5),
-            description="Demo Lunch",
-            category="Food",
-            is_demo=True,
-        )
-
-        response = self.client.get(reverse("transaction_list"))
-
-        self.assertContains(response, "Demo Lunch")
-        self.assertContains(response, "Food")
-        self.assertContains(response, "25.50")
-
-    def test_transaction_list_hides_non_demo_transaction(self):
-        """Non-demo transactions should not appear on the public landing page."""
-        Transaction.objects.create(
-            kind=Transaction.Kind.EXPENSE,
-            amount=Decimal("99.99"),
-            date=date(2026, 10, 5),
-            description="Private Transaction",
-            category="Personal",
-        )
-
-        response = self.client.get(reverse("transaction_list"))
-
-        self.assertNotContains(response, "Private Transaction")
-        self.assertNotContains(response, "99.99")
+        for page in ("record_income", "record_expense"):
+            with self.subTest(page=page):
+                response = self.client.get(reverse(page))
+                self.assertContains(response, f'href="{reverse("dashboard")}"')

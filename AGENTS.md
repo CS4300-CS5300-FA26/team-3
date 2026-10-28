@@ -18,13 +18,15 @@ docs/
 ├── ARCHITECTURE.pdf               Overview; verify against source
 └── DEPLOYMENT.md                  Deployment configuration and rollback
 src/
+├── accounts/                     Signup/mail, identity/verification, D2 sign-in/lockout/budget and private dashboard; default sign-in gate; shared account templates/navigation
 ├── budgetwise/                   Settings, root URLs, CI settings
 │   └── db/aurora/                PostgreSQL IAM connection backend
 ├── transactions/                 Model/constraints, views, URLs, templates, migrations
 ├── lambda_entry.py               API Gateway/Lambda request adapter
 └── manage.py                     Django command entry point
-tests/                            Model/view, host, database, Lambda, deployment tests
-features/                         Behave scenarios tagged with issue numbers
+tests/                            Model/view, host, database, Lambda, deployment tests;
+                                  test_accounts.py: identity; test_verification.py: completion; test_registration_view.py: password page; test_signup.py: signup/mail; test_site_flow.py: D1/D2 navigation; test_login_lockout.py: sign-in/budget/cleanup; test_remaining_budget.py: personal budget
+features/                         Behave scenarios tagged with issue numbers;
 .github/scripts/                  Luna review/issue context and line-coverage gate
 .github/workflows/                ci.yml: tests/coverage; ai-review.yml: Luna review;
                                   cd.yml: deployment

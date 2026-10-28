@@ -1,0 +1,20 @@
+<style>
+    .site-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 14px 3%; background: #e9efe6; font: 18px/1.5 Arial, sans-serif; }
+    .site-nav a { color: #104b25; }
+    .site-nav form { display: inline; margin: 0; padding: 0; border: 0; background: none; }
+    .site-nav button { padding: 6px 12px; border: 1px solid #104b25; border-radius: 4px; color: #104b25; background: white; font: inherit; cursor: pointer; }
+</style>
+<nav class="site-nav" aria-label="Main navigation">
+    {% if request.user.is_authenticated %}
+        <a href="{% url 'dashboard' %}">My dashboard</a>
+        <a href="{% url 'record_income' %}">Record income</a>
+        <a href="{% url 'record_expense' %}">Record expense</a>
+        <form method="post" action="{% url 'sign_out' %}">
+            {% csrf_token %}
+            <button type="submit">Sign out</button>
+        </form>
+    {% else %}
+        <a href="{% url 'accounts:signup' %}">Create account</a>
+        <a href="{% url 'sign_in' %}">Sign in</a>
+    {% endif %}
+</nav>

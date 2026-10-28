@@ -1,0 +1,1 @@
+"""Shared account identity helpers."""

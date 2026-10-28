@@ -4,7 +4,7 @@ on:
   # Base-branch workflow and scripts only. Never execute or check out PR-head code.
   pull_request_target:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review, edited]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read

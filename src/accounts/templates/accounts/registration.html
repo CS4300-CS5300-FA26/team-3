@@ -1,0 +1,32 @@
+{% extends "accounts/base.html" %}
+{% block title %}{% if signup %}Sign up{% elif check_email %}Check your email{% elif created %}Account created{% elif invalid_link %}Verification link unavailable{% else %}Set your password{% endif %} | BudgetWise{% endblock %}
+{% block content %}
+        {% if signup %}
+            <h1>Sign up</h1>
+            <p>Enter your email to create a BudgetWise account.</p>
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" data-pending-label="Sending email…">Continue</button>
+            </form>
+        {% elif check_email %}
+            <h1>Check your email</h1>
+            <p>If this email address isn't already associated with an account, you'll receive an email with steps to finish signing up.</p>
+        {% elif created %}
+            <h1>Account created</h1>
+            <p>Your account is ready. Sign in to continue.</p>
+            <a class="button" href="{{ sign_in_url }}">Sign in</a>
+        {% elif invalid_link %}
+            <h1>Verification link unavailable</h1>
+            <p role="alert">This verification link is invalid or no longer available.</p>
+            <a class="button" href="{% url 'accounts:signup' %}">Sign up again</a>
+        {% else %}
+            <h1>Set your password</h1>
+            <p>Create your account for {{ email }}.</p>
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" data-pending-label="Creating account…">Create account</button>
+            </form>
+        {% endif %}
+{% endblock %}
