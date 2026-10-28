@@ -1,0 +1,24 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Delete Transaction | BudgetWise{% endblock %}
+
+{% block content %}
+<h1>Delete Transaction</h1>
+
+<p>Are you sure you want to delete this transaction?</p>
+
+<p>
+    <strong>{{ transaction.description }}</strong><br>
+    {{ transaction.date }}<br>
+    ${{ transaction.amount|floatformat:2 }}
+</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Confirm Delete</button>
+</form>
+
+<p>
+    <a href="{% url 'dashboard' %}">Cancel</a>
+</p>
+{% endblock %}
