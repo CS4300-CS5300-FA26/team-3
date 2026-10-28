@@ -3,7 +3,7 @@ import unicodedata
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from .models import Transaction
 
@@ -109,3 +109,44 @@ def record_expense(request):
         return redirect("record_expense")
 
     return render(request, "transactions/record_expense.html", {"form": form})
+
+
+@login_required
+def edit_transaction(request, pk):
+    # Only the owner can edit a real transaction.
+    transaction = get_object_or_404(
+        Transaction,
+        pk=pk,
+        owner=request.user,
+        is_demo=False,
+    )
+
+    form_class = (
+        IncomeForm
+        if transaction.kind == Transaction.Kind.INCOME
+        else ExpenseForm
+    )
+
+    if request.method == "POST":
+        form = form_class(request.POST, instance=transaction)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Transaction updated.")
+            return redirect("dashboard")
+    else:
+        initial = {}
+
+        # The expense form expects "fixed"/"variable", not a Boolean.
+        if transaction.kind == Transaction.Kind.EXPENSE:
+            initial["is_fixed"] = (
+                "fixed" if transaction.is_fixed else "variable"
+            )
+
+        form = form_class(instance=transaction, initial=initial)
+
+    return render(
+        request,
+        "transactions/edit_transaction.html",
+        {"form": form, "transaction": transaction},
+    )

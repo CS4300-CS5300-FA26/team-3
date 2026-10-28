@@ -1,0 +1,15 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Edit Transaction | BudgetWise{% endblock %}
+
+{% block content %}
+<h1>Edit {{ transaction.get_kind_display }}</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+    <button type="submit">Save Changes</button>
+    <a href="{% url 'dashboard' %}">Cancel</a>
+</form>
+{% endblock %}
