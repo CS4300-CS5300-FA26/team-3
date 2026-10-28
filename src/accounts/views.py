@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 from smtplib import SMTPException
 
+from django import forms
 from django.conf import settings
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_not_required, login_required
@@ -18,6 +19,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from accounts.forms import SetPasswordForm, SignupForm
 from accounts.identity import normalize_email
 from accounts.lockout import SignInRateLimited, check_login
+from accounts.models import LowBalanceThreshold
 from accounts.signup import send_signup_email
 from accounts.verification import complete_registration, email_from_verification_token
 from transactions.models import Transaction
@@ -156,6 +158,14 @@ def sign_out(request):
     return redirect("sign_in")
 
 
+class LowBalanceThresholdForm(forms.ModelForm):
+    class Meta:
+        model = LowBalanceThreshold
+        fields = ["amount"]
+        labels = {"amount": "Safety threshold ($)"}
+        widgets = {"amount": forms.NumberInput(attrs={"min": "0", "step": "0.01"})}
+
+
 # Show the current user's monthly budget dashboard
 @never_cache
 @login_required(login_url="sign_in")
@@ -174,6 +184,17 @@ def dashboard(request):
         except ValueError:
             pass
 
+    current_threshold = LowBalanceThreshold.objects.filter(owner=request.user).first()
+    threshold_form = LowBalanceThresholdForm(
+        request.POST if request.method == "POST" else None,
+        instance=current_threshold,
+    )
+    if request.method == "POST" and threshold_form.is_valid():
+        threshold = threshold_form.save(commit=False)
+        threshold.owner = request.user
+        threshold.save()
+        return redirect(f"{reverse('dashboard')}?month={selected_month:%Y-%m}")
+
     # Get only this user's real transactions for the selected month
     transactions = Transaction.objects.filter(
         owner=request.user,
@@ -187,7 +208,6 @@ def dashboard(request):
         (item.signed_amount for item in transactions),
         Decimal("0.00"),
     )
-
     return render(
         request,
         "accounts/dashboard.html",
@@ -195,5 +215,7 @@ def dashboard(request):
             "transactions": transactions,
             "remaining_budget": remaining_budget,
             "selected_month": selected_month.isoformat()[:7],
+            "current_threshold": current_threshold,
+            "threshold_form": threshold_form,
         },
     )
