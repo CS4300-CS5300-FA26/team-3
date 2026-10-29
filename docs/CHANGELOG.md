@@ -14,6 +14,15 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-28 — Add the password-reset core
+
+- [#23](https://github.com/CS4300-CS5300-FA26/team-3/issues/23); PR pending.
+  [Reset completion](../src/accounts/password_reset.py) uses Django's 30-minute
+  tokens and password validation, replaces the password and clears sign-in lockout
+  atomically, and invalidates existing sessions and outstanding tokens.
+  [Core scenarios](../features/password_reset_core.feature) cover recovery and
+  expiry; email delivery, request throttling and reset pages follow separately.
+
 ### 2026-10-22 — Show account form submission progress
 
 - [#10](https://github.com/CS4300-CS5300-FA26/team-3/issues/10) and
