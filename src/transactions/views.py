@@ -150,3 +150,25 @@ def edit_transaction(request, pk):
         "transactions/edit_transaction.html",
         {"form": form, "transaction": transaction},
     )
+
+
+@login_required
+def delete_transaction(request, pk):
+    # Only the owner can delete a non-demo transaction.
+    transaction = get_object_or_404(
+        Transaction,
+        pk=pk,
+        owner=request.user,
+        is_demo=False,
+    )
+
+    if request.method == "POST":
+        transaction.delete()
+        messages.success(request, "Transaction deleted.")
+        return redirect("dashboard")
+
+    return render(
+        request,
+        "transactions/delete_transaction.html",
+        {"transaction": transaction},
+    )
