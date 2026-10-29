@@ -46,12 +46,13 @@ Install test tools with `python -m pip install -r requirements-dev.txt`.
 Run `python src/manage.py test tests src` and `python -m behave` locally.
 CI runs on every branch push and PR into `main`, without cancelling earlier
 pushes. It requires 80% line coverage and saves coverage reports as artifacts.
-The same required `test` check runs `python -m ruff check .` for Python errors
-and basic style, plus `python -m pip_audit --strict -r requirements-dev.txt` for
+The same required `test` check runs `python -m flake8 . --count --statistics`
+for Python errors and basic style, plus `python -m pip_audit --strict -r requirements-dev.txt` for
 known vulnerabilities in runtime/development dependencies and their transitive
 dependencies. Audit failures block the check; JSON reports are retained for 14
-days. Ruff's rules live in [ruff.toml](ruff.toml); full formatting and type
-checking are not enforced.
+days. Flake8 reports violations, counts, and statistics in the CI console to meet
+the Sprint 3 linting requirement. Rules live in [.flake8](.flake8); full formatting
+and type checking are not enforced.
 
 CI also runs each Monday at 14:17 UTC to catch new dependency advisories. Chase
 owns the weekly review using the Actions results and existing GitHub failure
@@ -433,4 +434,6 @@ acceptance checks.
 
 **How we used the result:** Kept the existing test/coverage job and human delivery
 process, checked intentional lint failures, and approved the certifi dependency
-update identified by the first audit. Operational monitoring remains separate.
+update identified by the first audit. Switched the linter to Flake8 for the
+Sprint 3 requirement, reusing the existing checks. Operational monitoring remains
+separate.

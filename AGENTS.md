@@ -33,7 +33,7 @@ features/                         Behave scenarios tagged with issue numbers;
                                   cd.yml: deployment
 requirements.txt                  Python dependencies
 requirements-dev.txt              Test/coverage/lint/audit tools; not packaged for Lambda
-ruff.toml                         Python lint rules and Lambda bootstrap import exception
+.flake8                           Python lint rules and Lambda bootstrap import exception
 ```
 
 - Identify the requirement, issue, or acceptance criterion being addressed. Read

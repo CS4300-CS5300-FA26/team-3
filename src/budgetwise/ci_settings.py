@@ -1,7 +1,7 @@
 """Use the disposable PostgreSQL service on the CI runner, never Aurora."""
 import os
 
-from .settings import *  # noqa: F403
+from .settings import *  # noqa: F401,F403
 
 # These credentials exist only in the temporary CI database and are not secrets.
 DATABASES = {

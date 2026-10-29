@@ -14,11 +14,20 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-29 — Align linting with Sprint 3
+
+- Follow-up to [#41](https://github.com/CS4300-CS5300-FA26/team-3/issues/41)
+  and [PR #65](https://github.com/CS4300-CS5300-FA26/team-3/pull/65).
+  Use Flake8 as our single linter, as allowed by the Sprint 3 rubric, with console
+  reports and the existing [failure scenarios](../features/ci_quality.feature).
+  Preserve the focused rule scope in [.flake8](../.flake8) and remove the old
+  linter dependency/configuration; intentional bootstrap imports remain allowed.
+
 ### 2026-10-29 — Address Sprint 1 CI feedback
 
 - Follow-up to [#41](https://github.com/CS4300-CS5300-FA26/team-3/issues/41);
   PR pending. [CI](../.github/workflows/ci.yml) checks every branch push, retains
-  PR checks, and adds Ruff lint and dependency auditing to the required test job.
+  PR checks, and adds lint and dependency auditing to the required test job.
   A weekly run and [review cadence](../README.md#tests-and-automated-review) catch
   new advisories; [lint scenarios](../features/ci_quality.feature) cover failures.
 - Update certifi to 2026.10.19 for

@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "budgetwise.settings")
 
-from budgetwise.db.aurora.base import DatabaseWrapper, PostgreSQLWrapper
+from budgetwise.db.aurora.base import DatabaseWrapper, PostgreSQLWrapper  # noqa: E402
 
 
 class DatabaseTests(unittest.TestCase):

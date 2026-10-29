@@ -5,8 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / ".github"))
-from scripts import ai_review
-from scripts import check_coverage
+from scripts import ai_review, check_coverage  # noqa: E402
 
 
 class AIReviewTests(unittest.TestCase):
