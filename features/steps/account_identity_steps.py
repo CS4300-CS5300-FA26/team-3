@@ -11,6 +11,7 @@ PASSWORD = "A-tide-of-bright-copper-42!"
 
 
 @given("the verification core has an isolated database")
+@given("the password reset core has an isolated database")
 @given("the account foundation has an isolated database and already verified mailbox ownership")
 def account_database(context):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))

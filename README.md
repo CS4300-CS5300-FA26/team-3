@@ -395,3 +395,13 @@ and simplified sign-in retention, request limits, routes, and deployment checks.
 **How we used the result:** Kept one private dashboard, removed the legacy demo
 route, and used the database for shared limits and automatic cleanup without new
 services. Retained focused tests and the existing deployment rollback path.
+
+### Sprint 2: Oct 28, 2026 — Password-reset core
+
+**Tool:** Codex
+
+**What it helped with:** Drafted the password-reset core with tests and independent reviews.
+
+**How we used the result:** Reused Django reset tokens and password validation,
+kept password replacement and lockout clearing in one transaction, and added
+core acceptance scenarios. Email delivery and reset pages remain separate work.
