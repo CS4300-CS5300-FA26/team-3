@@ -1,0 +1,9 @@
+target-version = "py313"
+
+[lint]
+# Catch Python errors and basic style problems without a repository-wide reformat.
+select = ["E4", "E7", "E9", "F"]
+
+[lint.per-file-ignores]
+# Deployment settings must be applied before importing the Django application.
+"src/lambda_entry.py" = ["E402"]

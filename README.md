@@ -44,8 +44,26 @@ Record the hostname and result when reporting verification.
 
 Install test tools with `python -m pip install -r requirements-dev.txt`.
 Run `python src/manage.py test tests src` and `python -m behave` locally.
-CI reports coverage on pushes and PRs, requires 80% line coverage, and saves
-coverage reports as workflow artifacts.
+CI runs on every branch push and PR into `main`, without cancelling earlier
+pushes. It requires 80% line coverage and saves coverage reports as artifacts.
+The same required `test` check runs `python -m ruff check .` for Python errors
+and basic style, plus `python -m pip_audit --strict -r requirements-dev.txt` for
+known vulnerabilities in runtime/development dependencies and their transitive
+dependencies. Audit failures block the check; JSON reports are retained for 14
+days. Ruff's rules live in [ruff.toml](ruff.toml); full formatting and type
+checking are not enforced.
+
+CI also runs each Monday at 14:17 UTC to catch new dependency advisories. Chase
+owns the weekly review using the Actions results and existing GitHub failure
+notifications. Triage failures before merging: review the advisory, update the
+smallest affected pin, and rerun CI. Any proposed temporary exception needs an
+issue recording the advisory ID, reason, owner, and expiry before changing the
+audit command; no exceptions are currently configured.
+
+First reviewed audit (2026-10-29, local Python 3.13): the initial audit identified
+[GHSA-6q48-6c7w-9gw2](https://github.com/advisories/GHSA-6q48-6c7w-9gw2) in
+certifi 2026.7.22. After updating to 2026.10.19, all 48 resolved dependencies were
+audited with no known findings or skipped packages. CI repeats this on Linux.
 
 Luna reviews team PRs using the `OPENAI_API_KEY` GitHub secret. Reference issues
 in the PR description (for example, `Related: #12`) to include their Gherkin
@@ -405,3 +423,14 @@ services. Retained focused tests and the existing deployment rollback path.
 **How we used the result:** Reused Django reset tokens and password validation,
 kept password replacement and lockout clearing in one transaction, and added
 core acceptance scenarios. Email delivery and reset pages remain separate work.
+
+### Sprint 2: Oct 29, 2026 — CI feedback follow-up
+
+**Tool:** Codex
+
+**What it helped with:** Added all-branch deterministic lint, dependency auditing, and focused
+acceptance checks.
+
+**How we used the result:** Kept the existing test/coverage job and human delivery
+process, checked intentional lint failures, and approved the certifi dependency
+update identified by the first audit. Operational monitoring remains separate.

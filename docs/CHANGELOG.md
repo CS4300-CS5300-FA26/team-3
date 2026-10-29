@@ -14,6 +14,17 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-29 — Address Sprint 1 CI feedback
+
+- Follow-up to [#41](https://github.com/CS4300-CS5300-FA26/team-3/issues/41);
+  PR pending. [CI](../.github/workflows/ci.yml) checks every branch push, retains
+  PR checks, and adds Ruff lint and dependency auditing to the required test job.
+  A weekly run and [review cadence](../README.md#tests-and-automated-review) catch
+  new advisories; [lint scenarios](../features/ci_quality.feature) cover failures.
+- Update certifi to 2026.10.19 for
+  [GHSA-6q48-6c7w-9gw2](https://github.com/advisories/GHSA-6q48-6c7w-9gw2).
+  Full formatting, type checking, and live service alerts remain outside this change.
+
 ### 2026-10-28 — Add the password-reset core
 
 - [#23](https://github.com/CS4300-CS5300-FA26/team-3/issues/23); PR pending.
