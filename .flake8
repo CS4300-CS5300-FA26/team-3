@@ -1,0 +1,8 @@
+[flake8]
+# Preserve the existing Python error and basic style checks.
+select = E4,E7,E9,F
+ignore =
+extend-exclude = .venv
+per-file-ignores =
+    # Deployment settings must be applied before importing the Django application.
+    src/lambda_entry.py:E402

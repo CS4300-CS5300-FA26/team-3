@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 from behave import given, when, then
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / ".github"))
-from scripts import ai_review, check_coverage
+from scripts import ai_review, check_coverage  # noqa: E402
 
 
 @given('a pull request references an issue with Gherkin acceptance criteria')

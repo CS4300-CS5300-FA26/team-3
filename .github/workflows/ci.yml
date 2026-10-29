@@ -85,7 +85,7 @@ jobs:
           retention-days: 14
       - name: Lint Python
         if: ${{ !cancelled() }}
-        run: python -m ruff check .
+        run: python -m flake8 . --count --statistics
       - name: Audit dependencies
         if: ${{ !cancelled() }}
         run: python -m pip_audit --strict -r requirements-dev.txt --format json --output dependency-audit.json

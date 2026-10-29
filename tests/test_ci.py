@@ -17,11 +17,12 @@ def lint_source(source, filename="example.py"):
     if step is None:
         raise AssertionError("CI does not run a Python lint check")
     command = shlex.split(step[1])
+    if command[:3] != ["python", "-m", "flake8"]:
+        raise AssertionError("Sprint 3 CI must run Flake8 with lint reports")
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
-        config = ROOT / "ruff.toml"
-        if config.exists():
-            (root / config.name).write_text(config.read_text())
+        config = ROOT / ".flake8"
+        (root / config.name).write_text(config.read_text())
         sample = root / filename
         sample.parent.mkdir(parents=True, exist_ok=True)
         sample.write_text(source)
@@ -41,12 +42,13 @@ class CIChecksTests(unittest.TestCase):
     def test_lint_accepts_valid_python(self):
         result = lint_source("value = 1\nprint(value)\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "0")
 
     def test_lint_rejects_errors_and_basic_style_violations(self):
         for source, diagnostic in (
             ("print(missing_value)\n", "F821"),
             ("value = 1; print(value)\n", "E702"),
-            ("def broken(:\n", "invalid-syntax"),
+            ("def broken(:\n", "E999"),
         ):
             with self.subTest(diagnostic=diagnostic):
                 result = lint_source(source)
