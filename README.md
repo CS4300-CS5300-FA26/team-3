@@ -434,3 +434,15 @@ acceptance checks.
 **How we used the result:** Kept the existing test/coverage job and human delivery
 process, checked intentional lint failures, and approved the certifi dependency
 update identified by the first audit. Operational monitoring remains separate.
+
+### Sprint 2: Oct 29, 2026 — Password-reset email requests
+
+**Tool:** Codex
+
+**What it helped with:** Wrote focused tests and acceptance scenarios for password-reset
+email requests. Advised and verified reset email requests service.
+
+**How we used the result:** Reused Django tokens and the existing account email
+transport/style, kept five admission timestamps per hashed email, and checked
+concurrent workers on PostgreSQL and SQLite. Public recovery pages remain separate;
+the request service sends nothing until the completion route exists.

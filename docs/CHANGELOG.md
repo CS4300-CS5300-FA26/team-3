@@ -14,6 +14,20 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-29 — Add password-reset email requests and throttling
+
+- [#23](https://github.com/CS4300-CS5300-FA26/team-3/issues/23); PR pending.
+  [Reset requests](../src/accounts/password_reset_requests.py) admit at most five
+  requests per normalized email in a rolling hour, including unknown addresses
+  and failed deliveries. Store only a hashed address and bounded timestamps;
+  requesting mail does not change passwords, sessions or sign-in lockout.
+- Share the [account mail helper](../src/accounts/mail.py) and email style with
+  signup. Eligible accounts receive Django's 30-minute reset tokens; all expected
+  outcomes return the same confirmation. Synchronous delivery still differs in timing.
+  [Service scenarios](../features/password_reset_requests.feature) use a test-only
+  route. Public pages follow separately: mail remains disabled until
+  `accounts:reset_password` accepts `uidb64` and `token` and uses the reset core.
+
 ### 2026-10-29 — Address Sprint 1 CI feedback
 
 - Follow-up to [#41](https://github.com/CS4300-CS5300-FA26/team-3/issues/41);
