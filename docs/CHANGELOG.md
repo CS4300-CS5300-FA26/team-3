@@ -43,6 +43,17 @@ Keep validation results and execution history out of this record.
   [Core scenarios](../features/password_reset_core.feature) cover recovery and
   expiry; email delivery, request throttling and reset pages follow separately.
 
+### 2026-10-27 — Store and set safety thresholds
+
+- [#22](https://github.com/CS4300-CS5300-FA26/team-3/issues/22); PR pending.
+  Add an optional [per-student threshold](../src/accounts/models.py) stored in
+  exact cents with a nonnegative database constraint. The
+  [dashboard](../src/accounts/templates/accounts/dashboard.html) shows the saved
+  amount or “Not set” below the monthly balance and lets the signed-in student
+  set or change it. [Saving](../src/accounts/views.py) handles competing
+  first-time requests without creating a second row. Low-balance warnings
+  follow in a later D8 change.
+
 ### 2026-10-22 — Show account form submission progress
 
 - [#10](https://github.com/CS4300-CS5300-FA26/team-3/issues/10) and
