@@ -26,12 +26,14 @@ src/
 └── manage.py                     Django command entry point
 tests/                            Model/view, host, database, Lambda, deployment tests;
                                   test_accounts.py: identity; test_verification.py: completion; test_password_reset.py: D12 token expiry/password/session/lockout/concurrency; test_registration_view.py: password page; test_signup.py: signup/mail; test_site_flow.py: D1/D2 navigation; test_login_lockout.py: sign-in/budget/cleanup; test_remaining_budget.py: personal budget
+                                  test_ci.py: CI triggers and lint failure fixtures
 features/                         Behave scenarios tagged with issue numbers;
 .github/scripts/                  Luna review/issue context and line-coverage gate
-.github/workflows/                ci.yml: tests/coverage; ai-review.yml: Luna review;
+.github/workflows/                ci.yml: all-branch tests/coverage, lint, dependency audit and weekly recheck; ai-review.yml: Luna review;
                                   cd.yml: deployment
 requirements.txt                  Python dependencies
-requirements-dev.txt              Test/coverage tools; not packaged for Lambda
+requirements-dev.txt              Test/coverage/lint/audit tools; not packaged for Lambda
+.flake8                           Python lint rules and Lambda bootstrap import exception
 ```
 
 - Identify the requirement, issue, or acceptance criterion being addressed. Read

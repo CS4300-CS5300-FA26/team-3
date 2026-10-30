@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 from behave import given, when, then
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / ".github"))
-from scripts import ai_review, check_coverage
+from scripts import ai_review, check_coverage  # noqa: E402
 
 
 @given('a pull request references an issue with Gherkin acceptance criteria')
@@ -87,3 +87,26 @@ def coverage_gate(context):
 @then('the coverage check {result}')
 def coverage_result(context, result):
     assert context.passed == (result == 'passes')
+
+
+@given('a Python sample with {condition}')
+def python_sample(context, condition):
+    context.python_source = {
+        'valid code': 'value = 1\nprint(value)\n',
+        'an undefined name': 'print(missing_value)\n',
+        'multiple statements per line': 'value = 1; print(value)\n',
+    }[condition]
+
+
+@when('the CI lint command checks the sample')
+def lint_sample(context):
+    from tests.test_ci import lint_source
+
+    context.lint_result = lint_source(context.python_source)
+
+
+@then('the lint check {result}')
+def lint_result(context, result):
+    assert context.lint_result.returncode == (0 if result == 'passes' else 1), (
+        context.lint_result.stdout + context.lint_result.stderr
+    )

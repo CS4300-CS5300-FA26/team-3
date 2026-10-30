@@ -20,3 +20,4 @@ db.sqlite3
 coverage.xml
 coverage.json
 coverage-html/
+dependency-audit.json
