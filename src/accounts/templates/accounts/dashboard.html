@@ -20,6 +20,7 @@
     .threshold-form div { flex: 1 1 180px; }
     .threshold-form input { margin: 0; }
     .threshold-form .errorlist { flex-basis: 100%; }
+    .low-balance-warning { margin: 14px 0 0; padding: 12px 16px; border: 1px solid #bd7a08; border-radius: 8px; background: #fff3dc; color: #6d3b00; }
     .transactions { padding: 0 24px; list-style: none; background: white; border: 1px solid #afc0ad; border-radius: 8px; }
     .transactions li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; padding: 20px 0; }
     .transactions li + li { border-top: 1px solid #afc0ad; }
@@ -54,6 +55,9 @@
         <button type="submit">Save threshold</button>
     </form>
 </details>
+{% if show_low_balance_warning %}
+<p class="low-balance-warning" role="alert">You are below your ${{ current_threshold.amount|floatformat:2 }} safety threshold</p>
+{% endif %}
 
 <h2>My transactions</h2>
 <ul class="transactions">
