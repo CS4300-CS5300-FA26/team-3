@@ -14,6 +14,15 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-30 — Warn below the saved safety threshold
+
+- [#22](https://github.com/CS4300-CS5300-FA26/team-3/issues/22); PR pending.
+  The [dashboard](../src/accounts/views.py) compares the selected month's
+  remaining budget with the signed-in student's saved threshold and shows the
+  specified warning only when it is lower. The
+  [acceptance scenarios](../features/low_balance_warning.feature) cover the
+  warning at $120 and its absence at $310 for a $150 threshold.
+
 ### 2026-10-29 — Align linting with Sprint 3
 
 - Follow-up to [#41](https://github.com/CS4300-CS5300-FA26/team-3/issues/41)
