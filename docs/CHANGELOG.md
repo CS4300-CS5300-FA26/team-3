@@ -14,6 +14,15 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-30 — Warn below the saved safety threshold
+
+- [#22](https://github.com/CS4300-CS5300-FA26/team-3/issues/22); PR pending.
+  The [dashboard](../src/accounts/views.py) compares the selected month's
+  remaining budget with the signed-in student's saved threshold and shows the
+  specified warning only when it is lower. The
+  [acceptance scenarios](../features/low_balance_warning.feature) cover the
+  warning at $120 and its absence at $310 for a $150 threshold.
+
 ### 2026-10-29 — Align linting with Sprint 3
 
 - Follow-up to [#41](https://github.com/CS4300-CS5300-FA26/team-3/issues/41)
@@ -42,6 +51,17 @@ Keep validation results and execution history out of this record.
   atomically, and invalidates existing sessions and outstanding tokens.
   [Core scenarios](../features/password_reset_core.feature) cover recovery and
   expiry; email delivery, request throttling and reset pages follow separately.
+
+### 2026-10-27 — Store and set safety thresholds
+
+- [#22](https://github.com/CS4300-CS5300-FA26/team-3/issues/22); PR pending.
+  Add an optional [per-student threshold](../src/accounts/models.py) stored in
+  exact cents with a nonnegative database constraint. The
+  [dashboard](../src/accounts/templates/accounts/dashboard.html) shows the saved
+  amount or “Not set” below the monthly balance and lets the signed-in student
+  set or change it. [Saving](../src/accounts/views.py) handles competing
+  first-time requests without creating a second row. Low-balance warnings
+  follow in a later D8 change.
 
 ### 2026-10-22 — Show account form submission progress
 

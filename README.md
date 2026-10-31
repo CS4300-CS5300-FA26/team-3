@@ -437,3 +437,26 @@ process, checked intentional lint failures, and approved the certifi dependency
 update identified by the first audit. Switched the linter to Flake8 for the
 Sprint 3 requirement, reusing the existing checks. Operational monitoring remains
 separate.
+
+### Sprint 2: Oct 27, 2026 — Safety threshold foundation
+
+**Tool:** Codex
+
+**What it helped with:** Drafted the threshold model, migration, focused tests,
+dashboard display, the setting form, and a regression for competing first-time saves.
+
+**How we used the result:** Fabian directed the work in small slices, ran the
+red and green checks himself, and inspected the local dashboard display. We
+changed the save path to update the student's single threshold when requests
+overlap. Low-balance warning behavior remains for a later commit.
+
+### Sprint 2: Oct 30, 2026 — D8 low-balance warning
+
+**Tool:** Codex
+
+**What it helped with:** Drafted the dashboard warning, focused tests, and the
+issue #22 acceptance scenarios.
+
+**How we used the result:** Fabian checked the red and green test results himself.
+We kept the warning tied to the selected month's remaining budget and the
+signed-in student's threshold, with the requested wording.
