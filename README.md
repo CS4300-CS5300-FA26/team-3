@@ -4,6 +4,8 @@ CS 4300/5300 Fall 2026 — Team 3 group project
 
 > A student-focused budgeting app that helps UCCS students track money in and out, understand what remains, and make more informed spending decisions.
 
+Public URL: https://budget-wise.dev/
+
 Team Members:
 
 - Fabian Perez Muñoz
@@ -14,7 +16,7 @@ Team Members:
 
 ## How to run Django Project locally
 
-Use Python 3.13 (tested locally with Python 3.13.2). The Django project resides in `src/`. Run these commands from the repository root:
+Use Python 3.13, matching CI. The Django project resides in `src/`. Run these commands from the repository root:
 
 ```bash
 python3 -m venv .venv
@@ -34,19 +36,13 @@ For example, `export DJANGO_DEVELOPMENT_HOSTS="preview.example.test"` before
 starting the server. No extra setting is needed for `localhost:3000`. The Lambda adapter only accepts `budget-wise.dev`
 regardless of this environment variable.
 
-For a second DevEdu verification, have a teammate follow the setup above, open
-`http://localhost:3000/` (or their configured hostname), and confirm there is no
-`DisallowedHost` error. Run
-`python src/manage.py test tests.test_hosts tests.test_deployment` as well.
-Record the hostname and result when reporting verification.
-
 ## Tests and automated review
 
 Install test tools with `python -m pip install -r requirements-dev.txt`.
 Run `python src/manage.py test tests src` and `python -m behave` locally.
 CI runs on every branch push and PR into `main`, without cancelling earlier
 pushes. It requires 80% line coverage and saves coverage reports as artifacts.
-The same required `test` check runs `python -m flake8 . --count --statistics`
+The same `test` job runs `python -m flake8 . --count --statistics`
 for Python errors and basic style, plus `python -m pip_audit --strict -r requirements-dev.txt` for
 known vulnerabilities in runtime/development dependencies and their transitive
 dependencies. Audit failures block the check; JSON reports are retained for 14
@@ -61,10 +57,10 @@ smallest affected pin, and rerun CI. Any proposed temporary exception needs an
 issue recording the advisory ID, reason, owner, and expiry before changing the
 audit command; no exceptions are currently configured.
 
-First reviewed audit (2026-10-29, local Python 3.13): the initial audit identified
-[GHSA-6q48-6c7w-9gw2](https://github.com/advisories/GHSA-6q48-6c7w-9gw2) in
-certifi 2026.7.22. After updating to 2026.10.19, all 48 resolved dependencies were
-audited with no known findings or skipped packages. CI repeats this on Linux.
+The certifi update and its advisory are recorded in the
+[changelog](docs/CHANGELOG.md#2026-10-29--address-sprint-1-ci-feedback).
+Use the latest audit artifact for current results; dependency counts and findings
+can change as the environment and advisories change.
 
 Luna reviews team PRs using the `OPENAI_API_KEY` GitHub secret. Reference issues
 in the PR description (for example, `Related: #12`) to include their Gherkin
@@ -72,47 +68,17 @@ criteria.
 Drafts skip normally. Other review failures appear in the Actions summary;
 current author/repository eligibility is checked using GitHub metadata.
 
-## Create an account (#10)
-
-Open `/accounts/signup/` and enter your email. Follow the single-use link within
-24 hours, choose a password, then sign in. Signed-out application visits lead to
-sign-in, and successful sign-in resumes supported protected pages.
-See [signup email configuration](docs/DEPLOYMENT.md#signup-email) for local links
-and the Resend sending credential; automated tests use in-memory email.
-
-## Student sign-in and dashboard (#11, #21)
-
-Sign in with an existing account's email and password at `/sign-in/`. Both `/`
-and `/dashboard/` show only that student's transactions and remaining budget for
-the selected month. Record income or expenses from the dashboard; sign-out uses
-POST and ends the session. The separate `/admin/login/` remains available for
-staff accounts, including those without an email.
-
-Incorrect credentials and unknown emails receive the same error. Five failed
-sign-ins within 15 minutes lock that email for 15 minutes. A shared database
-budget allows 10 sign-in attempts per source IP and 100 overall per minute.
-Requests over either limit receive HTTP 429 and can retry after a minute;
-source-blocked requests do not consume the overall allowance. Users sharing a
-network share its source allowance. Source counters store hashed addresses,
-expire with the shared minute window, and ignore client-supplied forwarded headers.
-
-The first sign-in attempt each minute removes expired failure records and idle
-email records without clearing active lockouts. No scheduled job is needed.
-`python src/manage.py cleanup_login_attempts` remains available for manual cleanup.
-PostgreSQL and file-backed SQLite serialize concurrent sign-in decisions;
-concurrency tests skip shared in-memory SQLite.
-
-Retained synthetic transactions are excluded from student dashboards. `/demo/`
-has been removed; the old seed command is only a development fixture helper.
-
 ## Source layout
 
 - `src/budgetwise/`: Django project settings and URLs.
 - `src/budgetwise/db/aurora/`: PostgreSQL connection with AWS IAM authentication.
-- `src/accounts/`: email identity, sign-in, lockout, and the private dashboard.
-- `src/transactions/`: transaction model, recording forms, migrations, and admin registration.
-- `src/integrations/`: future Resend, OpenAI, and other service connections.
-- `tests/`: transaction, database connection, Lambda, and deployment tests.
+- `src/accounts/`: identity, signup/shared mail, sign-in/lockout, reset services,
+  and the private dashboard with safety thresholds and warnings.
+- `src/transactions/`: transaction model, recording/editing/deletion views and
+  templates, migrations, and admin registration.
+- `tests/`: account, transaction, CI, database connection, Lambda, and deployment tests.
+- `features/`: executable Behave acceptance scenarios and their steps.
+- `.github/`: CI, AI-review, deployment workflows, and supporting scripts.
 
 ## Architecture decisions
 
@@ -130,8 +96,6 @@ Request flow: `Browser → API Gateway → Lambda → Django → Aurora PostgreS
 ## Deployment
 
 Pull requests to `main` run Django checks, migrations, and tests against a temporary PostgreSQL database in GitHub Actions. This uses no AWS credentials or Aurora credits. Teammates can run local tests with `python src/manage.py test tests src`.
-
-Public URL: https://budget-wise.dev/
 
 API Gateway sends requests to Django on AWS Lambda. Anonymous visitors are redirected from `/` to sign-in. The deployment workflow tests changes to `main`, applies migrations, checks the candidate sign-in page, and releases it to Lambda. See [deployment instructions](docs/DEPLOYMENT.md) for configuration and rollback.
 
@@ -238,7 +202,8 @@ We checked the local Django project, updated its setup instructions, and kept th
 
 **How we used the result:**
 
-The initial scaffold is now running at the registered public URL. Lambda is properly invoked through API Gateway and running our Django code to deploy the application.
+We deployed the initial scaffold at the registered public URL, with API Gateway
+invoking Lambda to run Django.
 
 ### Sprint 1: Oct 12, 2026 — automated review and coverage
 
@@ -252,8 +217,9 @@ The initial scaffold is now running at the registered public URL. Lambda is prop
 **How we used the result:**
 
 We verified the implementation locally with unit/integration tests, Behave scenarios,
-PostgreSQL, coverage reports, and workflow linting. Changes remain local for human
-review and delivery; live API review still needs verification after merging to `main`.
+PostgreSQL, coverage reports, and workflow linting. These changes subsequently
+merged in [PR #42](https://github.com/CS4300-CS5300-FA26/team-3/pull/42), followed by
+the eligibility and permission fixes in #45 and #46.
 
 ### Sprint 1: Oct 17, 2026 — Recording Income
 
@@ -276,7 +242,9 @@ the tests, saved an income entry on the local site and verified its date, type, 
 amount in Django admin, checked the zero-amount error and absence of a saved row,
 and confirmed an incognito visitor is redirected. The full Django suite passed with
 54 tests. Fabian also checked the missing-source error, save confirmation, and
-updated page locally. Entries are not yet associated with users or shown in a budget.
+updated page locally. At this stage entries were not associated with users or
+shown in a personal budget; ownership and dashboard integration followed in
+PRs #52 and #53.
 
 ### Sprint 1: Oct 17, 2026 — review eligibility
 
@@ -286,7 +254,7 @@ updated page locally. Entries are not yet associated with users or shown in a bu
 eligibility checks with visible failures.
 
 **How we used the result:** Checked the workflow boundaries and exercised eligible,
-ineligible, and failure cases locally before human delivery.
+ineligible, and failure cases. The fixes merged in PRs #45 and #46.
 
 ### Sprint 1: Oct 18, 2026 — Account foundation
 
@@ -312,7 +280,8 @@ and duplicate protection.
 **How we used the result:**
 
 We reviewed the dashboard locally and retained the demo-only scope while combining
-it with the team's income form and landing-page styling.
+it with the team's income form and landing-page styling. The personal dashboard
+in PR #53 subsequently replaced the demo page.
 
 ### Sprint 1: Oct 19, 2026 — Recording Expenses
 
@@ -330,8 +299,8 @@ it with the team's income form and landing-page styling.
 
 We followed the income pattern so the two pages behave the same, kept the category
 list in the form so the change needed no migration, and left out the transaction-list
-and remaining-budget criteria until expenses are tied to users. Noah chose the
-category list and the issue reference.
+and remaining-budget criteria until ownership and dashboard integration were added
+in PRs #52 and #53. Noah chose the category list and the issue reference.
 
 ### 2026-10-19 — Database email uniqueness
 
@@ -359,7 +328,7 @@ change, then passing after it. New income and expense entries now belong to the
 signed-in student. The optional owner field still allows older and demo records
 without an owner. The later D2 dashboard displays only user-owned records.
 
-### Sprint 1: Oct 21, 2026 — Pending success scenarios and shared Behave steps
+### Sprint 1: Oct 21, 2026 — Success scenarios and shared Behave steps
 
 **Tool:** Claude Code
 
@@ -371,10 +340,10 @@ without an owner. The later D2 dashboard displays only user-owned records.
 
 **How we used the result:**
 
-Following Pardot's advice, we added both scenarios now as pending instead of waiting
-for D2, and kept them skipped in CI rather than faking a passing step. We checked
-that both pass once the dashboard shows the student's own transactions, and that a
-wrong error message still fails the expense scenario.
+Following Pardot's advice, we initially added both scenarios with `@wip` while D2
+was being developed. We checked that they passed with user-owned dashboard data
+and that a wrong error message failed the expense scenario. Both scenarios were
+enabled with the personal dashboard in PR #53 and now run in the normal suite.
 
 ### Sprint 1: Oct 22, 2026 — Complete D1 and connect D2 navigation
 
@@ -384,9 +353,10 @@ wrong error message still fails the expense scenario.
 and integration of D1 signup with D2 sign-in and transaction navigation.
 
 **How we used the result:** Reused Django auth/mail and the shared identity helpers,
-combined the unshipped D1 migrations after D2, and added focused route and
-acceptance checks. Added the application sign-in gate and shared account/recording
-navigation; dashboard changes remain in D2 (#53).
+joined the D1 and D2 migration histories with a merge migration, and added focused
+route and acceptance checks. The application sign-in gate and shared
+account/recording navigation merged in PR #55, integrating the private dashboard
+from PR #53.
 
 ### Sprint 1: Oct 22, 2026 — Student sign-in and account lockout
 
@@ -423,7 +393,8 @@ services. Retained focused tests and the existing deployment rollback path.
 
 **How we used the result:** Reused Django reset tokens and password validation,
 kept password replacement and lockout clearing in one transaction, and added
-core acceptance scenarios. Email delivery and reset pages remain separate work.
+core acceptance scenarios. The core merged in PR #64; email requests and
+throttling are covered by pending PR #68. Public reset pages follow separately.
 
 ### Sprint 2: Oct 29, 2026 — CI feedback follow-up
 
@@ -438,7 +409,30 @@ update identified by the first audit. Switched the linter to Flake8 for the
 Sprint 3 requirement, reusing the existing checks. Operational monitoring remains
 separate.
 
-### Sprint 2: Oct 29, 2026 — Password-reset email requests
+### Sprint 2: Oct 27, 2026 — Safety threshold foundation
+
+**Tool:** Codex
+
+**What it helped with:** Drafted the threshold model, migration, focused tests,
+dashboard display, the setting form, and a regression for competing first-time saves.
+
+**How we used the result:** Fabian directed the work in small slices, ran the
+red and green checks himself, and inspected the local dashboard display. We
+changed the save path to update the student's single threshold when requests
+overlap. The foundation merged in PR #61; warning behavior followed in PR #66.
+
+### Sprint 2: Oct 30, 2026 — D8 low-balance warning
+
+**Tool:** Codex
+
+**What it helped with:** Drafted the dashboard warning, focused tests, and the
+issue #22 acceptance scenarios.
+
+**How we used the result:** Fabian checked the red and green test results himself.
+We kept the warning tied to the selected month's remaining budget and the
+signed-in student's threshold, with the requested wording.
+
+### Sprint 2: Oct 30, 2026 — Password-reset email requests
 
 **Tool:** Codex
 
@@ -447,5 +441,5 @@ email requests. Advised and verified reset email requests service.
 
 **How we used the result:** Reused Django tokens and the existing account email
 transport/style, kept five admission timestamps per hashed email, and checked
-concurrent workers on PostgreSQL and SQLite. Public recovery pages remain separate;
-the request service sends nothing until the completion route exists.
+concurrent workers on PostgreSQL and SQLite. Public recovery pages follow
+separately; the service sends nothing until the completion route exists.
