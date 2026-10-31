@@ -14,19 +14,53 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-30 — Complete transaction editing and deletion from the dashboard
+
+- [#19](https://github.com/CS4300-CS5300-FA26/team-3/issues/19); merged through
+  [#62](https://github.com/CS4300-CS5300-FA26/team-3/pull/62) (editing),
+  [#63](https://github.com/CS4300-CS5300-FA26/team-3/pull/63) (deletion), and
+  [#67](https://github.com/CS4300-CS5300-FA26/team-3/pull/67) (dashboard actions
+  and acceptance scenarios). [Transaction views](../src/transactions/views.py)
+  reuse the recording forms, require the signed-in owner, and exclude demo rows.
+- Deletion needs a confirmation POST; cancelling preserves the record. Saved
+  changes affect the monthly budget, and successful actions return to the current
+  month's dashboard. [Scenarios](../features/transaction_management.feature)
+  cover editing, deletion, cancellation, ownership, and dashboard links.
+
 ### 2026-10-30 — Warn below the saved safety threshold
 
-- [#22](https://github.com/CS4300-CS5300-FA26/team-3/issues/22); PR pending.
+- [#22](https://github.com/CS4300-CS5300-FA26/team-3/issues/22);
+  merged in [#66](https://github.com/CS4300-CS5300-FA26/team-3/pull/66).
   The [dashboard](../src/accounts/views.py) compares the selected month's
   remaining budget with the signed-in student's saved threshold and shows the
   specified warning only when it is lower. The
   [acceptance scenarios](../features/low_balance_warning.feature) cover the
   warning at $120 and its absence at $310 for a $150 threshold.
+- Equality and an unset threshold do not warn. An empty month has zero balance
+  and warns when the threshold is positive. The warning stays inline below the
+  threshold editor; it does not send notifications or add a new migration.
+
+### 2026-10-29 — Add password-reset email requests and throttling
+
+- [#23](https://github.com/CS4300-CS5300-FA26/team-3/issues/23); pending PR #68.
+  [Reset requests](../src/accounts/password_reset_requests.py) admit at most five
+  requests per normalized email in a rolling hour, including unknown addresses
+  and failed deliveries. Store only a hashed address and bounded timestamps;
+  requesting mail does not change passwords, sessions or sign-in lockout.
+- Share the [account mail helper](../src/accounts/mail.py) and email style with
+  signup. Eligible accounts receive Django's 30-minute reset tokens; all expected
+  outcomes return the same confirmation. Synchronous delivery still differs in timing.
+  [Service scenarios](../features/password_reset_requests.feature) use a test-only
+  route. Public pages follow separately: mail remains disabled until
+  `accounts:reset_password` resolves with `uidb64` and `token`. The future
+  completion view must call the reset core.
+- Extend [application-log redaction](../src/accounts/logging.py) to Django reset
+  tokens so request logs do not expose recovery credentials.
 
 ### 2026-10-29 — Align linting with Sprint 3
 
 - Follow-up to [#41](https://github.com/CS4300-CS5300-FA26/team-3/issues/41)
-  and [PR #65](https://github.com/CS4300-CS5300-FA26/team-3/pull/65).
+  in merged [PR #65](https://github.com/CS4300-CS5300-FA26/team-3/pull/65).
   Use Flake8 as our single linter, as allowed by the Sprint 3 rubric, with console
   reports and the existing [failure scenarios](../features/ci_quality.feature).
   Preserve the focused rule scope in [.flake8](../.flake8) and remove the old
@@ -35,8 +69,9 @@ Keep validation results and execution history out of this record.
 ### 2026-10-29 — Address Sprint 1 CI feedback
 
 - Follow-up to [#41](https://github.com/CS4300-CS5300-FA26/team-3/issues/41);
-  PR pending. [CI](../.github/workflows/ci.yml) checks every branch push, retains
-  PR checks, and adds lint and dependency auditing to the required test job.
+  merged in [#65](https://github.com/CS4300-CS5300-FA26/team-3/pull/65).
+  [CI](../.github/workflows/ci.yml) checks every branch push, retains
+  PR checks, and adds lint and dependency auditing to the test job.
   A weekly run and [review cadence](../README.md#tests-and-automated-review) catch
   new advisories; [lint scenarios](../features/ci_quality.feature) cover failures.
 - Update certifi to 2026.10.19 for
@@ -45,28 +80,32 @@ Keep validation results and execution history out of this record.
 
 ### 2026-10-28 — Add the password-reset core
 
-- [#23](https://github.com/CS4300-CS5300-FA26/team-3/issues/23); PR pending.
+- [#23](https://github.com/CS4300-CS5300-FA26/team-3/issues/23);
+  merged in [#64](https://github.com/CS4300-CS5300-FA26/team-3/pull/64).
   [Reset completion](../src/accounts/password_reset.py) uses Django's 30-minute
   tokens and password validation, replaces the password and clears sign-in lockout
   atomically, and invalidates existing sessions and outstanding tokens.
   [Core scenarios](../features/password_reset_core.feature) cover recovery and
-  expiry; email delivery, request throttling and reset pages follow separately.
+  expiry. Email requests and throttling are covered by pending PR #68, recorded
+  above; public reset pages follow separately.
 
 ### 2026-10-27 — Store and set safety thresholds
 
-- [#22](https://github.com/CS4300-CS5300-FA26/team-3/issues/22); PR pending.
+- [#22](https://github.com/CS4300-CS5300-FA26/team-3/issues/22);
+  merged in [#61](https://github.com/CS4300-CS5300-FA26/team-3/pull/61).
   Add an optional [per-student threshold](../src/accounts/models.py) stored in
   exact cents with a nonnegative database constraint. The
   [dashboard](../src/accounts/templates/accounts/dashboard.html) shows the saved
   amount or “Not set” below the monthly balance and lets the signed-in student
   set or change it. [Saving](../src/accounts/views.py) handles competing
   first-time requests without creating a second row. Low-balance warnings
-  follow in a later D8 change.
+  were subsequently added in #66, recorded above.
 
 ### 2026-10-22 — Show account form submission progress
 
 - [#10](https://github.com/CS4300-CS5300-FA26/team-3/issues/10) and
-  [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11); PR pending.
+  [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11);
+  merged in [#59](https://github.com/CS4300-CS5300-FA26/team-3/pull/59).
   [Account forms](../src/accounts/templates/accounts/base.html) show progress and
   prevent repeat submissions while waiting. Restore controls on browser Back;
   [email failures](../features/signup.feature) leave signup ready to retry.
@@ -74,14 +113,16 @@ Keep validation results and execution history out of this record.
 
 ### 2026-10-22 — Identify the deployment health probe
 
-- Deployment follow-up; PR pending. Give the public health probe a BudgetWise
+- Deployment follow-up, merged in
+  [#58](https://github.com/CS4300-CS5300-FA26/team-3/pull/58). Give the public health probe a BudgetWise
   user agent so Cloudflare does not reject Python's default client signature.
   Report the actual failing HTTP status and retain automatic rollback.
 
 ### 2026-10-22 — Match dashboard styling to the account pages
 
 - **Reference:** [#11](https://github.com/CS4300-CS5300-FA26/team-3/issues/11)
-  and [#21](https://github.com/CS4300-CS5300-FA26/team-3/issues/21); PR pending.
+  and [#21](https://github.com/CS4300-CS5300-FA26/team-3/issues/21);
+  merged in [#57](https://github.com/CS4300-CS5300-FA26/team-3/pull/57).
 - Reuse the shared account layout and navigation on the dashboard. Style the
   month summary and transaction list for desktop and narrow screens, removing
   the duplicate navigation and sign-out form.
@@ -139,11 +180,12 @@ Keep validation results and execution history out of this record.
   [common_steps.py](../features/steps/common_steps.py), so the income and expense
   steps no longer import each other. All four scenarios now start with the issues'
   wording, `Given I am signed in`.
-- Initially pending D2; both scenarios are now enabled against the private dashboard.
+- Both scenarios are enabled against the private dashboard added in #53.
 
 ### 2026-10-19 — Record an expense (D-4)
 
-- **Reference:** [Issue #18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18); PR pending.
+- **Reference:** [Issue #18](https://github.com/CS4300-CS5300-FA26/team-3/issues/18);
+  merged in [PR #50](https://github.com/CS4300-CS5300-FA26/team-3/pull/50).
 - Add a signed-in-only [expense page](../src/transactions/templates/transactions/record_expense.html)
   at `/expense/` with amount, date, description, a required category (Housing,
   Food, Books, Transportation, or Other), and a Fixed/Variable choice, so rent
@@ -175,7 +217,8 @@ Keep validation results and execution history out of this record.
 
 ### 2026-10-17 — Record income regression coverage and page feedback
 
-- **Reference:** [Issue #12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12); follow-up PR pending.
+- **Reference:** [Issue #12](https://github.com/CS4300-CS5300-FA26/team-3/issues/12);
+  merged in [PR #47](https://github.com/CS4300-CS5300-FA26/team-3/pull/47), following #44.
 - Add [view regression tests](../tests/test_transaction_view.py) for access, CSRF,
   negative amounts, and posted field overrides, plus a [Behave scenario](../features/record_income.feature)
   for the non-positive amount criterion.
@@ -185,30 +228,36 @@ Keep validation results and execution history out of this record.
 
 ### 2026-10-17 — Fix unexpected AI-review skips
 
-- **Reference:** #41; prompted by PR #44, delivery pending.
+- **Reference:** [#41](https://github.com/CS4300-CS5300-FA26/team-3/issues/41),
+  prompted by #44; merged in [#45](https://github.com/CS4300-CS5300-FA26/team-3/pull/45).
 - Check author/repository eligibility in the [review script](../.github/scripts/ai_review.py)
   using current GitHub metadata; report failures in the Actions summary. Drafts
-  still skip normally. Takes effect after human delivery to `main`.
+  still skip normally. [#46](https://github.com/CS4300-CS5300-FA26/team-3/pull/46)
+  subsequently added comment permissions, safe failure diagnostics, and the
+  repository-permission check now used for reviewer eligibility.
 
 ### 2026-10-12 — Luna PR review and CI coverage
 
 - **Reference:** [Issue #41](https://github.com/CS4300-CS5300-FA26/team-3/issues/41),
-  Sprint 1; commit/PR pending.
+  Sprint 1; merged in [PR #42](https://github.com/CS4300-CS5300-FA26/team-3/pull/42).
 - **Changes:** Luna reviews PR patches and referenced issue criteria using trusted
   base-branch code. CI runs Django and Behave tests, reports coverage, and enforces
   80% line coverage. See the [review script](../.github/scripts/ai_review.py),
   [CI workflow](../.github/workflows/ci.yml), and [scenarios](../features/ai_review.feature).
-- **Limits:** Reviews activate once the workflow reaches `main`. Feedback is
-  advisory and limited to patches and linked issues.
+- **Limits:** The workflow is on `main`; review execution still requires its
+  configured API secret and an eligible PR event. Feedback is advisory and
+  limited to patches and linked issues.
 
 ### 2026-10-08 — Sprint 1 development guidance
 
-- **Reference / requirement:** Pending commit; requested team-wide guidance for
+- **Reference / requirement:** Commit
+  [fa13615](https://github.com/CS4300-CS5300-FA26/team-3/commit/fa13615);
+  requested team-wide guidance for
   simple, explainable code, SOLID, TDD, coverage, and consolidated explanations.
 - **Result and design:** [AGENTS.md](../AGENTS.md) routes agents to relevant files
   and defines RED–GREEN–REFACTOR, practical SOLID boundaries, coverage reporting,
   and teammate walkthroughs. This record holds unified implementation explanations;
   README retains AI attribution. Existing tagged-demo review guidance is condensed.
-- **Limits:** Instructions guide future work; they do not install coverage tooling,
-  enforce a CI coverage gate, or establish teammate understanding. No application
-  behavior changes.
+- **Limits:** These instructions do not establish teammate understanding or change
+  application behavior. Coverage tooling and the CI gate were added separately
+  in #42; this entry records the original guidance change.
