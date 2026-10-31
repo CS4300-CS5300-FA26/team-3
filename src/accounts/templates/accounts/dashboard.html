@@ -27,6 +27,9 @@
     .transaction-details { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
     .transaction-details small { display: block; color: #56616b; }
     .transaction-amount { margin-left: auto; font-variant-numeric: tabular-nums; }
+    .transaction-actions { display: flex; gap: 12px; }
+    .transaction-actions a { color: #104b25; font-weight: 600; text-decoration: none; }
+    .transaction-actions a:hover { text-decoration: underline; }
 </style>
 {% endblock %}
 
@@ -67,7 +70,17 @@
                 {{ transaction.description }}
                 <small>{{ transaction.date }} · {{ transaction.get_kind_display }}</small>
             </div>
-            <strong class="transaction-amount">${{ transaction.amount|floatformat:2 }}</strong>
+
+            <strong class="transaction-amount">
+                ${{ transaction.amount|floatformat:2 }}
+            </strong>
+
+            {% if not transaction.is_demo %}
+                <div class="transaction-actions">
+                    <a href="{% url 'edit_transaction' transaction.pk %}">Edit</a>
+                    <a href="{% url 'delete_transaction' transaction.pk %}">Delete</a>
+                </div>
+            {% endif %}
         </li>
     {% empty %}
         <li>No transactions in this period</li>
