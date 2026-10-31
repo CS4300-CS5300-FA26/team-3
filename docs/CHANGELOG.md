@@ -14,6 +14,13 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-31 — Refine the monthly budget summary
+
+- **Reference:** [Issue #21](https://github.com/CS4300-CS5300-FA26/team-3/issues/21).
+- Make the month picker update the dashboard automatically and present the
+  selected period and remaining budget in a clearer summary card. See the
+  [calendar-month scenarios](../features/remaining_budget.feature).
+
 ### 2026-10-30 — Warn below the saved safety threshold
 
 - [#22](https://github.com/CS4300-CS5300-FA26/team-3/issues/22); PR pending.
