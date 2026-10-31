@@ -1,9 +1,12 @@
+from datetime import date
 import unicodedata
 
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from .models import Transaction
 
@@ -171,4 +174,58 @@ def delete_transaction(request, pk):
         request,
         "transactions/delete_transaction.html",
         {"transaction": transaction},
+    )
+
+
+def month_from_query(value):
+    """Return the first day of a "YYYY-MM" month, or of the current month when
+    the value is missing or invalid. Uses the same rules as the dashboard."""
+    current_month = timezone.localdate().replace(day=1)
+    if len(value) != 7 or value[4] != "-":
+        return current_month
+    try:
+        return date.fromisoformat(f"{value}-01")
+    except ValueError:
+        return current_month
+
+
+@login_required
+def spending_by_category(request):
+    month = month_from_query(request.GET.get("month", ""))
+
+    # One row per category with its total, largest first. Equal totals are
+    # ordered by name so the chart never reshuffles between page loads.
+    totals = list(
+        Transaction.objects.filter(
+            owner=request.user,
+            is_demo=False,
+            kind=Transaction.Kind.EXPENSE,
+            date__year=month.year,
+            date__month=month.month,
+        )
+        .values("category")
+        .annotate(total=Sum("amount"))
+        .order_by("-total", "category")
+    )
+
+    # Each bar's length is its share of the largest category, kept as exact
+    # decimals and formatted here so the template only places the value.
+    largest = totals[0]["total"] if totals else None
+    categories = [
+        {
+            "category": row["category"],
+            "total": row["total"],
+            "width": f"{row['total'] * 100 / largest:.2f}",
+        }
+        for row in totals
+    ]
+
+    return render(
+        request,
+        "transactions/spending_by_category.html",
+        {
+            "categories": categories,
+            "month": month,
+            "selected_month": f"{month:%Y-%m}",
+        },
     )

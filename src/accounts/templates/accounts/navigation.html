@@ -9,6 +9,7 @@
         <a href="{% url 'dashboard' %}">My dashboard</a>
         <a href="{% url 'record_income' %}">Record income</a>
         <a href="{% url 'record_expense' %}">Record expense</a>
+        <a href="{% url 'spending_by_category' %}">Spending by category</a>
         <form method="post" action="{% url 'sign_out' %}">
             {% csrf_token %}
             <button type="submit">Sign out</button>

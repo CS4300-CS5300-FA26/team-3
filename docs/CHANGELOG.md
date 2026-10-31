@@ -14,6 +14,16 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-10-31 — See spending by category
+
+- [#20](https://github.com/CS4300-CS5300-FA26/team-3/issues/20); PR pending.
+  [Spending by category](../src/transactions/views.py) totals the signed-in
+  student's expenses per category for a selected month, ranks them highest first,
+  and draws each as a horizontal bar scaled to the largest category. Linked from
+  the main navigation; [acceptance scenario](../features/spending_by_category.feature).
+  Income, demo data and other students' entries are excluded. The page is separate
+  from the dashboard so dashboard work for D5, D8 and D15 is unaffected.
+
 ### 2026-10-29 — Align linting with Sprint 3
 
 - Follow-up to [#41](https://github.com/CS4300-CS5300-FA26/team-3/issues/41)
