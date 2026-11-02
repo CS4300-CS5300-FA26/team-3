@@ -209,6 +209,9 @@ def dashboard(request):
         (item.signed_amount for item in transactions),
         Decimal("0.00"),
     )
+    show_low_balance_warning = (
+        current_threshold is not None and remaining_budget < current_threshold.amount
+    )
     return render(
         request,
         "accounts/dashboard.html",
@@ -218,5 +221,6 @@ def dashboard(request):
             "selected_month": selected_month.isoformat()[:7],
             "current_threshold": current_threshold,
             "threshold_form": threshold_form,
+            "show_low_balance_warning": show_low_balance_warning,
         },
     )
