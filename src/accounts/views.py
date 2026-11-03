@@ -1,4 +1,5 @@
-from datetime import date
+from calendar import monthrange
+from datetime import date, timedelta
 from decimal import Decimal
 from smtplib import SMTPException
 
@@ -9,6 +10,7 @@ from django.contrib.auth.decorators import login_not_required, login_required
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.db.models import Max, Min, Q, Sum
 from django.shortcuts import redirect, render, resolve_url
 from django.urls import reverse
 from django.utils import timezone
@@ -184,6 +186,20 @@ def dashboard(request):
         except ValueError:
             pass
 
+    today = timezone.localdate()
+    period_options = {
+        "selected_month": f"Selected month ({selected_month:%B %Y})",
+        "last_3_days": "Last 3 days",
+        "last_7_days": "Last 7 days",
+        "last_14_days": "Last 14 days",
+        "this_month": "This month",
+        "this_quarter": "This quarter",
+        "all": "All time",
+    }
+    selected_period = request.GET.get("period", "selected_month")
+    if selected_period not in period_options:
+        selected_period = "selected_month"
+
     current_threshold = LowBalanceThreshold.objects.filter(owner=request.user).first()
     threshold_form = LowBalanceThresholdForm(
         request.POST if request.method == "POST" else None,
@@ -194,19 +210,71 @@ def dashboard(request):
             owner=request.user,
             defaults={"amount": threshold_form.cleaned_data["amount"]},
         )
-        return redirect(f"{reverse('dashboard')}?month={selected_month:%Y-%m}")
+        redirect_url = f"{reverse('dashboard')}?month={selected_month:%Y-%m}"
+        if selected_period != "selected_month":
+            redirect_url += f"&period={selected_period}"
+        return redirect(redirect_url)
 
-    # Get only this user's real transactions for the selected month
-    transactions = Transaction.objects.filter(
+    # Keep the monthly budget independent from the transaction-history filter.
+    budget_transactions = Transaction.objects.filter(
         owner=request.user,
         is_demo=False,
         date__year=selected_month.year,
         date__month=selected_month.month,
-    ).order_by("-date", "-id")
+    )
+
+    transactions = Transaction.objects.filter(owner=request.user, is_demo=False)
+    if selected_period == "selected_month":
+        period_start = selected_month
+        period_end = date(
+            selected_month.year,
+            selected_month.month,
+            monthrange(selected_month.year, selected_month.month)[1],
+        )
+        transactions = transactions.filter(
+            date__year=selected_month.year,
+            date__month=selected_month.month,
+        )
+    elif selected_period.startswith("last_"):
+        days = int(selected_period.split("_")[1])
+        period_start = today - timedelta(days=days - 1)
+        period_end = today
+        transactions = transactions.filter(
+            date__gte=period_start, date__lte=period_end
+        )
+    elif selected_period == "this_month":
+        period_start = today.replace(day=1)
+        period_end = today
+        transactions = transactions.filter(
+            date__gte=period_start, date__lte=period_end
+        )
+    elif selected_period == "this_quarter":
+        quarter_start_month = ((today.month - 1) // 3) * 3 + 1
+        period_start = date(today.year, quarter_start_month, 1)
+        period_end = today
+        transactions = transactions.filter(
+            date__gte=period_start, date__lte=period_end
+        )
+    else:
+        period_start = None
+        period_end = None
+    transactions = transactions.order_by("-date", "-id")
+
+    period_totals = transactions.aggregate(
+        income_total=Sum("amount", filter=Q(kind=Transaction.Kind.INCOME)),
+        expense_total=Sum("amount", filter=Q(kind=Transaction.Kind.EXPENSE)),
+        first_date=Min("date"),
+        last_date=Max("date"),
+    )
+    income_total = period_totals["income_total"] or Decimal("0.00")
+    expense_total = period_totals["expense_total"] or Decimal("0.00")
+    if selected_period == "all":
+        period_start = period_totals["first_date"]
+        period_end = period_totals["last_date"]
 
     # Calculate the remaining balance using existing model logic
     remaining_budget = sum(
-        (item.signed_amount for item in transactions),
+        (item.signed_amount for item in budget_transactions),
         Decimal("0.00"),
     )
     show_low_balance_warning = (
@@ -217,9 +285,16 @@ def dashboard(request):
         "accounts/dashboard.html",
         {
             "transactions": transactions,
+            "income_total": income_total,
+            "expense_total": expense_total,
+            "selected_period": selected_period,
+            "period_options": period_options,
+            "period_start": period_start,
+            "period_end": period_end,
             "remaining_budget": remaining_budget,
             "selected_month": selected_month.isoformat()[:7],
             "selected_month_label": selected_month.strftime("%B %Y"),
+            "budget_transaction_count": budget_transactions.count(),
             "current_threshold": current_threshold,
             "threshold_form": threshold_form,
             "show_low_balance_warning": show_low_balance_warning,
