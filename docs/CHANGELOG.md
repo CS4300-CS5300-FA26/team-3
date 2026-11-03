@@ -14,6 +14,14 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-11-02 — Strengthen low-balance warning regressions
+
+- [#22](https://github.com/CS4300-CS5300-FA26/team-3/issues/22); PR pending.
+  Extend the [focused warning tests](../tests/test_low_balance_warning.py) to
+  check selected-month switching, separation between students, and the warning
+  after a saved threshold changes. Absence checks now catch any low-balance
+  warning text. Application behavior is unchanged.
+  
 ### 2026-10-31 — See spending by category
 
 - [#20](https://github.com/CS4300-CS5300-FA26/team-3/issues/20); PR pending.
