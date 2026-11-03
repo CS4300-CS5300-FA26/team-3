@@ -16,5 +16,6 @@
         </p>
         <button type="submit" data-pending-label="Signing in…">Sign in</button>
     </form>
+    <p><a href="{% url 'accounts:forgot_password' %}">Forgot password</a></p>
     <p>New to BudgetWise? <a href="{% url 'accounts:signup' %}">Create account</a></p>
 {% endblock %}

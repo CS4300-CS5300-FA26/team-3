@@ -1,4 +1,4 @@
-"""Test-only stand-in for PR 3's completion route; never installed by the app."""
+"""Isolated route stand-in for service tests; public flow tests use real routes."""
 from django.http import HttpResponse
 from django.urls import include, path
 

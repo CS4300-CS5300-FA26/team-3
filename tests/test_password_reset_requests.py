@@ -157,9 +157,11 @@ class PasswordResetRequestTests(TestCase):
             self.assertEqual(request_reset("other@uccs.edu"), CONFIRMATION)
         self.assertEqual(len(mail.outbox), 0)
 
-    @override_settings(ROOT_URLCONF="budgetwise.urls")
     def test_unmounted_completion_route_never_sends_a_live_link(self):
-        self.assertEqual(request_reset(), CONFIRMATION)
+        from django.urls import NoReverseMatch
+
+        with patch("accounts.password_reset_requests.reverse", side_effect=NoReverseMatch):
+            self.assertEqual(request_reset(), CONFIRMATION)
         self.assertEqual(len(mail.outbox), 0)
 
     def test_storage_is_bounded_hashed_and_cleans_expired_addresses(self):

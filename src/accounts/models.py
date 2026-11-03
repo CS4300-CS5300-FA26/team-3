@@ -39,6 +39,12 @@ class PasswordResetRateLimit(models.Model):
     expires_at = models.DateTimeField(db_index=True)
 
 
+class PasswordResetBudget(models.Model):
+    # One row, at most 100 [timestamp, HMAC source] admissions; independent of sign-in.
+    id = models.PositiveSmallIntegerField(primary_key=True)
+    admitted_at = models.JSONField(default=list)
+
+
 class SignInBudget(models.Model):
     # One shared row bounds work across email addresses and application workers.
     id = models.PositiveSmallIntegerField(primary_key=True)

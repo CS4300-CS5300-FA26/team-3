@@ -1,4 +1,4 @@
-"""Issue #23 core scenarios; no email delivery or reset pages yet."""
+"""Issue #23 core scenarios; public routes have separate acceptance scenarios."""
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
