@@ -460,3 +460,21 @@ issue #22 acceptance scenarios.
 **How we used the result:** Fabian checked the red and green test results himself.
 We kept the warning tied to the selected month's remaining budget and the
 signed-in student's threshold, with the requested wording.
+
+### Sprint 2: Oct 31, 2026 — Spending by category
+
+**Tool:** Claude Code
+
+**What it helped with:**
+
+- Reviewed the D-7 acceptance criteria, the dashboard month selector, and the
+  existing expense categories.
+- Drafted the category totals page, its tests and the Behave scenario, written
+  before the implementation.
+- Checked the page in a local browser at desktop and phone widths.
+
+**How we used the result:**
+
+We kept the breakdown on its own page so it does not conflict with other dashboard
+work, used plain HTML and CSS bars instead of a chart library, and matched the
+dashboard's month rules. Noah chose to deliver the story as one pull request.

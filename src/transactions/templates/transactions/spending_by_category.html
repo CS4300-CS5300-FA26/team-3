@@ -1,0 +1,53 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Spending by category | BudgetWise{% endblock %}
+
+{% block extra_style %}
+<style>
+    main { max-width: 800px; }
+    h2 { margin: 32px 0 16px; color: #104b25; font: 28px/1.2 Georgia, serif; }
+    .month-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+    .month-form div { flex: 1 1 220px; }
+    .month-form input { margin: 0; }
+    .category-chart { margin: 0; padding: 8px 24px; list-style: none; background: white; border: 1px solid #afc0ad; border-radius: 8px; }
+    .category-chart li { padding: 16px 0; }
+    .category-chart li + li { border-top: 1px solid #afc0ad; }
+    .category-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; margin-bottom: 8px; }
+    .category-name { min-width: 0; overflow-wrap: anywhere; }
+    .category-label strong { font-variant-numeric: tabular-nums; }
+    .bar-track { height: 20px; background: #e9efe6; border-radius: 4px; }
+    /* A minimum width keeps very small categories visible next to large ones. */
+    .bar { min-width: 4px; height: 100%; background: #104b25; border-radius: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Spending by category</h1>
+
+<form class="month-form" method="get" action="{% url 'spending_by_category' %}">
+    <div>
+        <label for="month">Select month</label>
+        <input type="month" id="month" name="month" value="{{ selected_month }}">
+    </div>
+    <button type="submit">View month</button>
+</form>
+
+<h2>{{ month|date:"F Y" }}</h2>
+{% if categories %}
+    <ol class="category-chart">
+        {% for row in categories %}
+            <li>
+                <div class="category-label">
+                    <span class="category-name">{{ row.category }}</span>
+                    <strong>${{ row.total|floatformat:2 }}</strong>
+                </div>
+                <div class="bar-track" aria-hidden="true">
+                    <div class="bar" style="width: {{ row.width }}%"></div>
+                </div>
+            </li>
+        {% endfor %}
+    </ol>
+{% else %}
+    <p>No expenses in this period</p>
+{% endif %}
+{% endblock %}

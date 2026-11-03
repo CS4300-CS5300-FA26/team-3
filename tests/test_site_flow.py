@@ -59,7 +59,7 @@ class SiteFlowTests(TestCase):
 
     def test_protected_routes_reach_signin_and_resume_the_requested_page(self):
         create_verified_user("student@example.com", PASSWORD)
-        for route in ["dashboard", "record_income", "record_expense"]:
+        for route in ["dashboard", "record_income", "record_expense", "spending_by_category"]:
             with self.subTest(route=route):
                 self.client.logout()
                 destination = reverse(route)
