@@ -461,6 +461,18 @@ issue #22 acceptance scenarios.
 We kept the warning tied to the selected month's remaining budget and the
 signed-in student's threshold, with the requested wording.
 
+### Sprint 2: Nov 2, 2026 — D8 warning regression checks
+
+**Tool:** Codex
+
+**What it helped with:** Added focused tests for selected-month switching,
+per-student data isolation, saved threshold changes, and warning absence.
+
+**How we used the result:** Fabian checked the tests and acceptance scenarios,
+then tried threshold changes and month switching on the local dashboard. We
+also checked account isolation with temporary local accounts. The tests protect
+the existing warning behavior without changing the application.
+
 ### Sprint 2: Oct 31, 2026 — Spending by category
 
 **Tool:** Claude Code
