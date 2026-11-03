@@ -86,7 +86,7 @@ class PasswordResetTests(TestCase):
         self.assertContains(response, "Email or password is incorrect")
         response = self.client.post(reverse("sign_in"), {"email": self.user.email, "password": NEW_PASSWORD})
         self.assertRedirects(response, reverse("dashboard"))
-        dashboard = self.client.get(reverse("dashboard"), {"month": "2026-10-01"})
+        dashboard = self.client.get(reverse("dashboard"), {"month": "2026-10"})
         self.assertEqual(dashboard.context["remaining_budget"], Decimal("80.00"))
 
     def test_reset_invalidates_two_existing_sessions_but_not_another_users(self):

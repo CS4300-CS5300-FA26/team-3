@@ -104,7 +104,10 @@ def sign_in(request):
     # Resume only the protected pages that send users here. This also prevents
     # external redirects and loops through signup, sign-in, or sign-out.
     destination = request.POST.get("next", request.GET.get("next", ""))
-    if destination not in {reverse(name) for name in ("dashboard", "record_income", "record_expense")}:
+    if destination not in {
+        reverse(name)
+        for name in ("dashboard", "record_income", "record_expense", "spending_by_category")
+    }:
         destination = reverse("dashboard")
 
     # Check if the sign in form was submitted
