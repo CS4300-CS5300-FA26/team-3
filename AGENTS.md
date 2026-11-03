@@ -18,15 +18,14 @@ docs/
 ├── ARCHITECTURE.pdf               Overview; verify against source
 └── DEPLOYMENT.md                  Deployment configuration and rollback
 src/
-├── accounts/                     Signup/mail, identity/verification, D2 sign-in/lockout/budget and private dashboard; D12 password_reset.py core uses Django tokens/forms and clears lockout atomically; default sign-in gate; shared account templates/navigation
+├── accounts/                     Signup/mail.py shared account email, identity/verification, D2 sign-in/lockout/budget and private dashboard; D12 password_reset.py completion clears lockout atomically; password_reset_requests.py admits five requests per rolling hour and mails Django tokens only when accounts:reset_password exists; default sign-in gate; shared account templates/navigation
 ├── budgetwise/                   Settings, root URLs, CI settings
 │   └── db/aurora/                PostgreSQL IAM connection backend
-├── transactions/                 Model/constraints, views, URLs, templates, migrations
+├── transactions/                 Model/constraints, recording/editing/deletion views and forms, URLs, templates, migrations; owner-only non-demo mutations
 ├── lambda_entry.py               API Gateway/Lambda request adapter
 └── manage.py                     Django command entry point
-tests/                            Model/view, host, database, Lambda, deployment tests;
-                                  test_accounts.py: identity; test_verification.py: completion; test_password_reset.py: D12 token expiry/password/session/lockout/concurrency; test_registration_view.py: password page; test_signup.py: signup/mail; test_site_flow.py: D1/D2 navigation; test_login_lockout.py: sign-in/budget/cleanup; test_remaining_budget.py: personal budget
-                                  test_ci.py: CI triggers and lint failure fixtures
+tests/                            Account, transaction, CI, database, Lambda, and deployment tests
+                                  reset_urls.py: test-only reset completion route until public views arrive
 features/                         Behave scenarios tagged with issue numbers;
 .github/scripts/                  Luna review/issue context and line-coverage gate
 .github/workflows/                ci.yml: all-branch tests/coverage, lint, dependency audit and weekly recheck; ai-review.yml: Luna review;

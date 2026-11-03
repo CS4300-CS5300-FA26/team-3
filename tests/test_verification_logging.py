@@ -73,3 +73,31 @@ class VerificationLoggingTests(SimpleTestCase):
         with self.assertLogs("django.server", level="INFO") as logs:
             logging.getLogger("django.server").info("GET /search?q=hello%20world 200")
         self.assertEqual(logs.records[0].getMessage(), "GET /search?q=hello%20world 200")
+
+    @override_settings(ROOT_URLCONF="tests.reset_urls")
+    def test_reset_tokens_are_redacted_in_paths_fields_and_exception_text(self):
+        from django.contrib.auth import get_user_model
+        from django.contrib.auth.tokens import default_token_generator
+
+        user = get_user_model()(pk=1, email="student@example.com", password="test-hash")
+        token = default_token_generator.make_token(user)
+        url = reverse("accounts:reset_password", kwargs={"uidb64": "MQ", "token": token})
+        request = RequestFactory().get(url, HTTP_REFERER="https://testserver" + url)
+        request.resolver_match = resolve(url)
+        for name in ["django.security.csrf", "django.request", "django.server", "mangum.http"]:
+            with self.subTest(logger=name), self.assertLogs(name, level="WARNING") as logs:
+                try:
+                    raise RuntimeError("Cannot send " + url)
+                except RuntimeError:
+                    logging.getLogger(name).warning(
+                        "GET %s 400", url.replace("-", "%2D"), exc_info=True,
+                        extra={"request": request, "kwargs": {"token": token}},
+                    )
+            record = logs.records[0]
+            diagnostic = str((logging.Formatter().format(record), record.kwargs,
+                              record.request.path, record.request.META,
+                              record.request.resolver_match.kwargs))
+            self.assertNotIn(token, unquote(diagnostic))
+            self.assertIn("[redacted]", diagnostic)
+        self.assertEqual(request.path, url)
+        self.assertEqual(request.resolver_match.kwargs["token"], token)

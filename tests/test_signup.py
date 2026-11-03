@@ -114,7 +114,7 @@ class SignupTests(TestCase):
     def test_transport_failure_is_identical_for_new_and_existing_and_consumes_budget(self):
         create_verified_user("existing@example.com", PASSWORD)
         for exception in [SMTPException("secret address/token"), OSError("private transport detail")]:
-            with patch("accounts.signup.send_mail", side_effect=exception) as sender:
+            with patch("accounts.mail.send_mail", side_effect=exception) as sender:
                 new = self.submit("new@example.com", REMOTE_ADDR="192.0.2.1")
                 existing = self.submit("existing@example.com", REMOTE_ADDR="192.0.2.2")
                 self.assertContains(new, "Unable to send email right now")

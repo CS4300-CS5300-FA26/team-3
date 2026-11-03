@@ -9,7 +9,7 @@ def unavailable_email(context):
     from smtplib import SMTPException
     from unittest.mock import patch
 
-    with patch("accounts.signup.send_mail", side_effect=SMTPException("Unavailable")):
+    with patch("accounts.mail.send_mail", side_effect=SMTPException("Unavailable")):
         request_signup(context, "student@example.org")
 
 
