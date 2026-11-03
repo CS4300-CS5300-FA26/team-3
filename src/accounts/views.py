@@ -102,7 +102,10 @@ def sign_in(request):
     # Resume only the protected pages that send users here. This also prevents
     # external redirects and loops through signup, sign-in, or sign-out.
     destination = request.POST.get("next", request.GET.get("next", ""))
-    if destination not in {reverse(name) for name in ("dashboard", "record_income", "record_expense")}:
+    if destination not in {
+        reverse(name)
+        for name in ("dashboard", "record_income", "record_expense", "spending_by_category")
+    }:
         destination = reverse("dashboard")
 
     # Check if the sign in form was submitted
@@ -219,6 +222,7 @@ def dashboard(request):
             "transactions": transactions,
             "remaining_budget": remaining_budget,
             "selected_month": selected_month.isoformat()[:7],
+            "selected_month_label": selected_month.strftime("%B %Y"),
             "current_threshold": current_threshold,
             "threshold_form": threshold_form,
             "show_low_balance_warning": show_low_balance_warning,
