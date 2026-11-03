@@ -23,6 +23,13 @@ Keep validation results and execution history out of this record.
   the main navigation; [acceptance scenario](../features/spending_by_category.feature).
   Income, demo data and other students' entries are excluded. The page is separate
   from the dashboard so dashboard work for D5, D8 and D15 is unaffected.
+  
+### 2026-10-31 — Refine the monthly budget summary
+
+- **Reference:** [Issue #21](https://github.com/CS4300-CS5300-FA26/team-3/issues/21).
+- Make the month picker update the dashboard automatically and present the
+  selected period and remaining budget in a clearer summary card. See the
+  [calendar-month scenarios](../features/remaining_budget.feature).
 
 ### 2026-10-30 — Warn below the saved safety threshold
 

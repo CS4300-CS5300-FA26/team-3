@@ -222,6 +222,7 @@ def dashboard(request):
             "transactions": transactions,
             "remaining_budget": remaining_budget,
             "selected_month": selected_month.isoformat()[:7],
+            "selected_month_label": selected_month.strftime("%B %Y"),
             "current_threshold": current_threshold,
             "threshold_form": threshold_form,
             "show_low_balance_warning": show_low_balance_warning,
