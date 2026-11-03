@@ -4,14 +4,24 @@
 
 {% block extra_style %}
 <style>
-    main { max-width: 800px; }
-    h1 { margin-bottom: 12px; }
+    main { max-width: 860px; }
+    h1 { margin-bottom: 8px; }
+    .dashboard-intro { margin: 0; color: #56616b; }
     h2 { margin: 32px 0 16px; color: #104b25; font: 28px/1.2 Georgia, serif; }
-    .budget-summary { display: flex; flex-wrap: wrap; align-items: end; gap: 24px; }
-    .month-picker { flex: 1 1 220px; }
-    .month-picker input { margin-bottom: 16px; }
-    .budget-summary p { flex: 1 1 220px; margin: 0; }
-    .budget-summary strong { display: block; font-size: 32px; overflow-wrap: anywhere; }
+    .monthly-budget { margin-top: 32px; padding: 28px; background: white; border: 1px solid #afc0ad; border-radius: 12px; box-shadow: 0 6px 20px rgb(16 24 32 / 6%); }
+    .monthly-budget-header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 20px; }
+    .monthly-budget h2 { margin: 4px 0 0; }
+    .eyebrow { margin: 0; color: #56616b; font-size: 14px; font-weight: bold; letter-spacing: .08em; text-transform: uppercase; }
+    .month-picker { flex: 0 1 240px; padding: 0; border: 0; background: transparent; }
+    .month-picker label { font-size: 15px; }
+    .month-picker input { margin: 0; background: #fff; }
+    .month-picker button { margin-top: 10px; }
+    .budget-total { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-top: 24px; padding: 20px 24px; border-left: 5px solid #104b25; border-radius: 8px; background: #e9efe6; }
+    .budget-label, .budget-amount, .budget-description, .budget-activity { margin: 0; }
+    .budget-label { color: #34443a; font-weight: bold; }
+    .budget-amount { color: #104b25; font-size: clamp(32px, 6vw, 44px); font-weight: bold; font-variant-numeric: tabular-nums; line-height: 1.15; overflow-wrap: anywhere; }
+    .budget-description { max-width: 240px; color: #56616b; }
+    .budget-activity { margin-top: 14px; color: #56616b; font-size: 15px; }
     .threshold-setting { margin-top: 14px; }
     .threshold-summary { color: #56616b; cursor: pointer; }
     .threshold-summary:hover { text-decoration: underline; }
@@ -35,17 +45,34 @@
 
 {% block content %}
 <h1>My budget dashboard</h1>
-<p>Signed in as {{ request.user.email|default:request.user.username }}</p>
+<p class="dashboard-intro">Signed in as {{ request.user.email|default:request.user.username }}</p>
 
-<h2>Monthly budget</h2>
-<form class="budget-summary" method="get" action="{% url 'dashboard' %}">
-    <div class="month-picker">
-        <label for="month">Select month</label>
-        <input type="month" id="month" name="month" value="{{ selected_month }}">
-        <button type="submit">View month</button>
+<section class="monthly-budget" aria-labelledby="month-heading">
+    <div class="monthly-budget-header">
+        <div>
+            <p class="eyebrow">Monthly budget</p>
+            <h2 id="month-heading">{{ selected_month_label }}</h2>
+        </div>
+        <form class="month-picker" method="get" action="{% url 'dashboard' %}" data-auto-submit="month">
+            <label for="month">Change month</label>
+            <input type="month" id="month" name="month" value="{{ selected_month }}">
+            <noscript><button type="submit">Update month</button></noscript>
+        </form>
     </div>
-    <p>Remaining budget: <strong>${{ remaining_budget|floatformat:2 }}</strong></p>
-</form>
+    <div class="budget-total">
+        <div>
+            <p class="budget-label">Remaining budget</p>
+            <p class="budget-amount">${{ remaining_budget|floatformat:2 }}</p>
+        </div>
+        <p class="budget-description">Income minus expenses for this month.</p>
+    </div>
+    <p class="budget-activity">Based on {{ transactions|length }} transaction{{ transactions|length|pluralize }}</p>
+</section>
+<script>
+    document.querySelectorAll('[data-auto-submit="month"] input[type="month"]').forEach((input) => {
+        input.addEventListener("change", () => input.form.requestSubmit());
+    });
+</script>
 <details class="threshold-setting"{% if threshold_form.errors %} open{% endif %}>
     <summary class="threshold-summary">Safety threshold: {% if current_threshold %}<strong>${{ current_threshold.amount|floatformat:2 }}</strong>{% else %}Not set{% endif %}</summary>
     <form class="threshold-form" method="post" action="{% url 'dashboard' %}?month={{ selected_month }}">

@@ -34,6 +34,7 @@ def signed_in(context):
     student = get_user_model().objects.create_user(username="student")
     context.client = Client()
     context.client.force_login(student)
+    context.student = student
     context.transaction_count = Transaction.objects.count()
     context.Transaction = Transaction
 

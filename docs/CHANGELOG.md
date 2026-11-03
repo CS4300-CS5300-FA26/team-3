@@ -21,6 +21,23 @@ Keep validation results and execution history out of this record.
   check selected-month switching, separation between students, and the warning
   after a saved threshold changes. Absence checks now catch any low-balance
   warning text. Application behavior is unchanged.
+  
+### 2026-10-31 — See spending by category
+
+- [#20](https://github.com/CS4300-CS5300-FA26/team-3/issues/20); PR pending.
+  [Spending by category](../src/transactions/views.py) totals the signed-in
+  student's expenses per category for a selected month, ranks them highest first,
+  and draws each as a horizontal bar scaled to the largest category. Linked from
+  the main navigation; [acceptance scenario](../features/spending_by_category.feature).
+  Income, demo data and other students' entries are excluded. The page is separate
+  from the dashboard so dashboard work for D5, D8 and D15 is unaffected.
+  
+### 2026-10-31 — Refine the monthly budget summary
+
+- **Reference:** [Issue #21](https://github.com/CS4300-CS5300-FA26/team-3/issues/21).
+- Make the month picker update the dashboard automatically and present the
+  selected period and remaining budget in a clearer summary card. See the
+  [calendar-month scenarios](../features/remaining_budget.feature).
 
 ### 2026-10-30 — Warn below the saved safety threshold
 

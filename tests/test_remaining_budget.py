@@ -73,6 +73,18 @@ class RemainingBudgetViewTests(TestCase):
         self.assertNotContains(response, "Retained demo pay")
         self.assertNotContains(response, "No transactions in this period")
 
+    def test_dashboard_has_automatic_month_picker_and_contextual_budget_card(self):
+        response = self.client.get(
+            reverse("dashboard"), {"month": "2026-10"}
+        )
+        content = response.content.decode()
+
+        self.assertContains(response, "October 2026")
+        self.assertContains(response, "Income minus expenses for this month")
+        self.assertContains(response, "Based on 4 transactions")
+        self.assertIn('data-auto-submit="month"', content)
+        self.assertNotContains(response, "View month")
+
     def test_december_displays_zero_and_empty_period_message(self):
         response = self.client.get(
             reverse("dashboard"), {"month": "2026-12"}
