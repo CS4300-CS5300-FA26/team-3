@@ -1,7 +1,7 @@
 @issue_23
 Feature: Request password reset instructions
   These service scenarios use a test-only completion route and local email.
-  Public forgot-password pages and browser confirmation are the next increment.
+  Public pages are covered separately in password_recovery.feature.
 
   Background:
     Given the password reset core has an isolated database
@@ -39,7 +39,7 @@ Feature: Request password reset instructions
     Then the reset service returns "If an account matches, password reset instructions will be sent"
     And the reset service has sent 0 emails
 
-  Scenario: Staged delivery never emails a link to an absent completion page
+  Scenario: Delivery never emails a link if completion routing is unavailable
     Given a resettable account exists for "student@uccs.edu"
     When the reset service is called without the test completion route
     Then the reset service returns "If an account matches, password reset instructions will be sent"

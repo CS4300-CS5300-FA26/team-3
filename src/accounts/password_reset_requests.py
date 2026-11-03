@@ -1,8 +1,7 @@
-"""D12 reset requests and rolling-hour delivery admissions, without public views.
+"""D12 reset requests and rolling-hour per-email delivery admissions.
 
-PR 3 must supply accounts:reset_password with uidb64/token keyword arguments.
-Until that route exists this service sends no mail. Its view must display the
-same confirmation for every outcome; synchronous delivery still differs in timing.
+The public caller in recovery.py applies aggregate admission first and displays
+the same confirmation for every outcome. Synchronous delivery differs in timing.
 """
 from datetime import timedelta
 from smtplib import SMTPException

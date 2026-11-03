@@ -72,7 +72,7 @@ current author/repository eligibility is checked using GitHub metadata.
 
 - `src/budgetwise/`: Django project settings and URLs.
 - `src/budgetwise/db/aurora/`: PostgreSQL connection with AWS IAM authentication.
-- `src/accounts/`: identity, signup/shared mail, sign-in/lockout, reset services,
+- `src/accounts/`: identity, signup/shared mail, sign-in/lockout, password recovery,
   and the private dashboard with safety thresholds and warnings.
 - `src/transactions/`: transaction model, recording/editing/deletion views and
   templates, migrations, and admin registration.
@@ -385,6 +385,18 @@ and simplified sign-in retention, request limits, routes, and deployment checks.
 route, and used the database for shared limits and automatic cleanup without new
 services. Retained focused tests and the existing deployment rollback path.
 
+### Sprint 2: Oct 27, 2026 — Safety threshold foundation
+
+**Tool:** Codex
+
+**What it helped with:** Drafted the threshold model, migration, focused tests,
+dashboard display, the setting form, and a regression for competing first-time saves.
+
+**How we used the result:** Fabian directed the work in small slices, ran the
+red and green checks himself, and inspected the local dashboard display. We
+changed the save path to update the student's single threshold when requests
+overlap. The foundation merged in PR #61; warning behavior followed in PR #66.
+
 ### Sprint 2: Oct 28, 2026 — Password-reset core
 
 **Tool:** Codex
@@ -409,18 +421,6 @@ update identified by the first audit. Switched the linter to Flake8 for the
 Sprint 3 requirement, reusing the existing checks. Operational monitoring remains
 separate.
 
-### Sprint 2: Oct 27, 2026 — Safety threshold foundation
-
-**Tool:** Codex
-
-**What it helped with:** Drafted the threshold model, migration, focused tests,
-dashboard display, the setting form, and a regression for competing first-time saves.
-
-**How we used the result:** Fabian directed the work in small slices, ran the
-red and green checks himself, and inspected the local dashboard display. We
-changed the save path to update the student's single threshold when requests
-overlap. The foundation merged in PR #61; warning behavior followed in PR #66.
-
 ### Sprint 2: Oct 30, 2026 — D8 low-balance warning
 
 **Tool:** Codex
@@ -444,18 +444,6 @@ transport/style, kept five admission timestamps per hashed email, and checked
 concurrent workers on PostgreSQL and SQLite. Public recovery pages follow
 separately; the service sends nothing until the completion route exists.
 
-### Sprint 2: Nov 2, 2026 — D8 warning regression checks
-
-**Tool:** Codex
-
-**What it helped with:** Added focused tests for selected-month switching,
-per-student data isolation, saved threshold changes, and warning absence.
-
-**How we used the result:** Fabian checked the tests and acceptance scenarios,
-then tried threshold changes and month switching on the local dashboard. We
-also checked account isolation with temporary local accounts. The tests protect
-the existing warning behavior without changing the application.
-
 ### Sprint 2: Oct 31, 2026 — Spending by category
 
 **Tool:** Claude Code
@@ -473,3 +461,26 @@ the existing warning behavior without changing the application.
 We kept the breakdown on its own page so it does not conflict with other dashboard
 work, used plain HTML and CSS bars instead of a chart library, and matched the
 dashboard's month rules. Noah chose to deliver the story as one pull request.
+
+### Sprint 2: Nov 2, 2026 — D8 warning regression checks
+
+**Tool:** Codex
+
+**What it helped with:** Added focused tests for selected-month switching,
+per-student data isolation, saved threshold changes, and warning absence.
+
+**How we used the result:** Fabian checked the tests and acceptance scenarios,
+then tried threshold changes and month switching on the local dashboard. We
+also checked account isolation with temporary local accounts. The tests protect
+the existing warning behavior without changing the application.
+
+### Sprint 2: Nov 3, 2026 — Password recovery pages
+
+**Tool:** Codex
+
+**What it helped with:** Drafted the forgot-password pages, implemented aggregate
+request limits and route-level acceptance scenarios for issue #23.
+
+**How we used the result:** Reused Django's reset form and token handling with our
+existing reset services. Kept saved budgets and lockout recovery intact, and
+bounded requests across email addresses before the per-email service runs.

@@ -13,26 +13,22 @@ when planning, verifying, or preparing sprint deliverables.
 ```text
 README.md                         Setup, sprint plan, AI usage log
 docs/
-├── BudgetWise Sprint 0-2 Backlog.pdf  Initial requirements/stories/acceptance criteria
-├── CHANGELOG.md                   Commit/PR explanations and demo preparation
+├── BudgetWise Sprint 0-2 Backlog.pdf  Initial stories and acceptance criteria
+├── CHANGELOG.md                   Implementation history
 ├── ARCHITECTURE.pdf               Overview; verify against source
 └── DEPLOYMENT.md                  Deployment configuration and rollback
 src/
-├── accounts/                     Signup/mail.py shared account email, identity/verification, D2 sign-in/lockout/budget and private dashboard; D12 password_reset.py completion clears lockout atomically; password_reset_requests.py admits five requests per rolling hour and mails Django tokens only when accounts:reset_password exists; default sign-in gate; shared account templates/navigation
-├── budgetwise/                   Settings, root URLs, CI settings
-│   └── db/aurora/                PostgreSQL IAM connection backend
-├── transactions/                 Model/constraints, recording/editing/deletion views and forms, URLs, templates, migrations; owner-only non-demo mutations
-├── lambda_entry.py               API Gateway/Lambda request adapter
-└── manage.py                     Django command entry point
-tests/                            Account, transaction, CI, database, Lambda, and deployment tests
-                                  reset_urls.py: test-only reset completion route until public views arrive
-features/                         Behave scenarios tagged with issue numbers;
-.github/scripts/                  Luna review/issue context and line-coverage gate
-.github/workflows/                ci.yml: all-branch tests/coverage, lint, dependency audit and weekly recheck; ai-review.yml: Luna review;
-                                  cd.yml: deployment
-requirements.txt                  Python dependencies
-requirements-dev.txt              Test/coverage/lint/audit tools; not packaged for Lambda
-.flake8                           Python lint rules and Lambda bootstrap import exception
+├── accounts/                     Authentication, recovery, shared email, dashboard
+├── budgetwise/                   Settings and root URLs
+│   └── db/aurora/                PostgreSQL IAM backend
+├── transactions/                 Transaction recording/editing/deletion and category totals
+└── lambda_entry.py               API Gateway/Lambda adapter
+tests/                            Unit and integration tests
+features/                         Behave acceptance scenarios by issue
+.github/scripts/                  AI review helpers and coverage gate
+.github/workflows/                CI, Luna review, deployment
+requirements*.txt                 Runtime and development dependencies
+.flake8                           Python lint rules
 ```
 
 - Identify the requirement, issue, or acceptance criterion being addressed. Read

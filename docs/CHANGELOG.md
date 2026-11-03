@@ -14,18 +14,18 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
-### 2026-10-30 — Complete transaction editing and deletion from the dashboard
+### 2026-11-03 — Complete password recovery from sign-in
 
-- [#19](https://github.com/CS4300-CS5300-FA26/team-3/issues/19); merged through
-  [#62](https://github.com/CS4300-CS5300-FA26/team-3/pull/62) (editing),
-  [#63](https://github.com/CS4300-CS5300-FA26/team-3/pull/63) (deletion), and
-  [#67](https://github.com/CS4300-CS5300-FA26/team-3/pull/67) (dashboard actions
-  and acceptance scenarios). [Transaction views](../src/transactions/views.py)
-  reuse the recording forms, require the signed-in owner, and exclude demo rows.
-- Deletion needs a confirmation POST; cancelling preserves the record. Saved
-  changes affect the monthly budget, and successful actions return to the current
-  month's dashboard. [Scenarios](../features/transaction_management.feature)
-  cover editing, deletion, cancellation, ownership, and dashboard links.
+- [#23](https://github.com/CS4300-CS5300-FA26/team-3/issues/23): add public
+  [recovery pages](../src/accounts/recovery.py) for requesting a reset, setting
+  a password, and returning to sign-in. Reuse Django's token-to-session redirect
+  and the atomic reset core so saved budgets survive and old sessions expire.
+  [Acceptance scenarios](../features/password_recovery.feature) cover the five
+  issue requirements.
+- Before the per-email service, admit at most 100 requests total and 10 per
+  source in a rolling hour, using one bounded database row independent of
+  sign-in/signup. The existing five-per-email limit and common confirmation
+  remain; synchronous email delivery can still differ in response time.
   
 ### 2026-11-02 — Strengthen low-balance warning regressions
 
@@ -51,6 +51,19 @@ Keep validation results and execution history out of this record.
 - Make the month picker update the dashboard automatically and present the
   selected period and remaining budget in a clearer summary card. See the
   [calendar-month scenarios](../features/remaining_budget.feature).
+
+### 2026-10-30 — Complete transaction editing and deletion from the dashboard
+
+- [#19](https://github.com/CS4300-CS5300-FA26/team-3/issues/19); merged through
+  [#62](https://github.com/CS4300-CS5300-FA26/team-3/pull/62) (editing),
+  [#63](https://github.com/CS4300-CS5300-FA26/team-3/pull/63) (deletion), and
+  [#67](https://github.com/CS4300-CS5300-FA26/team-3/pull/67) (dashboard actions
+  and acceptance scenarios). [Transaction views](../src/transactions/views.py)
+  reuse the recording forms, require the signed-in owner, and exclude demo rows.
+- Deletion needs a confirmation POST; cancelling preserves the record. Saved
+  changes affect the monthly budget, and successful actions return to the current
+  month's dashboard. [Scenarios](../features/transaction_management.feature)
+  cover editing, deletion, cancellation, ownership, and dashboard links.
 
 ### 2026-10-30 — Warn below the saved safety threshold
 

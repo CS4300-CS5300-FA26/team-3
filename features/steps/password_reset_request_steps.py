@@ -1,4 +1,4 @@
-"""Issue #23 request service; browser behavior remains in the next increment."""
+"""Issue #23 request service; public routes have separate acceptance scenarios."""
 from datetime import datetime, timedelta, timezone
 from smtplib import SMTPException
 from unittest.mock import patch
@@ -51,7 +51,9 @@ def reset_mail_unavailable(context):
 
 @when("the reset service is called without the test completion route")
 def reset_route_absent(context):
-    with override_settings(ROOT_URLCONF="budgetwise.urls"):
+    from django.urls import NoReverseMatch
+
+    with patch("accounts.password_reset_requests.reverse", side_effect=NoReverseMatch):
         request_reset_mail(context, "student@uccs.edu")
 
 

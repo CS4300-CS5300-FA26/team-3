@@ -1,7 +1,7 @@
 @issue_23
 Feature: Forgotten password reset core
-  This increment covers password replacement, expiry and recovery from lockout.
-  Reset email delivery, request throttling and public pages follow separately.
+  Service-level checks cover password replacement, expiry and recovery from lockout.
+  Public pages are covered separately in password_recovery.feature.
 
   Background:
     Given the password reset core has an isolated database
