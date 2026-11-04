@@ -17,7 +17,7 @@ class IncomeForm(forms.ModelForm):
         fields = ["amount", "date", "description"]
         labels = {"amount": "Amount ($)", "description": "Source"}
         widgets = {
-            "amount": forms.NumberInput(attrs={"step": "0.01"}),
+            "amount": forms.TextInput(attrs={"inputmode": "decimal"}),
             "date": forms.DateInput(attrs={"type": "date"}),
         }
         error_messages = {
@@ -53,7 +53,7 @@ class ExpenseForm(forms.ModelForm):
         fields = ["amount", "date", "description", "category", "is_fixed"]
         labels = {"amount": "Amount ($)", "description": "Description"}
         widgets = {
-            "amount": forms.NumberInput(attrs={"step": "0.01"}),
+            "amount": forms.TextInput(attrs={"inputmode": "decimal"}),
             "date": forms.DateInput(attrs={"type": "date"}),
         }
         error_messages = {

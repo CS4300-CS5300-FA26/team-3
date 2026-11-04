@@ -2,11 +2,25 @@ from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.test import Client, SimpleTestCase, TestCase
 from django.urls import reverse
 
 from transactions.models import Transaction
-from transactions.views import IncomeForm
+from transactions.views import ExpenseForm, IncomeForm
+
+
+class AmountInputTests(SimpleTestCase):
+    def test_income_amount_cannot_change_from_mouse_wheel(self):
+        amount_input = IncomeForm()["amount"].as_widget()
+
+        self.assertIn('type="text"', amount_input)
+        self.assertIn('inputmode="decimal"', amount_input)
+
+    def test_expense_amount_cannot_change_from_mouse_wheel(self):
+        amount_input = ExpenseForm()["amount"].as_widget()
+
+        self.assertIn('type="text"', amount_input)
+        self.assertIn('inputmode="decimal"', amount_input)
 
 
 class IncomeFormTests(TestCase):
