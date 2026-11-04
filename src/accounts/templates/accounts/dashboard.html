@@ -40,6 +40,22 @@
     .transaction-actions { display: flex; gap: 12px; }
     .transaction-actions a { color: #104b25; font-weight: 600; text-decoration: none; }
     .transaction-actions a:hover { text-decoration: underline; }
+    .history-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; padding: 12px 16px; border: 1px solid #afc0ad; border-radius: 8px; background: white; }
+    .period-picker { display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; background: transparent; }
+    .period-picker label { flex: 0 0 auto; margin: 0; color: #34443a; font-size: 14px; }
+    .period-picker select { box-sizing: border-box; flex: 0 1 180px; min-width: 145px; margin: 0; padding: 8px 34px 8px 10px; appearance: none; border: 1px solid #afc0ad; border-radius: 6px; color: #101820; background-color: #f3f6f1; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m3 6 5 5 5-5' stroke='%23104b25' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; font: inherit; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease; }
+    .period-picker select:hover { border-color: #104b25; background-color: #e9efe6; }
+    .period-picker select:focus-visible { outline: 3px solid #104b25; outline-offset: 2px; }
+    .period-date-range { flex: 0 0 auto; color: #56616b; font-size: 14px; white-space: nowrap; }
+    .period-picker button { margin-top: 0; }
+    .history-totals { display: flex; flex: 0 0 auto; flex-wrap: nowrap; gap: 12px; margin: 0; color: #56616b; font-size: 14px; white-space: nowrap; }
+    .history-totals strong { color: #104b25; font-variant-numeric: tabular-nums; }
+    @media (max-width: 680px) {
+        .history-controls { flex-wrap: wrap; align-items: stretch; }
+        .period-picker { flex-wrap: wrap; }
+        .period-picker select { width: 100%; }
+        .history-totals { justify-content: space-between; }
+    }
 </style>
 {% endblock %}
 
@@ -54,6 +70,7 @@
             <h2 id="month-heading">{{ selected_month_label }}</h2>
         </div>
         <form class="month-picker" method="get" action="{% url 'dashboard' %}" data-auto-submit="month">
+            <input type="hidden" name="period" value="{{ selected_period }}">
             <label for="month">Change month</label>
             <input type="month" id="month" name="month" value="{{ selected_month }}">
             <noscript><button type="submit">Update month</button></noscript>
@@ -66,16 +83,21 @@
         </div>
         <p class="budget-description">Income minus expenses for this month.</p>
     </div>
-    <p class="budget-activity">Based on {{ transactions|length }} transaction{{ transactions|length|pluralize }}</p>
+    <p class="budget-activity">Based on {{ budget_transaction_count }} transaction{{ budget_transaction_count|pluralize }}</p>
 </section>
 <script>
     document.querySelectorAll('[data-auto-submit="month"] input[type="month"]').forEach((input) => {
         input.addEventListener("change", () => input.form.requestSubmit());
     });
+    document.addEventListener("change", (event) => {
+        if (event.target.matches('[data-auto-submit="period"]')) {
+            event.target.form.requestSubmit();
+        }
+    });
 </script>
 <details class="threshold-setting"{% if threshold_form.errors %} open{% endif %}>
     <summary class="threshold-summary">Safety threshold: {% if current_threshold %}<strong>${{ current_threshold.amount|floatformat:2 }}</strong>{% else %}Not set{% endif %}</summary>
-    <form class="threshold-form" method="post" action="{% url 'dashboard' %}?month={{ selected_month }}">
+    <form class="threshold-form" method="post" action="{% url 'dashboard' %}?month={{ selected_month }}&amp;period={{ selected_period }}">
         {% csrf_token %}
         {{ threshold_form.amount.errors }}
         <div>
@@ -90,6 +112,29 @@
 {% endif %}
 
 <h2>My transactions</h2>
+<section class="history-controls" aria-label="Transaction history filters and totals">
+    <form class="period-picker" method="get" action="{% url 'dashboard' %}">
+        <input type="hidden" name="month" value="{{ selected_month }}">
+        <label for="period">Filter by period</label>
+        <select id="period" name="period" data-auto-submit="period">
+            {% for value, label in period_options.items %}
+                <option value="{{ value }}"{% if value == selected_period %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <span class="period-date-range" aria-live="polite">
+            {% if period_start and period_end %}
+                {{ period_start|date:"M j, Y" }} – {{ period_end|date:"M j, Y" }}
+            {% else %}
+                No transaction dates
+            {% endif %}
+        </span>
+        <noscript><button type="submit">Apply filter</button></noscript>
+    </form>
+    <p class="history-totals">
+        <span>Income <strong>${{ income_total|floatformat:2 }}</strong></span>
+        <span>Expenses <strong>${{ expense_total|floatformat:2 }}</strong></span>
+    </p>
+</section>
 <ul class="transactions">
     {% for transaction in transactions %}
         <li>
