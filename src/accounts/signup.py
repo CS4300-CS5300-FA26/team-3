@@ -1,19 +1,17 @@
 """Registration mail and shared, bounded delivery budgets."""
 
 from datetime import timedelta
-from urllib.parse import urljoin
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
 from django.db.models import F, Func, Value
 from django.db.models.functions import Lower, Trim
 from django.shortcuts import resolve_url
-from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
 
+from accounts.mail import send_account_email
 from accounts.models import SignupRateLimit, UsedVerificationToken
 from accounts.verification import VERIFICATION_MAX_AGE, issue_verification_token
 
@@ -80,10 +78,4 @@ def send_signup_email(email, remote_address):
             "If you didn't request a BudgetWise account, you can safely ignore this email. "
             "No account will be created unless you complete this step."
         )
-    link = urljoin(settings.SIGNUP_BASE_URL + "/", path)
-    body = f"{intro}\n\n{action}:\n{link}\n\n{details}\n\nThe BudgetWise team\n"
-    html = render_to_string("accounts/signup_email.html", {
-        "intro": intro, "link": link, "action": action, "details": details,
-    })
-    send_mail("Your BudgetWise signup request", body, settings.DEFAULT_FROM_EMAIL,
-              [email], html_message=html)
+    send_account_email(email, "Your BudgetWise signup request", path, intro, action, details)

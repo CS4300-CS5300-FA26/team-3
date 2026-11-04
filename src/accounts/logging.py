@@ -1,4 +1,4 @@
-"""Redact registration credentials where Django and Mangum emit request logs."""
+"""Redact account credentials where Django and Mangum emit request logs."""
 from copy import copy
 import logging
 import re
@@ -8,6 +8,8 @@ from django.http import HttpRequest
 
 # Also match standalone signed values, such as resolver kwargs or a Referer URL.
 _TOKEN = re.compile(r"\.?[A-Za-z0-9_-]+:[A-Za-z0-9]+:[A-Za-z0-9_-]{43}")
+# Django default_token_generator: base36 timestamp and truncated SHA-256 HMAC.
+_RESET_TOKEN = re.compile(r"\b[0-9a-z]+-[0-9a-f]{32}\b")
 _VERIFY_PATH = re.compile(r"(/accounts/verify/)[^/?\s]+")
 _PERCENT_ESCAPE = re.compile(r"%([0-9a-fA-F]{2})")
 
@@ -22,6 +24,7 @@ def redact(value):
             if 32 <= int(match[1], 16) < 127 else match[0], value,
         )
         safe = _TOKEN.sub("[redacted]", _VERIFY_PATH.sub(r"\1[redacted]", decoded))
+        safe = _RESET_TOKEN.sub("[redacted]", safe)
         return safe if safe != decoded else value
     if isinstance(value, bytes):
         return redact(value.decode("utf-8", errors="replace")).encode("utf-8")

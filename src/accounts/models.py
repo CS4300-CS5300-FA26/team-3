@@ -32,6 +32,19 @@ class SignupRateLimit(models.Model):
     expires_at = models.DateTimeField(db_index=True)
 
 
+class PasswordResetRateLimit(models.Model):
+    # HMAC email key and at most five admission timestamps; never reset tokens.
+    key = models.CharField(max_length=64, primary_key=True)
+    admitted_at = models.JSONField(default=list)
+    expires_at = models.DateTimeField(db_index=True)
+
+
+class PasswordResetBudget(models.Model):
+    # One row, at most 100 [timestamp, HMAC source] admissions; independent of sign-in.
+    id = models.PositiveSmallIntegerField(primary_key=True)
+    admitted_at = models.JSONField(default=list)
+
+
 class SignInBudget(models.Model):
     # One shared row bounds work across email addresses and application workers.
     id = models.PositiveSmallIntegerField(primary_key=True)

@@ -1,0 +1,45 @@
+{% extends "accounts/base.html" %}
+{% block title %}Password recovery | BudgetWise{% endblock %}
+{% block extra_style %}
+    <style>.reset-field { margin-bottom: 20px; }</style>
+{% endblock %}
+{% block content %}
+    {% if request_reset %}
+        <h1>Forgot password</h1>
+        <p>Enter your account email to request a password reset link.</p>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" data-pending-label="Sending email…">Send reset link</button>
+        </form>
+    {% elif confirmation %}
+        <h1>Check your email</h1>
+        <p role="status">{{ confirmation }}.</p>
+    {% elif complete %}
+        <h1>Password reset</h1>
+        <p role="status">Your password has been reset. Sign in to continue.</p>
+    {% elif validlink %}
+        <h1>Reset your password</h1>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            {% for field in form %}
+                <div class="reset-field">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {{ field.errors }}
+                    {% if field.help_text %}
+                        <div id="{{ field.auto_id }}_helptext">{{ field.help_text|safe }}</div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit" data-pending-label="Resetting password…">Reset password</button>
+        </form>
+    {% else %}
+        <h1>Reset link unavailable</h1>
+        <p role="alert">This link has expired. Request a new one.</p>
+        <p>Invalid or already-used links cannot be used to reset your password.</p>
+        <p><a href="{% url 'accounts:forgot_password' %}">Request a new link</a></p>
+    {% endif %}
+    <p><a href="{% url 'sign_in' %}">Sign in</a></p>
+{% endblock %}
