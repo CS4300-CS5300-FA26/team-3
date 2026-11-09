@@ -484,3 +484,22 @@ request limits and route-level acceptance scenarios for issue #23.
 **How we used the result:** Reused Django's reset form and token handling with our
 existing reset services. Kept saved budgets and lockout recovery intact, and
 bounded requests across email addresses before the per-email service runs.
+
+### Sprint 3: Nov 9, 2026 — Fixed expense recurrence schedule
+
+**Tool:** Claude Code
+
+**What it helped with:**
+
+- Reviewed the D-13 acceptance criteria, the expense form from D-4, and what the
+  D-14 reminders will need.
+- Drafted the recurrence fields, migration, database constraints, form rules,
+  shared expense form template, tests and Behave scenarios, written before the
+  implementation.
+
+**How we used the result:**
+
+We kept the schedule on the expense itself so D-14 can read `next_due_date`
+directly, enforced the fixed-only rule in both the form and the database, and
+left advancing the due date to D-14. Noah chose to take D-13 first so Fabian's
+D-14 is not blocked.

@@ -47,14 +47,20 @@ class ExpenseForm(forms.ModelForm):
         widget=forms.RadioSelect,
         error_messages={"required": "Choose fixed or variable"},
     )
+    recurrence = forms.ChoiceField(
+        label="Repeats",
+        choices=Transaction.Recurrence.choices,
+        required=False,
+    )
 
     class Meta:
         model = Transaction
-        fields = ["amount", "date", "description", "category", "is_fixed"]
-        labels = {"amount": "Amount ($)", "description": "Description"}
+        fields = ["amount", "date", "description", "category", "is_fixed", "recurrence", "next_due_date"]
+        labels = {"amount": "Amount ($)", "description": "Description", "next_due_date": "Next due date"}
         widgets = {
             "amount": forms.TextInput(attrs={"inputmode": "decimal"}),
             "date": forms.DateInput(attrs={"type": "date"}),
+            "next_due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
         error_messages = {
             "amount": {"min_value": "Amount must be greater than zero"},
@@ -76,6 +82,20 @@ class ExpenseForm(forms.ModelForm):
         ):
             raise forms.ValidationError("Enter an expense description.")
         return description
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not cleaned_data.get("is_fixed"):
+            # Only fixed expenses repeat. A variable expense never keeps a
+            # schedule, even one left in the form before switching to Variable.
+            cleaned_data["recurrence"] = Transaction.Recurrence.NONE
+            cleaned_data["next_due_date"] = None
+        elif cleaned_data.get("recurrence") and not cleaned_data.get("next_due_date"):
+            if "next_due_date" not in self.errors:
+                self.add_error("next_due_date", "Choose the next due date.")
+        elif cleaned_data.get("next_due_date") and not cleaned_data.get("recurrence"):
+            self.add_error("recurrence", "Choose how often it repeats.")
+        return cleaned_data
 
 
 @login_required
