@@ -62,4 +62,4 @@ def view_scheduling(context):
 @then("no recurrence schedule is offered")
 def no_schedule_offered(context):
     assert context.saved.recurrence == "" and context.saved.next_due_date is None
-    assert 'id="recurrence-fields" hidden' in context.response.content.decode()
+    assert 'id="recurrence-fields" hidden disabled' in context.response.content.decode()

@@ -67,6 +67,16 @@ class ExpenseForm(forms.ModelForm):
             "description": {"required": "Enter an expense description."},
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # A variable expense's schedule is hidden on the page, so its values must
+        # never block saving. Blank them before field validation runs; clean()
+        # still clears the schedule for any type other than Fixed.
+        if self.is_bound and self.data.get(self.add_prefix("is_fixed")) == "variable":
+            self.data = self.data.copy()
+            for name in ("recurrence", "next_due_date"):
+                self.data[self.add_prefix(name)] = ""
+
     def clean_description(self):
         description = self.cleaned_data["description"]
         # These pass Django's whitespace strip but display as nothing on their own:

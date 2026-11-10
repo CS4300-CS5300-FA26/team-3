@@ -38,9 +38,15 @@ class Transaction(models.Model):
     is_demo = models.BooleanField(default=False, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     # A repeating fixed expense and the next date it is due. Reminders (D14)
-    # read next_due_date.
+    # read next_due_date. db_default keeps the database default in place, so
+    # inserts from code that predates this column (during a deploy, or after a
+    # rollback) still store an unscheduled row.
     recurrence = models.CharField(
-        max_length=10, choices=Recurrence.choices, blank=True, default=Recurrence.NONE
+        max_length=10,
+        choices=Recurrence.choices,
+        blank=True,
+        default=Recurrence.NONE,
+        db_default=Recurrence.NONE,
     )
     next_due_date = models.DateField(null=True, blank=True)
 
@@ -65,6 +71,12 @@ class Transaction(models.Model):
                 | ~models.Q(Exact(Trim("category"), "")),
                 name="transaction_expense_has_category",
                 violation_error_message="Choose a category.",
+            ),
+            models.CheckConstraint(
+                # Choices only validate forms; this also stops direct writes.
+                condition=models.Q(recurrence__in=["", "monthly"]),
+                name="transaction_recurrence_valid",
+                violation_error_message="Recurrence must be monthly or none.",
             ),
             models.CheckConstraint(
                 condition=models.Q(recurrence="")

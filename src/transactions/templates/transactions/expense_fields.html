@@ -1,7 +1,8 @@
 {% comment %}
 Expense form fields, shared by the record and edit pages. The schedule fields
-belong to fixed expenses only. The server hides them for a variable expense; the
-script also hides them until Fixed is chosen, so without JavaScript they stay usable.
+belong to fixed expenses only. The server hides and disables them for a variable
+expense; the script also does so until Fixed is chosen, so without JavaScript they
+stay usable. Disabled controls are not submitted.
 {% endcomment %}
 {{ form.non_field_errors }}
 {% for field in form %}
@@ -9,7 +10,7 @@ script also hides them until Fixed is chosen, so without JavaScript they stay us
         <div>{{ field.as_field_group }}</div>
     {% endif %}
 {% endfor %}
-<fieldset id="recurrence-fields"{% if form.is_fixed.value == "variable" %} hidden{% endif %}>
+<fieldset id="recurrence-fields"{% if form.is_fixed.value == "variable" %} hidden disabled{% endif %}>
     <legend>Recurrence schedule</legend>
     <div>{{ form.recurrence.as_field_group }}</div>
     <div>{{ form.next_due_date.as_field_group }}</div>
@@ -19,7 +20,9 @@ script also hides them until Fixed is chosen, so without JavaScript they stay us
         var schedule = document.getElementById("recurrence-fields");
         var fixed = document.querySelector('input[name="is_fixed"][value="fixed"]');
         function update() {
-            schedule.hidden = !(fixed && fixed.checked);
+            var off = !(fixed && fixed.checked);
+            schedule.hidden = off;
+            schedule.disabled = off;
         }
         document.querySelectorAll('input[name="is_fixed"]').forEach(function (choice) {
             choice.addEventListener("change", update);

@@ -4,9 +4,10 @@ from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, connection, transaction
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from transactions.models import Transaction
 from transactions.views import ExpenseForm
@@ -98,6 +99,27 @@ class RecurrenceConstraintTests(TestCase):
             with self.subTest(fields=fields), transaction.atomic(), self.assertRaises(IntegrityError):
                 self.create(**fields)
 
+    def test_rejects_recurrence_values_other_than_monthly(self):
+        with transaction.atomic(), self.assertRaises(IntegrityError):
+            self.create(recurrence="weekly", next_due_date=date(2026, 11, 1))
+
+    def test_insert_without_schedule_columns_is_stored_unscheduled(self):
+        # During a deploy the previous code version still serves requests, and a
+        # rollback runs it against the migrated schema. Its inserts omit the new
+        # columns, so the database itself must supply an empty recurrence.
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"INSERT INTO {Transaction._meta.db_table} "
+                "(owner_id, kind, amount, date, description, category, is_fixed, is_demo, created_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                [self.student.pk, "income", Decimal("80.00"), date(2026, 10, 1), "Old code",
+                 "", False, False, timezone.now()],
+            )
+
+        stored = Transaction.objects.get(description="Old code")
+        self.assertEqual(stored.recurrence, "")
+        self.assertIsNone(stored.next_due_date)
+
 
 class RecurrenceViewTests(TestCase):
     def setUp(self):
@@ -120,7 +142,7 @@ class RecurrenceViewTests(TestCase):
         self.assertNotIn('id="recurrence-fields" hidden', page)
 
         variable = self.client.post(reverse("record_expense"), {**RENT, "is_fixed": "variable", "amount": ""})
-        self.assertContains(variable, 'id="recurrence-fields" hidden')
+        self.assertContains(variable, 'id="recurrence-fields" hidden disabled')
 
         response = self.client.post(reverse("record_expense"), {**RENT, "recurrence": "monthly"})
 
@@ -128,6 +150,54 @@ class RecurrenceViewTests(TestCase):
         self.assertContains(response, 'id="recurrence-fields"')
         self.assertNotContains(response, 'id="recurrence-fields" hidden')
         self.assertFalse(Transaction.objects.filter(owner=self.student).exists())
+
+    def test_variable_expense_saves_despite_stale_or_malformed_schedule_values(self):
+        # A hidden schedule must never block saving: its values are ignored
+        # before they are validated.
+        for schedule in (
+            {"recurrence": "monthly", "next_due_date": "2026-02-30"},
+            {"recurrence": "weekly", "next_due_date": "not a date"},
+        ):
+            with self.subTest(schedule=schedule):
+                response = self.client.post(
+                    reverse("record_expense"),
+                    {**RENT, "description": "Coffee", "is_fixed": "variable", **schedule},
+                )
+
+                self.assertRedirects(response, reverse("record_expense"))
+                coffee = Transaction.objects.filter(owner=self.student, description="Coffee").latest("id")
+                self.assertEqual(coffee.recurrence, "")
+                self.assertIsNone(coffee.next_due_date)
+
+    def test_changing_to_variable_saves_despite_malformed_schedule_values(self):
+        self.client.post(reverse("record_expense"), {**RENT, **MONTHLY})
+        rent = Transaction.objects.get(owner=self.student, description="Rent")
+
+        response = self.client.post(
+            reverse("edit_transaction", args=[rent.pk]),
+            {**RENT, "is_fixed": "variable", "recurrence": "monthly", "next_due_date": "2026-02-30"},
+        )
+
+        self.assertRedirects(response, reverse("dashboard"))
+        rent.refresh_from_db()
+        self.assertFalse(rent.is_fixed)
+        self.assertEqual(rent.recurrence, "")
+        self.assertIsNone(rent.next_due_date)
+
+    def test_fixed_expense_still_validates_its_schedule(self):
+        response = self.client.post(
+            reverse("record_expense"), {**RENT, "recurrence": "monthly", "next_due_date": "2026-02-30"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Enter a valid date.")
+        self.assertNotContains(response, 'id="recurrence-fields" hidden')
+        self.assertFalse(Transaction.objects.filter(owner=self.student).exists())
+
+    def test_hidden_schedule_controls_are_disabled(self):
+        response = self.client.post(reverse("record_expense"), {**RENT, "is_fixed": "variable", "amount": ""})
+
+        self.assertContains(response, 'id="recurrence-fields" hidden disabled')
 
     def test_dashboard_shows_the_next_due_date(self):
         self.client.post(reverse("record_expense"), {**RENT, **MONTHLY})
