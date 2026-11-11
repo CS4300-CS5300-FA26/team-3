@@ -14,6 +14,20 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-11-09 — Set a recurrence schedule for a fixed expense
+
+- [#25](https://github.com/CS4300-CS5300-FA26/team-3/issues/25); PR pending.
+  Fixed expenses can repeat monthly with a next due date, set when recording or
+  editing the expense. The [expense form](../src/transactions/views.py) shows the
+  schedule only for Fixed and ignores any schedule sent with a variable expense
+  before validating it; database constraints allow only a monthly schedule, only
+  on fixed expenses, and always with a due date. The dashboard shows the next due
+  date. [Acceptance scenarios](../features/expense_recurrence.feature).
+- The new recurrence column keeps a database default, so inserts from the
+  previous version during a deploy or after a rollback still succeed.
+- `next_due_date` on `Transaction` is the date D14 reminders read. The due date
+  does not advance on its own yet; that belongs with D14.
+
 ### 2026-11-03 — Complete password recovery from sign-in
 
 - [#23](https://github.com/CS4300-CS5300-FA26/team-3/issues/23): add public

@@ -141,6 +141,9 @@
             <div class="transaction-details">
                 {{ transaction.description }}
                 <small>{{ transaction.date }} · {{ transaction.get_kind_display }}</small>
+                {% if transaction.next_due_date %}
+                    <small>{{ transaction.get_recurrence_display }}, next due {{ transaction.next_due_date|date:"M j, Y" }}</small>
+                {% endif %}
             </div>
 
             <strong class="transaction-amount">

@@ -15,6 +15,10 @@ class Transaction(models.Model):
         INCOME = "income", "Income"
         EXPENSE = "expense", "Expense"
 
+    class Recurrence(models.TextChoices):
+        NONE = "", "Does not repeat"
+        MONTHLY = "monthly", "Monthly"
+
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -33,6 +37,18 @@ class Transaction(models.Model):
     is_fixed = models.BooleanField(default=False)
     is_demo = models.BooleanField(default=False, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    # A repeating fixed expense and the next date it is due. Reminders (D14)
+    # read next_due_date. db_default keeps the database default in place, so
+    # inserts from code that predates this column (during a deploy, or after a
+    # rollback) still store an unscheduled row.
+    recurrence = models.CharField(
+        max_length=10,
+        choices=Recurrence.choices,
+        blank=True,
+        default=Recurrence.NONE,
+        db_default=Recurrence.NONE,
+    )
+    next_due_date = models.DateField(null=True, blank=True)
 
     class Meta:
         ordering = ["-date", "-id"]
@@ -55,6 +71,25 @@ class Transaction(models.Model):
                 | ~models.Q(Exact(Trim("category"), "")),
                 name="transaction_expense_has_category",
                 violation_error_message="Choose a category.",
+            ),
+            models.CheckConstraint(
+                # Choices only validate forms; this also stops direct writes.
+                condition=models.Q(recurrence__in=["", "monthly"]),
+                name="transaction_recurrence_valid",
+                violation_error_message="Recurrence must be monthly or none.",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(recurrence="")
+                | models.Q(kind="expense", is_fixed=True),
+                name="transaction_only_fixed_expenses_recur",
+                violation_error_message="Only fixed expenses can repeat.",
+            ),
+            models.CheckConstraint(
+                # A schedule and its next due date are set or cleared together.
+                condition=models.Q(recurrence="", next_due_date__isnull=True)
+                | (~models.Q(recurrence="") & models.Q(next_due_date__isnull=False)),
+                name="transaction_recurrence_has_due_date",
+                violation_error_message="Choose the next due date.",
             ),
         ]
 

@@ -7,7 +7,11 @@
 
 <form method="post">
     {% csrf_token %}
-    {{ form.as_p }}
+    {% if transaction.kind == "expense" %}
+        {% include "transactions/expense_fields.html" %}
+    {% else %}
+        {{ form.as_p }}
+    {% endif %}
 
     <button type="submit">Save Changes</button>
     <a href="{% url 'dashboard' %}">Cancel</a>
