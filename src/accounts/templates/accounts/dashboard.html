@@ -50,6 +50,9 @@
     .period-picker button { margin-top: 0; }
     .history-totals { display: flex; flex: 0 0 auto; flex-wrap: nowrap; gap: 12px; margin: 0; color: #56616b; font-size: 14px; white-space: nowrap; }
     .history-totals strong { color: #104b25; font-variant-numeric: tabular-nums; }
+    .spending-summary { margin: 16px 0; padding: 16px 20px; border-left: 5px solid #104b25; border-radius: 8px; background: #e9efe6; }
+    .spending-summary h3 { margin: 0 0 8px; color: #104b25; }
+    .spending-summary ul { margin: 0; padding-left: 20px; }
     @media (max-width: 680px) {
         .history-controls { flex-wrap: wrap; align-items: stretch; }
         .period-picker { flex-wrap: wrap; }
@@ -104,7 +107,7 @@
             <label for="{{ threshold_form.amount.id_for_label }}">Safety threshold ($)</label>
             {{ threshold_form.amount }}
         </div>
-        <button type="submit">Save threshold</button>
+        <button type="submit" name="save_threshold">Save threshold</button>
     </form>
 </details>
 {% if show_low_balance_warning %}
@@ -135,6 +138,26 @@
         <span>Expenses <strong>${{ expense_total|floatformat:2 }}</strong></span>
     </p>
 </section>
+<form method="post" action="{% url 'explain_spending' %}">
+    {% csrf_token %}
+    <input type="hidden" name="month" value="{{ selected_month }}">
+    <input type="hidden" name="period" value="{{ selected_period }}">
+    <button type="submit" name="explain_spending">Explain my spending</button>
+</form>
+{% if summary_message or summary_observations %}
+<section class="spending-summary" aria-live="polite">
+    {% if summary_message %}
+        <p>{{ summary_message }}</p>
+    {% else %}
+        <h3>Spending observations</h3>
+        <ul>
+            {% for observation in summary_observations %}
+                <li>{{ observation }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</section>
+{% endif %}
 <ul class="transactions">
     {% for transaction in transactions %}
         <li>

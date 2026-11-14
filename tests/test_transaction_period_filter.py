@@ -18,7 +18,10 @@ class TransactionPeriodFilterTests(TestCase):
         self.other_student = get_user_model().objects.create_user(username="period-other")
         self.client.force_login(self.student)
 
-    def create_transaction(self, kind, amount, transaction_date, description, owner=None, is_demo=False):
+    def create_transaction(
+        self, kind, amount, transaction_date, description, owner=None,
+        is_demo=False, category=None,
+    ):
         return Transaction.objects.create(
             kind=kind,
             amount=Decimal(amount),
@@ -26,7 +29,9 @@ class TransactionPeriodFilterTests(TestCase):
             description=description,
             owner=owner or self.student,
             is_demo=is_demo,
-            category="Food" if kind == Transaction.Kind.EXPENSE else "",
+            category=category if category is not None else (
+                "Food" if kind == Transaction.Kind.EXPENSE else ""
+            ),
         )
 
     def get_dashboard(self, period):
@@ -171,3 +176,114 @@ class TransactionPeriodFilterTests(TestCase):
         self.assertEqual(descriptions, {"Recent income", "Older expense"})
         self.assertEqual(response.context["income_total"], Decimal("200.00"))
         self.assertEqual(response.context["expense_total"], Decimal("42.50"))
+
+    @patch("accounts.views.generate_spending_summary", create=True)
+    def test_spending_summary_does_not_call_ai_with_fewer_than_ten_transactions(
+        self, generate_summary
+    ):
+        for index in range(9):
+            self.create_transaction(
+                Transaction.Kind.EXPENSE,
+                "10.00",
+                date(2026, 10, index + 1),
+                f"October expense {index}",
+            )
+
+        response = self.client.post(
+            reverse("explain_spending"),
+            {
+                "month": "2026-10",
+                "period": "selected_month",
+                "explain_spending": "Explain my spending",
+            },
+        )
+
+        self.assertContains(response, "Not enough activity yet to summarize")
+        generate_summary.assert_not_called()
+
+    @patch("accounts.views.generate_spending_summary", create=True)
+    def test_spending_summary_sends_selected_period_category_totals(
+        self, generate_summary
+    ):
+        for index in range(6):
+            self.create_transaction(
+                Transaction.Kind.EXPENSE,
+                "20.00",
+                date(2026, 10, index + 1),
+                f"Food expense {index}",
+                category="Food",
+            )
+        for index in range(4):
+            self.create_transaction(
+                Transaction.Kind.EXPENSE,
+                "50.00",
+                date(2026, 10, index + 10),
+                f"Housing expense {index}",
+                category="Housing",
+            )
+        self.create_transaction(
+            Transaction.Kind.EXPENSE,
+            "999.00",
+            date(2026, 9, 30),
+            "Outside selected period",
+        )
+        self.create_transaction(
+            Transaction.Kind.EXPENSE,
+            "888.00",
+            date(2026, 10, 15),
+            "Other student expense",
+            owner=self.other_student,
+        )
+        generate_summary.return_value = [
+            "Housing was your largest category at $200.00.",
+            "Food totaled $120.00.",
+        ]
+
+        response = self.client.post(
+            reverse("explain_spending"),
+            {
+                "month": "2026-10",
+                "period": "selected_month",
+                "explain_spending": "Explain my spending",
+            },
+        )
+
+        self.assertContains(response, "Housing was your largest category at $200.00.")
+        self.assertContains(response, "Food totaled $120.00.")
+        generate_summary.assert_called_once_with([
+            {"category": "Housing", "total": Decimal("200.00"), "count": 4},
+            {"category": "Food", "total": Decimal("120.00"), "count": 6},
+        ])
+
+    @patch("accounts.views.generate_spending_summary", create=True)
+    def test_spending_summary_discards_observations_with_unknown_data(
+        self, generate_summary
+    ):
+        for index in range(10):
+            self.create_transaction(
+                Transaction.Kind.EXPENSE,
+                "20.00",
+                date(2026, 10, index + 1),
+                f"Food expense {index}",
+                category="Food",
+            )
+        generate_summary.return_value = [
+            "Food totaled $200.00.",
+            "Travel totaled $999.00.",
+            "Food totaled $12.00.",
+            "Food totaled $200.01 again.",
+        ]
+
+        response = self.client.post(
+            reverse("explain_spending"),
+            {
+                "month": "2026-10",
+                "period": "selected_month",
+                "explain_spending": "Explain my spending",
+            },
+        )
+
+        self.assertContains(response, "Food totaled $200.00.")
+        self.assertNotContains(response, "Travel totaled $999.00.")
+        self.assertNotContains(response, "Food totaled $12.00.")
+        self.assertNotContains(response, "Food totaled $200.01 again.")
