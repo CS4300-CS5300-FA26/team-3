@@ -23,11 +23,12 @@ from accounts.identity import normalize_email
 from accounts.lockout import SignInRateLimited, check_login
 from accounts.models import LowBalanceThreshold
 from accounts.signup import send_signup_email
-from accounts.verification import complete_registration, email_from_verification_token
 from accounts.spending_summary import (
+    SpendingSummaryError,
     generate_spending_summary,
     validate_spending_observations,
 )
+from accounts.verification import complete_registration, email_from_verification_token
 from transactions.models import Transaction
 
 
@@ -294,9 +295,14 @@ def dashboard(request):
                 .annotate(total=Sum("amount"), count=Count("id"))
                 .order_by("-total", "category")
             )
-            summary_observations = validate_spending_observations(
-                generate_spending_summary(category_totals), category_totals
-            )
+            try:
+                provider_observations = generate_spending_summary(category_totals)
+            except SpendingSummaryError:
+                summary_message = "Unable to generate spending summary right now."
+            else:
+                summary_observations = validate_spending_observations(
+                    provider_observations, category_totals
+                )
 
     # Calculate the remaining balance using existing model logic
     remaining_budget = sum(
