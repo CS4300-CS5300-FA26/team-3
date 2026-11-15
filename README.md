@@ -503,3 +503,30 @@ We kept the schedule on the expense itself so D-14 can read `next_due_date`
 directly, enforced the fixed-only rule in both the form and the database, and
 left advancing the due date to D-14. Noah chose to take D-13 first so Fabian's
 D-14 is not blocked.
+
+### Sprint 3: Nov 13, 2026 — Upcoming fixed expense dashboard reminder
+
+**Tool:** Codex
+
+**What it helped with:** Drafted a focused D14 dashboard test, the reminder
+query and display, and a check for the early-date acceptance scenario.
+
+**How we used the result:** Fabian ran the failing test before the dashboard
+change and checked both acceptance dates after it. We kept the reminder visible
+without another user action and limited it to the signed-in student's monthly
+fixed expenses due within three days.
+
+### Sprint 3: Nov 14, 2026 — Clear a fixed expense reminder after payment
+
+**Tool:** Codex
+
+**What it helped with:** Drafted the payment-clearing test and the automatic
+schedule update when a matching fixed expense is recorded.
+
+**How we used the result:** Fabian checked the red and green test results. With
+no direct link from a payment to its schedule, we match only one schedule for
+the same student, amount, category, and expense name (ignoring capitalization).
+The recorded payment date must be within the three days before the due date or
+on the due date. This avoids advancing a schedule for an unrelated earlier
+payment, but payments recorded earlier or later do not clear the reminder
+automatically. Ambiguous matches leave schedules unchanged.

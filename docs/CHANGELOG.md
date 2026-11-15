@@ -14,6 +14,27 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-11-14 — Clear a fixed expense reminder after payment
+
+- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.
+  Recording a matching fixed expense through the existing
+  [expense form](../src/transactions/views.py) advances one monthly schedule
+  to its next due date, clearing the current dashboard reminder. A match needs
+  the same student, amount, category, and name (case-insensitive); the payment
+  date must be within three days before the due date or on it. There is no
+  direct payment-to-schedule link, so earlier or late payments and ambiguous
+  matches leave the schedule unchanged.
+  [Focused check](../tests/test_fixed_expense_payment.py).
+
+### 2026-11-14 — Show upcoming fixed expense reminders on the dashboard
+
+- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.
+  The [dashboard](../src/accounts/views.py) shows a signed-in student's monthly
+  fixed expenses due within three days, using the schedule added in D13.
+  [Focused checks](../tests/test_fixed_expense_reminders.py) cover the reminder
+  three days before Rent is due and its absence earlier. Payment clearing and
+  daily email delivery belong to separate D14 changes.
+
 ### 2026-11-09 — Set a recurrence schedule for a fixed expense
 
 - [#25](https://github.com/CS4300-CS5300-FA26/team-3/issues/25); PR pending.

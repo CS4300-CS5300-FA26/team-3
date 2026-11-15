@@ -1,9 +1,11 @@
-from datetime import date
+from calendar import monthrange
+from datetime import date, timedelta
 import unicodedata
 
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -31,6 +33,38 @@ INVISIBLE_CATEGORIES = {"Cc", "Cf", "Mn", "Me"}
 # Characters outside those categories that still draw as empty space: the blank
 # Braille pattern and the Hangul fillers.
 BLANK_CHARACTERS = {"⠀", "ᅟ", "ᅠ", "ㅤ", "ﾠ"}
+
+
+def _advance_paid_fixed_schedule(expense):
+    """Match one pending schedule to a recorded payment without another user step."""
+    if not expense.is_fixed or expense.recurrence != Transaction.Recurrence.NONE:
+        return
+
+    matches = list(
+        Transaction.objects.select_for_update()
+        .filter(
+            owner=expense.owner,
+            kind=Transaction.Kind.EXPENSE,
+            is_fixed=True,
+            is_demo=False,
+            recurrence=Transaction.Recurrence.MONTHLY,
+            amount=expense.amount,
+            description__iexact=expense.description,
+            category=expense.category,
+            next_due_date__range=(expense.date, expense.date + timedelta(days=3)),
+        )
+        .order_by("next_due_date", "id")[:2]
+    )
+    # A payment without a unique match must not move another schedule.
+    if len(matches) != 1:
+        return
+
+    schedule = matches[0]
+    due = schedule.next_due_date
+    year = due.year + (due.month == 12)
+    month = due.month % 12 + 1
+    schedule.next_due_date = date(year, month, min(due.day, monthrange(year, month)[1]))
+    schedule.save(update_fields=["next_due_date"])
 
 
 class ExpenseForm(forms.ModelForm):
@@ -137,7 +171,9 @@ def record_expense(request):
         expense = form.save(commit=False)
         expense.kind = Transaction.Kind.EXPENSE
         expense.owner = request.user
-        expense.save()
+        with transaction.atomic():
+            expense.save()
+            _advance_paid_fixed_schedule(expense)
         messages.success(request, "Expense saved.")
         return redirect("record_expense")
 
