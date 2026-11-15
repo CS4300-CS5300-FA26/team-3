@@ -512,9 +512,9 @@ D-14 is not blocked.
 query and display, and a check for the early-date acceptance scenario.
 
 **How we used the result:** Fabian ran the failing test before the dashboard
-change and checked both acceptance dates after it. We kept the reminder visible
-without another user action and limited it to the signed-in student's monthly
-fixed expenses due within three days.
+change and checked both acceptance dates after it. In this first increment, we
+kept the reminder visible without another user action and limited it to the
+signed-in student's monthly fixed expenses due within three days.
 
 ### Sprint 3: Nov 14, 2026 — Clear a fixed expense reminder after payment
 
@@ -526,7 +526,22 @@ schedule update when a matching fixed expense is recorded.
 **How we used the result:** Fabian checked the red and green test results. With
 no direct link from a payment to its schedule, we match only one schedule for
 the same student, amount, category, and expense name (ignoring capitalization).
-The recorded payment date must be within the three days before the due date or
-on the due date. This avoids advancing a schedule for an unrelated earlier
-payment, but payments recorded earlier or later do not clear the reminder
-automatically. Ambiguous matches leave schedules unchanged.
+For this first increment, the recorded payment date had to be within three days
+before the due date or on it. This avoided advancing a schedule for an
+unrelated earlier payment. Ambiguous matches leave schedules unchanged.
+
+### Sprint 3: Nov 14, 2026 — Custom notice and recurrence options
+
+**Tool:** Codex
+
+**What it helped with:** Drafted focused tests and Behave scenarios for a
+student-selected reminder notice and daily or weekly fixed expense schedules.
+Updated the model, form, dashboard reminder, and payment schedule advancement.
+
+**How we used the result:** Fabian decided that a fixed three-day window was too
+restrictive for planning ahead. We kept three days as the default to preserve
+the original behavior, but let each student choose 1–30 days, with a bounded
+30-day limit. Fabian checked the failing daily/weekly test first, then
+confirmed the focused Django tests and Behave examples passed. Matching
+payments advance daily, weekly, or monthly dates. Email reminders are planned
+for a separate PR.
