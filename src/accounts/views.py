@@ -289,10 +289,15 @@ def dashboard(request):
             owner=request.user,
             kind=Transaction.Kind.EXPENSE,
             is_fixed=True,
-            recurrence=Transaction.Recurrence.MONTHLY,
+            recurrence__in=[
+                Transaction.Recurrence.DAILY,
+                Transaction.Recurrence.WEEKLY,
+                Transaction.Recurrence.MONTHLY,
+            ],
             is_demo=False,
-            next_due_date__range=(today, today + timedelta(days=3)),
+            next_due_date__range=(today, today + timedelta(days=30)),
         ).order_by("next_due_date", "id")
+        if (expense.next_due_date - today).days <= expense.reminder_days
     ]
     return render(
         request,
