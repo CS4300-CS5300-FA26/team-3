@@ -30,6 +30,25 @@ visitor a generic retry message. Revoke the BudgetWise key in Resend to disable
 sending without changing other applications. Deployed code still needs the key
 configured; local integration does not configure Lambda.
 
+## Fixed expense reminder email
+
+After this change reaches `main`, the
+[`Fixed expense reminders`](../.github/workflows/fixed-expense-reminders.yml)
+workflow runs daily at 15:17 UTC. It uses GitHub OIDC to invoke the `live`
+alias of `budgetwise` with a private event; students do not call an HTTP
+reminder endpoint. The GitHub role must permit `lambda:InvokeFunction` on that
+alias, and Lambda needs its existing `RESEND_API_KEY` and database access.
+
+The command sends one email per schedule and due date while the due date is
+inside its saved notice window. It can catch up after a missed day and skips
+past-due expenses. A mail failure leaves that due date retryable and makes the
+workflow fail; check the Actions run and `/aws/lambda/budgetwise` logs. An
+operator can rerun the workflow on `main` while the due date is still inside
+the notice window. A crash
+after SMTP accepts a message but before the database records it can still
+produce a duplicate on retry. Local tests use in-memory mail and make no AWS
+calls; the first live scheduled run needs separate verification.
+
 ## Database
 
 Aurora PostgreSQL cluster `budgetwise` is our application database in `us-east-1`, configured for 0–1 ACU and automatic pause after five idle minutes. Use local tests to conserve credits.

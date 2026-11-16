@@ -545,3 +545,17 @@ the original behavior, but let each student choose 1–30 days, with a bounded
 confirmed the focused Django tests and Behave examples passed. Matching
 payments advance daily, weekly, or monthly dates. Email reminders are planned
 for a separate PR.
+
+### Sprint 3: Nov 14, 2026 — Fixed expense reminder email
+
+**Tool:** Codex
+
+**What it helped with:** Drafted the daily email command, private scheduler
+entry point, and isolated tests for custom notices, delivery failures, retries,
+and exclusion of ineligible expenses.
+
+**How we used the result:** Fabian checked failing tests before the email
+behavior changed, then verified the focused email and scheduler checks. The
+daily check uses each student's saved notice and avoids repeating a recorded
+due-date email; a failed delivery can be retried on a later check. Text
+messages are outside this change.
