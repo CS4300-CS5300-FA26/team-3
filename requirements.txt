@@ -4,3 +4,5 @@ boto3[crt]==1.43.108
 psycopg[binary]==3.3.6
 certifi==2026.10.19
 idna==3.20
+rapidocr==3.10.0
+onnxruntime==1.32.0
