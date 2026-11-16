@@ -283,6 +283,22 @@ def dashboard(request):
     show_low_balance_warning = (
         current_threshold is not None and remaining_budget < current_threshold.amount
     )
+    upcoming_fixed_expenses = [
+        {"transaction": expense, "days_until_due": (expense.next_due_date - today).days}
+        for expense in Transaction.objects.filter(
+            owner=request.user,
+            kind=Transaction.Kind.EXPENSE,
+            is_fixed=True,
+            recurrence__in=[
+                Transaction.Recurrence.DAILY,
+                Transaction.Recurrence.WEEKLY,
+                Transaction.Recurrence.MONTHLY,
+            ],
+            is_demo=False,
+            next_due_date__range=(today, today + timedelta(days=30)),
+        ).order_by("next_due_date", "id")
+        if (expense.next_due_date - today).days <= expense.reminder_days
+    ]
     return render(
         request,
         "accounts/dashboard.html",
@@ -301,5 +317,6 @@ def dashboard(request):
             "current_threshold": current_threshold,
             "threshold_form": threshold_form,
             "show_low_balance_warning": show_low_balance_warning,
+            "upcoming_fixed_expenses": upcoming_fixed_expenses,
         },
     )

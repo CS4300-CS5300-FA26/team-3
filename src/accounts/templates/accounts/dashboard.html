@@ -31,6 +31,7 @@
     .threshold-form input { margin: 0; }
     .threshold-form .errorlist { flex-basis: 100%; }
     .low-balance-warning { margin: 14px 0 0; padding: 12px 16px; border: 1px solid #bd7a08; border-radius: 8px; background: #fff3dc; color: #6d3b00; }
+    .fixed-expense-reminder { margin: 14px 0 0; padding: 12px 16px; border: 1px solid #afc0ad; border-radius: 8px; background: #e9efe6; color: #104b25; }
     .transactions { padding: 0 24px; list-style: none; background: white; border: 1px solid #afc0ad; border-radius: 8px; }
     .transactions li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; padding: 20px 0; }
     .transactions li + li { border-top: 1px solid #afc0ad; }
@@ -110,6 +111,9 @@
 {% if show_low_balance_warning %}
 <p class="low-balance-warning" role="alert">You are below your ${{ current_threshold.amount|floatformat:2 }} safety threshold</p>
 {% endif %}
+{% for reminder in upcoming_fixed_expenses %}
+<p class="fixed-expense-reminder" role="status">{{ reminder.transaction.description }} of ${{ reminder.transaction.amount|floatformat:2 }} is due in {{ reminder.days_until_due }} day{{ reminder.days_until_due|pluralize }}</p>
+{% endfor %}
 
 <h2>My transactions</h2>
 <section class="history-controls" aria-label="Transaction history filters and totals">

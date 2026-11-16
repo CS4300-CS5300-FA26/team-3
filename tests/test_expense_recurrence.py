@@ -1,4 +1,4 @@
-"""D-13 (#25): a fixed expense can repeat monthly with a next due date."""
+"""D-13 (#25): a fixed expense can repeat with a next due date."""
 
 from datetime import date
 from decimal import Decimal
@@ -58,7 +58,7 @@ class RecurrenceFormTests(TestCase):
 
     def test_unknown_recurrence_and_invalid_date_are_rejected(self):
         for data in (
-            {"recurrence": "weekly", "next_due_date": "2026-11-01"},
+            {"recurrence": "yearly", "next_due_date": "2026-11-01"},
             {"recurrence": "monthly", "next_due_date": "2026-02-30"},
         ):
             with self.subTest(data=data):
@@ -99,9 +99,9 @@ class RecurrenceConstraintTests(TestCase):
             with self.subTest(fields=fields), transaction.atomic(), self.assertRaises(IntegrityError):
                 self.create(**fields)
 
-    def test_rejects_recurrence_values_other_than_monthly(self):
+    def test_rejects_unsupported_recurrence_values(self):
         with transaction.atomic(), self.assertRaises(IntegrityError):
-            self.create(recurrence="weekly", next_due_date=date(2026, 11, 1))
+            self.create(recurrence="yearly", next_due_date=date(2026, 11, 1))
 
     def test_insert_without_schedule_columns_is_stored_unscheduled(self):
         # During a deploy the previous code version still serves requests, and a

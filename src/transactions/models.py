@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.functions import Trim
 from django.db.models.lookups import Exact
@@ -17,6 +17,8 @@ class Transaction(models.Model):
 
     class Recurrence(models.TextChoices):
         NONE = "", "Does not repeat"
+        DAILY = "daily", "Daily"
+        WEEKLY = "weekly", "Weekly"
         MONTHLY = "monthly", "Monthly"
 
     owner = models.ForeignKey(
@@ -49,6 +51,11 @@ class Transaction(models.Model):
         db_default=Recurrence.NONE,
     )
     next_due_date = models.DateField(null=True, blank=True)
+    reminder_days = models.PositiveSmallIntegerField(
+        default=3,
+        db_default=3,
+        validators=[MinValueValidator(1), MaxValueValidator(30)],
+    )
 
     class Meta:
         ordering = ["-date", "-id"]
@@ -74,9 +81,9 @@ class Transaction(models.Model):
             ),
             models.CheckConstraint(
                 # Choices only validate forms; this also stops direct writes.
-                condition=models.Q(recurrence__in=["", "monthly"]),
+                condition=models.Q(recurrence__in=["", "daily", "weekly", "monthly"]),
                 name="transaction_recurrence_valid",
-                violation_error_message="Recurrence must be monthly or none.",
+                violation_error_message="Choose daily, weekly, monthly, or none.",
             ),
             models.CheckConstraint(
                 condition=models.Q(recurrence="")
@@ -90,6 +97,11 @@ class Transaction(models.Model):
                 | (~models.Q(recurrence="") & models.Q(next_due_date__isnull=False)),
                 name="transaction_recurrence_has_due_date",
                 violation_error_message="Choose the next due date.",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(reminder_days__gte=1, reminder_days__lte=30),
+                name="transaction_reminder_days_valid",
+                violation_error_message="Choose a notice from 1 to 30 days.",
             ),
         ]
 
