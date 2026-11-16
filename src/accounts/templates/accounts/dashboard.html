@@ -6,7 +6,9 @@
 <style>
     main { max-width: 860px; }
     h1 { margin-bottom: 8px; }
-    .dashboard-intro { margin: 0; color: #56616b; }
+    .dashboard-heading, .entry-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+    .dashboard-heading { justify-content: space-between; margin-bottom: 12px; }
+    .dashboard-intro { margin: 0; overflow-wrap: anywhere; color: #56616b; }
     h2 { margin: 32px 0 16px; color: #104b25; font: 28px/1.2 Georgia, serif; }
     .monthly-budget { margin-top: 32px; padding: 28px; background: white; border: 1px solid #afc0ad; border-radius: 12px; box-shadow: 0 6px 20px rgb(16 24 32 / 6%); }
     .monthly-budget-header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 20px; }
@@ -22,14 +24,6 @@
     .budget-amount { color: #104b25; font-size: clamp(32px, 6vw, 44px); font-weight: bold; font-variant-numeric: tabular-nums; line-height: 1.15; overflow-wrap: anywhere; }
     .budget-description { max-width: 240px; color: #56616b; }
     .budget-activity { margin-top: 14px; color: #56616b; font-size: 15px; }
-    .threshold-setting { margin-top: 14px; }
-    .threshold-summary { color: #56616b; cursor: pointer; }
-    .threshold-summary:hover { text-decoration: underline; }
-    .threshold-summary strong { color: #104b25; font-variant-numeric: tabular-nums; }
-    .threshold-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-top: 12px; }
-    .threshold-form div { flex: 1 1 180px; }
-    .threshold-form input { margin: 0; }
-    .threshold-form .errorlist { flex-basis: 100%; }
     .low-balance-warning { margin: 14px 0 0; padding: 12px 16px; border: 1px solid #bd7a08; border-radius: 8px; background: #fff3dc; color: #6d3b00; }
     .fixed-expense-reminder { margin: 14px 0 0; padding: 12px 16px; border: 1px solid #afc0ad; border-radius: 8px; background: #e9efe6; color: #104b25; }
     .transactions { padding: 0 24px; list-style: none; background: white; border: 1px solid #afc0ad; border-radius: 8px; }
@@ -61,7 +55,13 @@
 {% endblock %}
 
 {% block content %}
-<h1>My budget dashboard</h1>
+<div class="dashboard-heading">
+    <h1>My budget dashboard</h1>
+    <div class="entry-actions">
+        <a class="button secondary" href="{% url 'record_income' %}">Add income</a>
+        <a class="button" href="{% url 'record_expense' %}">Add expense</a>
+    </div>
+</div>
 <p class="dashboard-intro">Signed in as {{ request.user.email|default:request.user.username }}</p>
 
 <section class="monthly-budget" aria-labelledby="month-heading">
@@ -96,18 +96,6 @@
         }
     });
 </script>
-<details class="threshold-setting"{% if threshold_form.errors %} open{% endif %}>
-    <summary class="threshold-summary">Safety threshold: {% if current_threshold %}<strong>${{ current_threshold.amount|floatformat:2 }}</strong>{% else %}Not set{% endif %}</summary>
-    <form class="threshold-form" method="post" action="{% url 'dashboard' %}?month={{ selected_month }}&amp;period={{ selected_period }}">
-        {% csrf_token %}
-        {{ threshold_form.amount.errors }}
-        <div>
-            <label for="{{ threshold_form.amount.id_for_label }}">Safety threshold ($)</label>
-            {{ threshold_form.amount }}
-        </div>
-        <button type="submit">Save threshold</button>
-    </form>
-</details>
 {% if show_low_balance_warning %}
 <p class="low-balance-warning" role="alert">You are below your ${{ current_threshold.amount|floatformat:2 }} safety threshold</p>
 {% endif %}
@@ -115,6 +103,7 @@
 <p class="fixed-expense-reminder" role="status">{{ reminder.transaction.description }} of ${{ reminder.transaction.amount|floatformat:2 }} is due in {{ reminder.days_until_due }} day{{ reminder.days_until_due|pluralize }}</p>
 {% endfor %}
 
+<p><a href="{% url 'spending_by_category' %}?month={{ selected_month }}">Spending by category</a></p>
 <h2>My transactions</h2>
 <section class="history-controls" aria-label="Transaction history filters and totals">
     <form class="period-picker" method="get" action="{% url 'dashboard' %}">
