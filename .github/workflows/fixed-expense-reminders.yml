@@ -1,0 +1,52 @@
+name: Fixed expense reminders
+
+on:
+  # The Django app uses UTC; this runs once each day, away from the hour boundary.
+  schedule:
+    - cron: "17 15 * * *"
+  # Operators can retry a failed due-day run from main before its window closes.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: budgetwise-fixed-expense-reminders
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Authenticate to AWS
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+          role-duration-seconds: 900
+          mask-aws-account-id: true
+      - name: Send due reminders
+        run: |
+          aws lambda invoke \
+            --function-name budgetwise \
+            --qualifier live \
+            --cli-binary-format raw-in-base64-out \
+            --payload '{"operation":"send_fixed_expense_reminders"}' \
+            "$RUNNER_TEMP/reminder-response.json" > "$RUNNER_TEMP/reminder-meta.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          folder = Path(os.environ["RUNNER_TEMP"])
+          metadata = json.loads((folder / "reminder-meta.json").read_text())
+          response = json.loads((folder / "reminder-response.json").read_text())
+          if metadata.get("StatusCode") != 200 or metadata.get("FunctionError"):
+              raise RuntimeError("Reminder Lambda invocation failed; inspect CloudWatch logs")
+          if response != {"reminders": "sent"}:
+              raise RuntimeError("Reminder Lambda returned an unexpected response")
+          PY
