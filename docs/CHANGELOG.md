@@ -22,6 +22,60 @@ Keep validation results and execution history out of this record.
   transactions are excluded. [Summary service](../src/accounts/spending_summary.py)
   and [dashboard tests](../tests/test_transaction_period_filter.py) cover the
   activity threshold, response validation, and provider failures.
+### 2026-11-14 — Choose when fixed expense reminders appear
+
+- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.
+  The original fixed three-day notice was too restrictive for planning ahead.
+  A fixed expense schedule still defaults to three days, but the student can
+  choose 1–30 days on the [expense form](../src/transactions/views.py). The
+  30-day ceiling keeps the reminder window bounded while allowing more time
+  to prepare.
+  The [dashboard](../src/accounts/views.py) and automatic payment matching use
+  that saved notice. Daily and weekly recurrence now work alongside monthly;
+  matching payments advance the next due date by one day, one week, or one month.
+  See the [notice](../features/fixed_expense_notice.feature) and
+  [frequency](../features/fixed_expense_frequency.feature) scenarios.
+- Matching still requires one unambiguous schedule owned by the student with
+  the same amount, category, and description. With daily or weekly recurrence,
+  the next occurrence may already be inside its notice window, so another
+  reminder can remain visible after payment. Email delivery remains a separate
+  D14 change.
+
+### 2026-11-14 — Clear a fixed expense reminder after payment
+
+- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.
+  Recording a matching fixed expense through the existing
+  [expense form](../src/transactions/views.py) advances one monthly schedule
+  to its next due date, clearing the current dashboard reminder. A match needs
+  the same student, amount, category, and name (case-insensitive); in this first
+  increment, the payment date had to be within three days before the due date
+  or on it. There is no direct payment-to-schedule link, so earlier or late
+  payments and ambiguous matches leave the schedule unchanged.
+  [Focused check](../tests/test_fixed_expense_payment.py).
+
+### 2026-11-14 — Show upcoming fixed expense reminders on the dashboard
+
+- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.
+  The [dashboard](../src/accounts/views.py) initially showed a signed-in
+  student's monthly fixed expenses due within three days, using the schedule
+  added in D13.
+  [Focused checks](../tests/test_fixed_expense_reminders.py) cover the reminder
+  three days before Rent is due and its absence earlier. Payment clearing and
+  daily email delivery belong to separate D14 changes.
+
+### 2026-11-09 — Set a recurrence schedule for a fixed expense
+
+- [#25](https://github.com/CS4300-CS5300-FA26/team-3/issues/25); PR pending.
+  Fixed expenses can repeat monthly with a next due date, set when recording or
+  editing the expense. The [expense form](../src/transactions/views.py) shows the
+  schedule only for Fixed and ignores any schedule sent with a variable expense
+  before validating it; database constraints allow only a monthly schedule, only
+  on fixed expenses, and always with a due date. The dashboard shows the next due
+  date. [Acceptance scenarios](../features/expense_recurrence.feature).
+- The new recurrence column keeps a database default, so inserts from the
+  previous version during a deploy or after a rollback still succeed.
+- `next_due_date` on `Transaction` is the date D14 reminders read. The due date
+  does not advance on its own yet; that belongs with D14.
 
 ### 2026-11-03 — Complete password recovery from sign-in
 
