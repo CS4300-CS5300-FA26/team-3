@@ -8,6 +8,7 @@ from urllib.error import URLError
 from accounts.spending_summary import (
     SpendingSummaryError,
     generate_spending_summary,
+    validate_spending_observations,
 )
 
 
@@ -69,3 +70,30 @@ class SpendingSummaryServiceTests(TestCase):
 
         with self.assertRaisesRegex(SpendingSummaryError, "invalid"):
             generate_spending_summary(self.totals)
+
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
+    @patch("accounts.spending_summary.urlopen")
+    def test_provider_response_must_be_an_object(self, urlopen):
+        urlopen.return_value = io.BytesIO(b"[]")
+
+        with self.assertRaisesRegex(SpendingSummaryError, "invalid"):
+            generate_spending_summary(self.totals)
+
+
+class SpendingObservationValidationTests(TestCase):
+    totals = [
+        {"category": "Housing", "total": Decimal("200.00")},
+        {"category": "Food", "total": Decimal("20.00")},
+    ]
+
+    def test_every_category_and_amount_pair_must_match(self):
+        observations = [
+            "Housing totaled $200.00 and Food totaled $20.00.",
+            "Housing totaled $200.00 and Food totaled $120.00.",
+            "Housing totaled $200.00 and Travel totaled $20.00.",
+        ]
+
+        self.assertEqual(
+            validate_spending_observations(observations, self.totals),
+            ["Housing totaled $200.00 and Food totaled $20.00."],
+        )

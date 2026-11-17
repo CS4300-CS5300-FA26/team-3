@@ -27,13 +27,29 @@ def _summary_prompt(category_totals):
 
 
 def _provider_text(response):
+    if not isinstance(response, dict):
+        raise SpendingSummaryError("Spending summary service returned invalid output.")
+
     if isinstance(response.get("output_text"), str):
         return response["output_text"]
+
     text_parts = []
-    for item in response.get("output", []):
-        for content in item.get("content", []):
-            if isinstance(content.get("text"), str):
-                text_parts.append(content["text"])
+    output = response.get("output")
+    if not isinstance(output, list):
+        raise SpendingSummaryError("Spending summary service returned invalid output.")
+    for item in output:
+        if not isinstance(item, dict):
+            raise SpendingSummaryError("Spending summary service returned invalid output.")
+        content = item.get("content")
+        if not isinstance(content, list):
+            raise SpendingSummaryError("Spending summary service returned invalid output.")
+        for part in content:
+            if not isinstance(part, dict) or not isinstance(part.get("text"), str):
+                raise SpendingSummaryError("Spending summary service returned invalid output.")
+            text_parts.append(part["text"])
+
+    if not text_parts:
+        raise SpendingSummaryError("Spending summary service returned invalid output.")
     return "".join(text_parts)
 
 
@@ -74,15 +90,48 @@ def validate_spending_observations(observations, category_totals):
     known_totals = {
         row["category"]: f"${row['total']:.2f}" for row in category_totals
     }
+    known_amounts = set(known_totals.values())
     valid_observations = []
+
     for observation in observations:
         if not isinstance(observation, str):
             continue
-        if any(
-            re.search(rf"\b{re.escape(category)}\b", observation)
-            and amount in observation
-            for category, amount in known_totals.items()
-        ):
+
+        monetary_tokens = set(re.findall(r"\$\d+(?:\.\d{2})?", observation))
+        if not monetary_tokens or not monetary_tokens.issubset(known_amounts):
+            continue
+
+        clauses = [
+            clause.strip()
+            for clause in re.split(r"(?:\band\b|,|;|[.!?](?:\s|$))", observation)
+            if clause.strip()
+        ]
+        if not clauses:
+            continue
+
+        valid = True
+        matched_category_count = 0
+        for clause in clauses:
+            category_matches = [
+                category for category in known_totals
+                if re.search(rf"\b{re.escape(category)}\b", clause, re.IGNORECASE)
+            ]
+            if not category_matches:
+                if re.search(r"\$\d+(?:\.\d{2})?", clause):
+                    valid = False
+                    break
+                continue
+
+            matched_category_count += len(category_matches)
+            clause_amounts = set(re.findall(r"\$\d+(?:\.\d{2})?", clause))
+            if not clause_amounts or any(
+                known_totals[category] not in clause_amounts
+                for category in category_matches
+            ):
+                valid = False
+                break
+
+        if valid and matched_category_count:
             valid_observations.append(observation)
         if len(valid_observations) == 3:
             break
