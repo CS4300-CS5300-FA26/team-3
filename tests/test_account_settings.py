@@ -13,6 +13,9 @@ from accounts.password_reset_requests import RESET_CONFIRMATION
 from transactions.models import Transaction
 
 
+ACCOUNT_RESET_FEEDBACK = "Password reset requested. Check your email for instructions."
+
+
 @override_settings(MAILERS={"default": {"BACKEND": "django.core.mail.backends.locmem.EmailBackend"}})
 class AccountSettingsTests(TestCase):
     def setUp(self):
@@ -72,16 +75,26 @@ class AccountSettingsTests(TestCase):
         for method in (self.client.get, self.client.post):
             self.assertRedirects(method(self.url), reverse("sign_in") + "?next=/account/")
 
+    def test_account_confirmation_acknowledges_request_without_public_lookup_wording(self):
+        response = self.client.post(self.url, {"action": "reset_password"}, follow=True)
+        self.assertContains(response, ACCOUNT_RESET_FEEDBACK)
+        self.assertNotContains(response, RESET_CONFIRMATION)
+        public = self.client.post(reverse("accounts:forgot_password"), {
+            "email": "unknown@example.com",
+        }, follow=True)
+        self.assertContains(public, RESET_CONFIRMATION)
+        self.assertNotContains(public, ACCOUNT_RESET_FEEDBACK)
+
     def test_reset_uses_session_identity_and_shared_per_email_budget(self):
         for _ in range(3):
             self.client.post(reverse("accounts:forgot_password"), {"email": self.user.email})
         for _ in range(3):
             response = self.client.post(self.url, {"action": "reset_password", "email": "other@example.com"}, follow=True)
-            self.assertContains(response, RESET_CONFIRMATION)
+            self.assertContains(response, ACCOUNT_RESET_FEEDBACK)
         self.assertEqual(len(mail.outbox), 5)
         self.assertTrue(all(message.to == [self.user.email] for message in mail.outbox))
         self.assertEqual(len(PasswordResetRateLimit.objects.get().admitted_at), 5)
-        self.assertNotIn(RESET_CONFIRMATION, self.client.get(self.url).content.decode())
+        self.assertNotIn(ACCOUNT_RESET_FEEDBACK, self.client.get(self.url).content.decode())
 
     def test_reset_shares_source_and_global_admission_with_public_recovery(self):
         from accounts.models import PasswordResetBudget
@@ -95,14 +108,14 @@ class AccountSettingsTests(TestCase):
                 with patch("accounts.recovery.request_password_reset") as send:
                     response = self.client.post(self.url, {"action": "reset_password"}, follow=True)
                 send.assert_not_called()
-                self.assertContains(response, RESET_CONFIRMATION)
+                self.assertContains(response, ACCOUNT_RESET_FEEDBACK)
 
     def test_transport_failure_is_neutral_and_does_not_change_password_or_threshold(self):
         LowBalanceThreshold.objects.create(owner=self.user, amount="12.34")
         old_password = self.user.password
         with patch("accounts.password_reset_requests.send_account_email", side_effect=SMTPException("private")):
             response = self.client.post(self.url, {"action": "reset_password"}, follow=True)
-        self.assertContains(response, RESET_CONFIRMATION)
+        self.assertContains(response, ACCOUNT_RESET_FEEDBACK)
         self.assertNotContains(response, "private")
         self.user.refresh_from_db()
         self.assertEqual(self.user.password, old_password)

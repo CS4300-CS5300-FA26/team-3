@@ -183,7 +183,8 @@ def account_settings(request):
     if request.method == "POST" and action == "reset_password":
         # The recipient is always the session identity, never submitted form data.
         recovery.send_recovery_email(request.user.email, request.META.get("REMOTE_ADDR", ""))
-        messages.info(request, recovery.RESET_CONFIRMATION, extra_tags="password_reset")
+        messages.info(request, "Password reset requested. Check your email for instructions.",
+                      extra_tags="password_reset")
         return redirect("account_settings")
     if request.method == "POST" and action != "threshold":
         return HttpResponseBadRequest("Unknown account action.")

@@ -1,15 +1,9 @@
 {% extends "accounts/base.html" %}
-
 {% block title %}Record expense | BudgetWise{% endblock %}
-
+{% block extra_style %}{% include "transactions/form_style.html" %}{% endblock %}
 {% block content %}
 <h1>Record expense</h1>
-        {% for message in messages %}
-            <p role="status">{{ message }}</p>
-        {% endfor %}
-        <form method="post">
-            {% csrf_token %}
-            {% include "transactions/expense_fields.html" %}
-            <button type="submit">Save expense</button>
-        </form>
+{% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
+{% include "transactions/transaction_form.html" %}
+{% include "transactions/expense_script.html" %}
 {% endblock %}

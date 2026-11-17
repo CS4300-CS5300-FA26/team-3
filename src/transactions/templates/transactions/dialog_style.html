@@ -1,0 +1,22 @@
+<style>
+    #transaction-dialog { box-sizing: border-box; width: min(640px, calc(100% - 32px)); max-height: calc(100dvh - 48px); padding: 32px; border: 1px solid #104b25; border-radius: 12px; color: #101820; background: #fff; overflow: hidden; }
+    #transaction-dialog[open] { display: flex; flex-direction: column; }
+    #transaction-dialog .dialog-content { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    #transaction-dialog .transaction-form-body { min-height: 0; overflow-y: auto; padding: 4px; }
+    #transaction-dialog::backdrop { background: rgb(16 24 32 / 45%); }
+    #transaction-dialog h2 { margin: 0 40px 32px 0; font: 36px/1.2 Georgia, serif; color: #104b25; }
+    #transaction-dialog .dialog-close { position: absolute; right: 16px; top: 16px; width: 44px; height: 44px; padding: 0; background: transparent; color: #56616b; font-size: 32px; }
+    #transaction-dialog .transaction-form { display: flex; flex-direction: column; min-height: 0; margin: 0; padding: 0; border: 0; background: transparent; }
+    #transaction-dialog .transaction-form > div { margin-bottom: 0; }
+    #transaction-dialog .transaction-form-actions { flex-shrink: 0; margin-top: 20px; padding: 20px 0 0; border-top: 1px solid #d5dfd2; background: #fff; }
+    #transaction-dialog input[type="radio"] { accent-color: #104b25; }
+    #transaction-dialog #id_is_fixed { display: flex; flex-wrap: wrap; gap: 12px 32px; }
+    #transaction-dialog #id_is_fixed label { font-weight: normal; }
+    #transaction-dialog input, #transaction-dialog select { min-width: 0; }
+    .dialog-error { padding: 12px; color: #9b1c1c; background: #fff3dc; }
+    body.transaction-dialog-open { overflow: hidden; }
+    @media (max-width: 600px) {
+        #transaction-dialog { width: calc(100% - 16px); max-height: calc(100dvh - 16px); padding: 24px 20px; }
+        #transaction-dialog h2 { font-size: 30px; }
+    }
+</style>

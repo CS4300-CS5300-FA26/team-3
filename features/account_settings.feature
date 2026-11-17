@@ -11,7 +11,7 @@ Feature: Shared navigation, account preferences and missing pages
 
   Scenario: Request recovery for the signed-in account
     When I request a password reset from Account
-    Then Account shows neutral recovery feedback
+    Then Account acknowledges my password reset request
 
   Scenario Outline: Missing application pages have a useful recovery link
     Given I am <session> for a missing page

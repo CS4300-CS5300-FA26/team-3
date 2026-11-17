@@ -4,9 +4,12 @@ belong to fixed expenses only. The server hides and disables them for a variable
 expense; the script also does so until Fixed is chosen, so without JavaScript they
 stay usable. Disabled controls are not submitted.
 {% endcomment %}
-{{ form.non_field_errors }}
+<div class="field-pair">
+    <div>{{ form.amount.as_field_group }}</div>
+    <div>{{ form.date.as_field_group }}</div>
+</div>
 {% for field in form %}
-    {% if field.name != "recurrence" and field.name != "next_due_date" and field.name != "reminder_days" %}
+    {% if field.name != "amount" and field.name != "date" and field.name != "recurrence" and field.name != "next_due_date" and field.name != "reminder_days" %}
         <div>{{ field.as_field_group }}</div>
     {% endif %}
 {% endfor %}
@@ -16,18 +19,3 @@ stay usable. Disabled controls are not submitted.
     <div>{{ form.next_due_date.as_field_group }}</div>
     <div>{{ form.reminder_days.as_field_group }}</div>
 </fieldset>
-<script>
-    (function () {
-        var schedule = document.getElementById("recurrence-fields");
-        var fixed = document.querySelector('input[name="is_fixed"][value="fixed"]');
-        function update() {
-            var off = !(fixed && fixed.checked);
-            schedule.hidden = off;
-            schedule.disabled = off;
-        }
-        document.querySelectorAll('input[name="is_fixed"]').forEach(function (choice) {
-            choice.addEventListener("change", update);
-        });
-        update();
-    })();
-</script>

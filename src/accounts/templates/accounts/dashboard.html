@@ -3,6 +3,8 @@
 {% block title %}My dashboard | BudgetWise{% endblock %}
 
 {% block extra_style %}
+{% include "transactions/form_style.html" %}
+{% include "transactions/dialog_style.html" %}
 <style>
     main { max-width: 860px; }
     h1 { margin-bottom: 8px; }
@@ -26,15 +28,16 @@
     .budget-activity { margin-top: 14px; color: #56616b; font-size: 15px; }
     .low-balance-warning { margin: 14px 0 0; padding: 12px 16px; border: 1px solid #bd7a08; border-radius: 8px; background: #fff3dc; color: #6d3b00; }
     .fixed-expense-reminder { margin: 14px 0 0; padding: 12px 16px; border: 1px solid #afc0ad; border-radius: 8px; background: #e9efe6; color: #104b25; }
-    .transactions { padding: 0 24px; list-style: none; background: white; border: 1px solid #afc0ad; border-radius: 8px; }
-    .transactions li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; padding: 20px 0; }
-    .transactions li + li { border-top: 1px solid #afc0ad; }
+    .transactions { padding: 8px; list-style: none; background: white; border: 1px solid #afc0ad; border-radius: 8px; }
+    .transactions li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; padding: 16px; border-radius: 8px; }
+    .transactions li + li { border-top: 1px solid #d5dfd2; }
     .transaction-details { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
     .transaction-details small { display: block; color: #56616b; }
     .transaction-amount { margin-left: auto; font-variant-numeric: tabular-nums; }
-    .transaction-actions { display: flex; gap: 12px; }
-    .transaction-actions a { color: #104b25; font-weight: 600; text-decoration: none; }
-    .transaction-actions a:hover { text-decoration: underline; }
+    .transaction-row:hover { background: #e9efe6; }
+    .transaction-row { cursor: pointer; }
+    .transaction-details a { font-weight: 600; }
+    .transaction-row:focus-within { background: #e9efe6; }
     .history-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; padding: 12px 16px; border: 1px solid #afc0ad; border-radius: 8px; background: white; }
     .period-picker { display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; background: transparent; }
     .period-picker label { flex: 0 0 auto; margin: 0; color: #34443a; font-size: 14px; }
@@ -55,11 +58,13 @@
 {% endblock %}
 
 {% block content %}
+<p id="transaction-feedback" role="status" hidden></p>
+<div id="dashboard-content">
 <div class="dashboard-heading">
     <h1>My budget dashboard</h1>
     <div class="entry-actions">
-        <a class="button secondary" href="{% url 'record_income' %}">Add income</a>
-        <a class="button" href="{% url 'record_expense' %}">Add expense</a>
+        <a class="button secondary" data-transaction-dialog href="{% url 'record_income' %}">Add income</a>
+        <a class="button" data-transaction-dialog href="{% url 'record_expense' %}">Add expense</a>
     </div>
 </div>
 <p class="dashboard-intro">Signed in as {{ request.user.email|default:request.user.username }}</p>
@@ -86,16 +91,7 @@
     </div>
     <p class="budget-activity">Based on {{ budget_transaction_count }} transaction{{ budget_transaction_count|pluralize }}</p>
 </section>
-<script>
-    document.querySelectorAll('[data-auto-submit="month"] input[type="month"]').forEach((input) => {
-        input.addEventListener("change", () => input.form.requestSubmit());
-    });
-    document.addEventListener("change", (event) => {
-        if (event.target.matches('[data-auto-submit="period"]')) {
-            event.target.form.requestSubmit();
-        }
-    });
-</script>
+
 {% if show_low_balance_warning %}
 <p class="low-balance-warning" role="alert">You are below your ${{ current_threshold.amount|floatformat:2 }} safety threshold</p>
 {% endif %}
@@ -130,9 +126,9 @@
 </section>
 <ul class="transactions">
     {% for transaction in transactions %}
-        <li>
+        <li class="transaction-row" data-transaction-row>
             <div class="transaction-details">
-                {{ transaction.description }}
+                <a data-transaction-dialog href="{% url 'edit_transaction' transaction.pk %}">{{ transaction.description }}</a>
                 <small>{{ transaction.date }} · {{ transaction.get_kind_display }}</small>
                 {% if transaction.next_due_date %}
                     <small>{{ transaction.get_recurrence_display }}, next due {{ transaction.next_due_date|date:"M j, Y" }}</small>
@@ -143,15 +139,25 @@
                 ${{ transaction.amount|floatformat:2 }}
             </strong>
 
-            {% if not transaction.is_demo %}
-                <div class="transaction-actions">
-                    <a href="{% url 'edit_transaction' transaction.pk %}">Edit</a>
-                    <a href="{% url 'delete_transaction' transaction.pk %}">Delete</a>
-                </div>
-            {% endif %}
+
         </li>
     {% empty %}
         <li>No transactions in this period</li>
     {% endfor %}
 </ul>
+</div>
+<dialog id="transaction-dialog" aria-labelledby="transaction-dialog-heading">
+    <button type="button" class="dialog-close" aria-label="Close transaction dialog">×</button>
+    <p class="dialog-error" role="alert" hidden></p>
+    <div class="dialog-content"></div>
+</dialog>
+{% include "transactions/expense_script.html" %}
+{% include "transactions/dialog_script.html" %}
+<script>
+    document.addEventListener("change", (event) => {
+        if (event.target.matches('[data-auto-submit="month"] input[type="month"], [data-auto-submit="period"]')) {
+            event.target.form.requestSubmit();
+        }
+    });
+</script>
 {% endblock %}

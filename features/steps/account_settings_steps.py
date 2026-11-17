@@ -42,12 +42,10 @@ def account_recovery(context):
     assert send.call_args.args[0] == context.student.email
 
 
-@then("Account shows neutral recovery feedback")
+@then("Account acknowledges my password reset request")
 def neutral_account_recovery(context):
-    from accounts.password_reset_requests import RESET_CONFIRMATION
-
     assert context.response.status_code == 200
-    assert RESET_CONFIRMATION in context.response.content.decode()
+    assert "Password reset requested. Check your email for instructions." in context.response.content.decode()
 
 
 @given("the navigation visitor is {session}")

@@ -7,7 +7,11 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Sum
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.vary import vary_on_headers
 from django.utils import timezone
 
 from .models import Transaction
@@ -90,8 +94,8 @@ class ExpenseForm(forms.ModelForm):
         error_messages={"required": "Choose a category"},
     )
     is_fixed = forms.TypedChoiceField(
-        label="Type",
-        choices=[("fixed", "Fixed"), ("variable", "Variable")],
+        label="Expense Type",
+        choices=[("variable", "Varying Amount"), ("fixed", "Fixed Amount")],
         coerce=lambda value: value == "fixed",
         widget=forms.RadioSelect,
         error_messages={"required": "Choose fixed or variable"},
@@ -178,30 +182,57 @@ class ExpenseForm(forms.ModelForm):
         return cleaned_data
 
 
+def _dialog_request(request):
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+def _form_response(request, form, kind, template, entry=None):
+    """Both entry points render the same fields and submit to the same route."""
+    dialog = _dialog_request(request)
+    return render(request, "transactions/dialog_form.html" if dialog else template, {
+        "form": form, "kind": kind, "transaction": entry,
+        "form_title": f"{'Edit' if entry else 'Add'} {kind}",
+        "submit_label": "Save Changes" if entry else f"Save {kind}",
+        "form_action": request.path,
+    }, status=422 if dialog and form.is_bound and form.errors else 200)
+
+
+def _saved_response(request, message, destination):
+    if _dialog_request(request):
+        return JsonResponse({"message": message})
+    messages.success(request, message)
+    return redirect(destination)
+
+
+@never_cache
+@vary_on_headers("X-Requested-With")
+@require_http_methods(["GET", "POST"])
 @login_required
 def record_income(request):
     if request.method == "POST":
         form = IncomeForm(request.POST)
     else:
-        form = IncomeForm(None)
+        form = IncomeForm(initial={"date": timezone.localdate()})
 
     if request.method == "POST" and form.is_valid():
         income = form.save(commit=False)
         income.kind = Transaction.Kind.INCOME
         income.owner = request.user
         income.save()
-        messages.success(request, "Income saved.")
-        return redirect("record_income")
+        return _saved_response(request, "Income saved.", "record_income")
 
-    return render(request, "transactions/record_income.html", {"form": form})
+    return _form_response(request, form, "income", "transactions/record_income.html")
 
 
+@never_cache
+@vary_on_headers("X-Requested-With")
+@require_http_methods(["GET", "POST"])
 @login_required
 def record_expense(request):
     if request.method == "POST":
         form = ExpenseForm(request.POST)
     else:
-        form = ExpenseForm(None)
+        form = ExpenseForm(initial={"date": timezone.localdate()})
 
     if request.method == "POST" and form.is_valid():
         expense = form.save(commit=False)
@@ -210,12 +241,14 @@ def record_expense(request):
         with transaction.atomic():
             expense.save()
             _advance_paid_fixed_schedule(expense)
-        messages.success(request, "Expense saved.")
-        return redirect("record_expense")
+        return _saved_response(request, "Expense saved.", "record_expense")
 
-    return render(request, "transactions/record_expense.html", {"form": form})
+    return _form_response(request, form, "expense", "transactions/record_expense.html")
 
 
+@never_cache
+@vary_on_headers("X-Requested-With")
+@require_http_methods(["GET", "POST"])
 @login_required
 def edit_transaction(request, pk):
     # Only the owner can edit a real transaction.
@@ -237,8 +270,7 @@ def edit_transaction(request, pk):
 
         if form.is_valid():
             form.save()
-            messages.success(request, "Transaction updated.")
-            return redirect("dashboard")
+            return _saved_response(request, "Transaction updated.", "dashboard")
     else:
         initial = {}
 
@@ -250,13 +282,14 @@ def edit_transaction(request, pk):
 
         form = form_class(instance=transaction, initial=initial)
 
-    return render(
-        request,
-        "transactions/edit_transaction.html",
-        {"form": form, "transaction": transaction},
+    return _form_response(
+        request, form, transaction.kind, "transactions/edit_transaction.html", transaction,
     )
 
 
+@never_cache
+@vary_on_headers("X-Requested-With")
+@require_http_methods(["GET", "POST"])
 @login_required
 def delete_transaction(request, pk):
     # Only the owner can delete a non-demo transaction.
@@ -269,8 +302,7 @@ def delete_transaction(request, pk):
 
     if request.method == "POST":
         transaction.delete()
-        messages.success(request, "Transaction deleted.")
-        return redirect("dashboard")
+        return _saved_response(request, "Transaction deleted.", "dashboard")
 
     return render(
         request,
