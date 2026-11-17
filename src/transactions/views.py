@@ -1,9 +1,11 @@
-from datetime import date
+from calendar import monthrange
+from datetime import date, timedelta
 import unicodedata
 
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -17,7 +19,7 @@ class IncomeForm(forms.ModelForm):
         fields = ["amount", "date", "description"]
         labels = {"amount": "Amount ($)", "description": "Source"}
         widgets = {
-            "amount": forms.NumberInput(attrs={"step": "0.01"}),
+            "amount": forms.TextInput(attrs={"inputmode": "decimal"}),
             "date": forms.DateInput(attrs={"type": "date"}),
         }
         error_messages = {
@@ -31,6 +33,53 @@ INVISIBLE_CATEGORIES = {"Cc", "Cf", "Mn", "Me"}
 # Characters outside those categories that still draw as empty space: the blank
 # Braille pattern and the Hangul fillers.
 BLANK_CHARACTERS = {"⠀", "ᅟ", "ᅠ", "ㅤ", "ﾠ"}
+
+
+def _advance_paid_fixed_schedule(expense):
+    """Match one pending schedule to a recorded payment without another user step."""
+    if not expense.is_fixed or expense.recurrence != Transaction.Recurrence.NONE:
+        return
+
+    matches = [
+        schedule
+        for schedule in (
+            Transaction.objects.select_for_update()
+            .filter(
+                owner=expense.owner,
+                kind=Transaction.Kind.EXPENSE,
+                is_fixed=True,
+                is_demo=False,
+                recurrence__in=[
+                    Transaction.Recurrence.DAILY,
+                    Transaction.Recurrence.WEEKLY,
+                    Transaction.Recurrence.MONTHLY,
+                ],
+                amount=expense.amount,
+                description__iexact=expense.description,
+                category=expense.category,
+                next_due_date__range=(expense.date, expense.date + timedelta(days=30)),
+            )
+            .order_by("next_due_date", "id")
+        )
+        if (schedule.next_due_date - expense.date).days <= schedule.reminder_days
+    ]
+    # A payment without a unique match must not move another schedule.
+    if len(matches) != 1:
+        return
+
+    schedule = matches[0]
+    due = schedule.next_due_date
+    if schedule.recurrence == Transaction.Recurrence.DAILY:
+        schedule.next_due_date = due + timedelta(days=1)
+    elif schedule.recurrence == Transaction.Recurrence.WEEKLY:
+        schedule.next_due_date = due + timedelta(days=7)
+    else:
+        year = due.year + (due.month == 12)
+        month = due.month % 12 + 1
+        schedule.next_due_date = date(
+            year, month, min(due.day, monthrange(year, month)[1])
+        )
+    schedule.save(update_fields=["next_due_date"])
 
 
 class ExpenseForm(forms.ModelForm):
@@ -47,19 +96,49 @@ class ExpenseForm(forms.ModelForm):
         widget=forms.RadioSelect,
         error_messages={"required": "Choose fixed or variable"},
     )
+    recurrence = forms.ChoiceField(
+        label="Repeats",
+        choices=Transaction.Recurrence.choices,
+        required=False,
+    )
+    reminder_days = forms.IntegerField(
+        label="Remind me (days before due)",
+        min_value=1,
+        max_value=30,
+        required=False,
+        initial=3,
+        widget=forms.NumberInput(attrs={"min": 1, "max": 30}),
+    )
 
     class Meta:
         model = Transaction
-        fields = ["amount", "date", "description", "category", "is_fixed"]
-        labels = {"amount": "Amount ($)", "description": "Description"}
+        fields = [
+            "amount", "date", "description", "category", "is_fixed",
+            "recurrence", "next_due_date", "reminder_days",
+        ]
+        labels = {
+            "amount": "Amount ($)", "description": "Description",
+            "next_due_date": "Next due date",
+        }
         widgets = {
-            "amount": forms.NumberInput(attrs={"step": "0.01"}),
+            "amount": forms.TextInput(attrs={"inputmode": "decimal"}),
             "date": forms.DateInput(attrs={"type": "date"}),
+            "next_due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
         error_messages = {
             "amount": {"min_value": "Amount must be greater than zero"},
             "description": {"required": "Enter an expense description."},
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # A variable expense's schedule is hidden on the page, so its values must
+        # never block saving. Blank them before field validation runs; clean()
+        # still clears the schedule for any type other than Fixed.
+        if self.is_bound and self.data.get(self.add_prefix("is_fixed")) == "variable":
+            self.data = self.data.copy()
+            for name in ("recurrence", "next_due_date", "reminder_days"):
+                self.data[self.add_prefix(name)] = ""
 
     def clean_description(self):
         description = self.cleaned_data["description"]
@@ -76,6 +155,27 @@ class ExpenseForm(forms.ModelForm):
         ):
             raise forms.ValidationError("Enter an expense description.")
         return description
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (
+            cleaned_data.get("reminder_days") is None
+            and "reminder_days" not in self.errors
+        ):
+            cleaned_data["reminder_days"] = 3
+        if not cleaned_data.get("is_fixed"):
+            # Only fixed expenses repeat. A variable expense never keeps a
+            # schedule, even one left in the form before switching to Variable.
+            cleaned_data["recurrence"] = Transaction.Recurrence.NONE
+            cleaned_data["next_due_date"] = None
+        elif cleaned_data.get("recurrence") and not cleaned_data.get("next_due_date"):
+            if "next_due_date" not in self.errors:
+                self.add_error("next_due_date", "Choose the next due date.")
+        elif cleaned_data.get("next_due_date") and not cleaned_data.get("recurrence"):
+            self.add_error("recurrence", "Choose how often it repeats.")
+        if not cleaned_data.get("recurrence"):
+            cleaned_data["reminder_days"] = 3
+        return cleaned_data
 
 
 @login_required
@@ -107,7 +207,9 @@ def record_expense(request):
         expense = form.save(commit=False)
         expense.kind = Transaction.Kind.EXPENSE
         expense.owner = request.user
-        expense.save()
+        with transaction.atomic():
+            expense.save()
+            _advance_paid_fixed_schedule(expense)
         messages.success(request, "Expense saved.")
         return redirect("record_expense")
 

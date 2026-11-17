@@ -489,3 +489,64 @@ request limits and route-level acceptance scenarios for issue #23.
 **How we used the result:** Reused Django's reset form and token handling with our
 existing reset services. Kept saved budgets and lockout recovery intact, and
 bounded requests across email addresses before the per-email service runs.
+
+### Sprint 3: Nov 9, 2026 — Fixed expense recurrence schedule
+
+**Tool:** Claude Code
+
+**What it helped with:**
+
+- Reviewed the D-13 acceptance criteria, the expense form from D-4, and what the
+  D-14 reminders will need.
+- Drafted the recurrence fields, migration, database constraints, form rules,
+  shared expense form template, tests and Behave scenarios, written before the
+  implementation.
+
+**How we used the result:**
+
+We kept the schedule on the expense itself so D-14 can read `next_due_date`
+directly, enforced the fixed-only rule in both the form and the database, and
+left advancing the due date to D-14. Noah chose to take D-13 first so Fabian's
+D-14 is not blocked.
+
+### Sprint 3: Nov 13, 2026 — Upcoming fixed expense dashboard reminder
+
+**Tool:** Codex
+
+**What it helped with:** Drafted a focused D14 dashboard test, the reminder
+query and display, and a check for the early-date acceptance scenario.
+
+**How we used the result:** Fabian ran the failing test before the dashboard
+change and checked both acceptance dates after it. In this first increment, we
+kept the reminder visible without another user action and limited it to the
+signed-in student's monthly fixed expenses due within three days.
+
+### Sprint 3: Nov 14, 2026 — Clear a fixed expense reminder after payment
+
+**Tool:** Codex
+
+**What it helped with:** Drafted the payment-clearing test and the automatic
+schedule update when a matching fixed expense is recorded.
+
+**How we used the result:** Fabian checked the red and green test results. With
+no direct link from a payment to its schedule, we match only one schedule for
+the same student, amount, category, and expense name (ignoring capitalization).
+For this first increment, the recorded payment date had to be within three days
+before the due date or on it. This avoided advancing a schedule for an
+unrelated earlier payment. Ambiguous matches leave schedules unchanged.
+
+### Sprint 3: Nov 14, 2026 — Custom notice and recurrence options
+
+**Tool:** Codex
+
+**What it helped with:** Drafted focused tests and Behave scenarios for a
+student-selected reminder notice and daily or weekly fixed expense schedules.
+Updated the model, form, dashboard reminder, and payment schedule advancement.
+
+**How we used the result:** Fabian decided that a fixed three-day window was too
+restrictive for planning ahead. We kept three days as the default to preserve
+the original behavior, but let each student choose 1–30 days, with a bounded
+30-day limit. Fabian checked the failing daily/weekly test first, then
+confirmed the focused Django tests and Behave examples passed. Matching
+payments advance daily, weekly, or monthly dates. Email reminders are planned
+for a separate PR.

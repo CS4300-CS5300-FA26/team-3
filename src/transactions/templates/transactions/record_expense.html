@@ -59,7 +59,7 @@
         {% endfor %}
         <form method="post">
             {% csrf_token %}
-            {{ form.as_div }}
+            {% include "transactions/expense_fields.html" %}
             <button type="submit">Save expense</button>
         </form>
     </main>
