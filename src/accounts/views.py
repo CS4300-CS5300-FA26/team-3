@@ -3,6 +3,7 @@ from collections import Counter
 from datetime import date, timedelta
 from decimal import Decimal
 from smtplib import SMTPException
+from urllib.parse import urlencode
 
 from django import forms
 from django.conf import settings
@@ -368,6 +369,7 @@ def dashboard(request):
             "period_end": period_end,
             **monthly,
             "drilldown_filters": drilldown_filters,
+            "drilldown_query": urlencode(criteria),
             "show_history_totals": show_history_totals,
             "history_scope": period_options[selected_period],
             "selected_month": selected_month.isoformat()[:7],

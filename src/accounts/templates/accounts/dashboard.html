@@ -101,7 +101,7 @@
     <a href="{{ clear_filters_url }}">Clear filters</a>
 </nav>
 {% endif %}
-<form method="post" action="{% url 'explain_spending' %}?month={{ selected_month }}&amp;period={{ selected_period }}">
+<form method="post" action="{% url 'explain_spending' %}?month={{ selected_month }}&amp;period={{ selected_period }}{% if drilldown_query %}&amp;{{ drilldown_query }}{% endif %}">
     {% csrf_token %}
     <input type="hidden" name="month" value="{{ selected_month }}">
     <input type="hidden" name="period" value="{{ selected_period }}">

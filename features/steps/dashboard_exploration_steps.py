@@ -1,6 +1,8 @@
 """#74 exploration through dashboard URLs and their rendered link targets."""
 from datetime import date
 from decimal import Decimal
+from html import unescape
+import re
 from unittest.mock import patch
 
 from behave import given, when, then
@@ -63,6 +65,28 @@ def day_food(context):
 def remove_category(context):
     criterion = next(f for f in context.response.context["drilldown_filters"] if f["key"] == "category")
     follow(context, criterion["url"])
+
+
+@when("I request an explanation of the displayed spending")
+def explain(context):
+    action = unescape(re.search(
+        r'<form method="post" action="(/dashboard/explain/[^\"]*)"',
+        context.response.content.decode(),
+    ).group(1))
+    with patch("accounts.views.generate_spending_summary") as provider:
+        context.response = context.client.post(action, {
+            "month": "2026-11", "period": "selected_month", "explain_spending": "1",
+        })
+        provider.assert_not_called()
+
+
+@then("the explanation keeps only my Food expenses on November 3")
+def explanation_filters(context):
+    rows = list(context.response.context["transactions"])
+    assert len(rows) == 2
+    assert all(t.kind == "expense" and t.category == "Food" and t.date == date(2026, 11, 3) for t in rows)
+    assert {f["key"] for f in context.response.context["drilldown_filters"]} == {"kind", "category", "date"}
+    assert "Not enough activity yet to summarize" in context.response.content.decode()
 
 
 @then("all my expenses on November 3 are listed")

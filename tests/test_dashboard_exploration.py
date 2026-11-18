@@ -1,6 +1,8 @@
 """#74: monthly figures, honest chart cutoffs, and URL-backed exploration."""
 from datetime import date
 from decimal import Decimal
+from html import unescape
+import re
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
@@ -69,6 +71,34 @@ class DashboardExplorationTests(TestCase):
             {"category": "Food", "total": Decimal("1.50"), "count": 10},
         ])
         self.assertEqual(response.context["monthly_expenses"], Decimal("1.50"))
+
+    @patch("accounts.views.generate_spending_summary")
+    def test_explanation_form_preserves_active_filters(self, generate_summary):
+        wanted = [self.entry("0.10", "2026-11-03", "Food & drink") for _ in range(10)]
+        self.entry("20", "2026-11-04", "Food & drink")
+        self.entry("30", "2026-11-03", "Books")
+        self.entry("40", "2026-11-03", kind="income")
+        self.entry("50", "2026-11-03", "Food & drink", owner=self.other)
+        self.entry("60", "2026-11-03", "Food & drink", is_demo=True)
+        generate_summary.return_value = ["Food & drink totaled $1.00."]
+        page = self.dashboard(kind="expense", category="Food & drink", date="2026-11-03")
+        action = unescape(re.search(
+            rf'<form method="post" action="({reverse("explain_spending")}[^"]*)"', page.content.decode(),
+        ).group(1))
+        response = self.client.post(action, {
+            "month": "2026-11", "period": "selected_month", "explain_spending": "1",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(set(response.context["transactions"]), set(wanted))
+        self.assertEqual(response.context["drilldown_filters"], page.context["drilldown_filters"])
+        self.assertEqual(response.context["period_start"], date(2026, 11, 3))
+        self.assertEqual(response.context["period_end"], date(2026, 11, 3))
+        self.assertEqual(response.context["expense_total"], Decimal("1.00"))
+        self.assertEqual(response.context["monthly_expenses"], Decimal("51.00"))
+        generate_summary.assert_called_once_with([
+            {"category": "Food & drink", "total": Decimal("1.00"), "count": 10},
+        ])
+        self.assertContains(response, "Food &amp; drink totaled $1.00.")
 
     def test_dashboard_omits_repeated_explanations_but_keeps_period_controls(self):
         response = self.dashboard()
