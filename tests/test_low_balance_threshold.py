@@ -12,6 +12,16 @@ from accounts.views import LowBalanceThresholdForm
 
 
 class LowBalanceThresholdTests(TestCase):
+    def test_account_amount_uses_non_stepping_decimal_input(self):
+        student = get_user_model().objects.create_user(username="threshold-scroll-student")
+        self.client.force_login(student)
+
+        response = self.client.get(reverse("account_settings"))
+
+        amount_input = response.context["threshold_form"]["amount"].as_widget()
+        self.assertIn('type="text"', amount_input)
+        self.assertIn('inputmode="decimal"', amount_input)
+
     def test_student_has_no_threshold_until_one_is_set(self):
         student = get_user_model().objects.create_user(username="student")
 
@@ -53,42 +63,29 @@ class LowBalanceThresholdTests(TestCase):
         with self.assertRaises(ValidationError):
             LowBalanceThreshold(owner=student, amount=Decimal("1.001")).full_clean()
 
-    def test_dashboard_says_when_safety_threshold_is_not_set(self):
+    def test_account_has_empty_threshold_until_set(self):
         student = get_user_model().objects.create_user(username="student")
         self.client.force_login(student)
 
-        response = self.client.get(reverse("dashboard"))
+        response = self.client.get(reverse("account_settings"))
 
         self.assertContains(response, "Safety threshold")
-        self.assertContains(response, "Not set")
+        self.assertFalse(response.context["threshold_form"].is_bound)
 
-    def test_dashboard_shows_saved_safety_threshold(self):
+    def test_account_shows_saved_safety_threshold(self):
         student = get_user_model().objects.create_user(username="student")
         LowBalanceThreshold.objects.create(owner=student, amount=Decimal("150.00"))
         self.client.force_login(student)
 
-        response = self.client.get(reverse("dashboard"))
+        response = self.client.get(reverse("account_settings"))
 
         self.assertContains(response, "Safety threshold")
-        self.assertContains(response, "$150.00")
+        self.assertContains(response, 'value="150.00"')
 
-    def test_threshold_editor_stays_collapsed_until_requested_or_invalid(self):
+    def test_student_can_set_threshold_from_account(self):
         student = get_user_model().objects.create_user(username="student")
         self.client.force_login(student)
-
-        response = self.client.get(reverse("dashboard"))
-        self.assertContains(response, '<details class="threshold-setting">')
-        self.assertContains(response, '<summary class="threshold-summary">Safety threshold:')
-        self.assertContains(response, "Not set")
-
-        response = self.client.post(reverse("dashboard"), {"amount": "-0.01"})
-        self.assertContains(response, '<details class="threshold-setting" open>')
-        self.assertContains(response, 'class="errorlist"')
-
-    def test_student_can_set_threshold_from_dashboard(self):
-        student = get_user_model().objects.create_user(username="student")
-        self.client.force_login(student)
-        dashboard_url = reverse("dashboard") + "?month=2026-10"
+        dashboard_url = reverse("account_settings")
 
         self.assertContains(self.client.get(dashboard_url), 'name="amount"')
 
@@ -99,7 +96,7 @@ class LowBalanceThresholdTests(TestCase):
             LowBalanceThreshold.objects.get(owner=student).amount, Decimal("150.00")
         )
         self.assertContains(response, "Safety threshold")
-        self.assertContains(response, "$150.00")
+        self.assertContains(response, 'value="150.00"')
 
     def test_student_can_change_threshold_without_creating_another_row(self):
         student = get_user_model().objects.create_user(username="student")
@@ -107,7 +104,7 @@ class LowBalanceThresholdTests(TestCase):
         self.client.force_login(student)
 
         response = self.client.post(
-            reverse("dashboard") + "?month=2026-10",
+            reverse("account_settings"),
             {"amount": "200.00"},
             follow=True,
         )
@@ -116,12 +113,12 @@ class LowBalanceThresholdTests(TestCase):
         self.assertEqual(
             LowBalanceThreshold.objects.get(owner=student).amount, Decimal("200.00")
         )
-        self.assertContains(response, "$200.00")
+        self.assertContains(response, 'value="200.00"')
 
     def test_first_save_handles_another_tab_creating_threshold_after_validation(self):
         student = get_user_model().objects.create_user(username="student")
         self.client.force_login(student)
-        dashboard_url = reverse("dashboard") + "?month=2026-10"
+        dashboard_url = reverse("account_settings")
         original_is_valid = LowBalanceThresholdForm.is_valid
 
         def validate_after_competing_save(form):
@@ -145,7 +142,7 @@ class LowBalanceThresholdTests(TestCase):
 
         for amount in ("-0.01", "1.001", "not money"):
             with self.subTest(amount=amount):
-                response = self.client.post(reverse("dashboard"), {"amount": amount})
+                response = self.client.post(reverse("account_settings"), {"amount": amount})
                 self.assertContains(response, 'class="errorlist"')
                 self.assertFalse(LowBalanceThreshold.objects.filter(owner=student).exists())
 
@@ -156,7 +153,7 @@ class LowBalanceThresholdTests(TestCase):
         self.client.force_login(student)
 
         self.client.post(
-            reverse("dashboard"),
+            reverse("account_settings"),
             {"amount": "150.00", "owner": other.pk},
         )
 

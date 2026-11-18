@@ -1,19 +1,9 @@
 {% extends "accounts/base.html" %}
-
-{% block title %}Edit Transaction | BudgetWise{% endblock %}
-
+{% block title %}Edit transaction | BudgetWise{% endblock %}
+{% block extra_style %}{% include "transactions/form_style.html" %}{% endblock %}
 {% block content %}
 <h1>Edit {{ transaction.get_kind_display }}</h1>
-
-<form method="post">
-    {% csrf_token %}
-    {% if transaction.kind == "expense" %}
-        {% include "transactions/expense_fields.html" %}
-    {% else %}
-        {{ form.as_p }}
-    {% endif %}
-
-    <button type="submit">Save Changes</button>
-    <a href="{% url 'dashboard' %}">Cancel</a>
-</form>
+{% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
+{% include "transactions/transaction_form.html" %}
+{% include "transactions/expense_script.html" %}
 {% endblock %}

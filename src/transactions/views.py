@@ -1,16 +1,23 @@
 from calendar import monthrange
 from datetime import date, timedelta
 import unicodedata
-
+import tempfile
+from pathlib import Path
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from .services.receipt_scanner import scan_receipt
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.vary import vary_on_headers
 from django.utils import timezone
-
+from PIL import Image, UnidentifiedImageError
 from .models import Transaction
+from .spending import category_totals
 
 
 class IncomeForm(forms.ModelForm):
@@ -90,8 +97,8 @@ class ExpenseForm(forms.ModelForm):
         error_messages={"required": "Choose a category"},
     )
     is_fixed = forms.TypedChoiceField(
-        label="Type",
-        choices=[("fixed", "Fixed"), ("variable", "Variable")],
+        label="Expense Type",
+        choices=[("variable", "Varying Amount"), ("fixed", "Fixed Amount")],
         coerce=lambda value: value == "fixed",
         widget=forms.RadioSelect,
         error_messages={"required": "Choose fixed or variable"},
@@ -178,30 +185,57 @@ class ExpenseForm(forms.ModelForm):
         return cleaned_data
 
 
+def _dialog_request(request):
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+def _form_response(request, form, kind, template, entry=None):
+    """Both entry points render the same fields and submit to the same route."""
+    dialog = _dialog_request(request)
+    return render(request, "transactions/dialog_form.html" if dialog else template, {
+        "form": form, "kind": kind, "transaction": entry,
+        "form_title": f"{'Edit' if entry else 'Add'} {kind}",
+        "submit_label": "Save Changes" if entry else f"Save {kind}",
+        "form_action": request.path,
+    }, status=422 if dialog and form.is_bound and form.errors else 200)
+
+
+def _saved_response(request, message, destination):
+    if _dialog_request(request):
+        return JsonResponse({"message": message})
+    messages.success(request, message)
+    return redirect(destination)
+
+
+@never_cache
+@vary_on_headers("X-Requested-With")
+@require_http_methods(["GET", "POST"])
 @login_required
 def record_income(request):
     if request.method == "POST":
         form = IncomeForm(request.POST)
     else:
-        form = IncomeForm(None)
+        form = IncomeForm(initial={"date": timezone.localdate()})
 
     if request.method == "POST" and form.is_valid():
         income = form.save(commit=False)
         income.kind = Transaction.Kind.INCOME
         income.owner = request.user
         income.save()
-        messages.success(request, "Income saved.")
-        return redirect("record_income")
+        return _saved_response(request, "Income saved.", "record_income")
 
-    return render(request, "transactions/record_income.html", {"form": form})
+    return _form_response(request, form, "income", "transactions/record_income.html")
 
 
+@never_cache
+@vary_on_headers("X-Requested-With")
+@require_http_methods(["GET", "POST"])
 @login_required
 def record_expense(request):
     if request.method == "POST":
         form = ExpenseForm(request.POST)
     else:
-        form = ExpenseForm(None)
+        form = ExpenseForm(initial={"date": timezone.localdate()})
 
     if request.method == "POST" and form.is_valid():
         expense = form.save(commit=False)
@@ -210,12 +244,115 @@ def record_expense(request):
         with transaction.atomic():
             expense.save()
             _advance_paid_fixed_schedule(expense)
-        messages.success(request, "Expense saved.")
-        return redirect("record_expense")
+        return _saved_response(request, "Expense saved.", "record_expense")
 
-    return render(request, "transactions/record_expense.html", {"form": form})
+    return _form_response(request, form, "expense", "transactions/record_expense.html")
 
 
+@login_required
+@require_POST
+def scan_receipt_upload(request):
+    """
+    Accept a receipt image and return its detected total.
+
+    The endpoint does not save or modify any transactions.
+    """
+    receipt = request.FILES.get("receipt")
+
+    if receipt is None:
+        return JsonResponse(
+            {"error": "Please upload a receipt image."},
+            status=400,
+        )
+
+    allowed_types = {
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+    }
+
+    extension = allowed_types.get(receipt.content_type)
+
+    if extension is None:
+        return JsonResponse(
+            {"error": "Unsupported receipt image format."},
+            status=400,
+        )
+
+    max_file_size = 5 * 1024 * 1024
+
+    if receipt.size > max_file_size:
+        return JsonResponse(
+            {"error": "Receipt image must be 5 MB or smaller."},
+            status=400,
+        )
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        image_path = Path(temp_dir) / f"receipt{extension}"
+
+        with image_path.open("wb") as destination:
+            for chunk in receipt.chunks():
+                destination.write(chunk)
+
+        # Verify that the uploaded file is a genuine supported image.
+        allowed_formats = {
+            "image/jpeg": "JPEG",
+            "image/png": "PNG",
+            "image/webp": "WEBP",
+        }
+
+        try:
+            with Image.open(image_path) as image:
+                actual_format = image.format
+                image.verify()
+
+            expected_format = allowed_formats[receipt.content_type]
+
+            if receipt.content_type == "image/jpeg":
+                valid_format = actual_format in ("JPEG", "MPO")
+            else:
+                valid_format = actual_format == expected_format
+
+            if not valid_format:
+                return JsonResponse(
+                    {"error": "Unsupported receipt image format."},
+                    status=400,
+                )
+
+            # Decode the image to catch corrupted image data.
+            with Image.open(image_path) as image:
+                image.load()
+
+        except (UnidentifiedImageError, OSError, ValueError):
+            return JsonResponse(
+                {"error": "Invalid or corrupted receipt image."},
+                status=400,
+            )
+
+        try:
+            amount = scan_receipt(image_path)
+        except RuntimeError:
+            return JsonResponse(
+                {"error": "Receipt scanning is currently unavailable."},
+                status=503,
+            )
+
+    if amount is None:
+        return JsonResponse(
+            {
+                "amount": None,
+                "message": (
+                    "Could not read a total, please enter it manually"
+                ),
+            }
+        )
+
+    return JsonResponse({"amount": str(amount)})
+
+
+@never_cache
+@vary_on_headers("X-Requested-With")
+@require_http_methods(["GET", "POST"])
 @login_required
 def edit_transaction(request, pk):
     # Only the owner can edit a real transaction.
@@ -236,9 +373,10 @@ def edit_transaction(request, pk):
         form = form_class(request.POST, instance=transaction)
 
         if form.is_valid():
-            form.save()
-            messages.success(request, "Transaction updated.")
-            return redirect("dashboard")
+            edited = form.save(commit=False)
+            # Preserve command-managed fields that may have changed since this edit loaded.
+            edited.save(update_fields=form.fields)
+            return _saved_response(request, "Transaction updated.", "dashboard")
     else:
         initial = {}
 
@@ -250,13 +388,14 @@ def edit_transaction(request, pk):
 
         form = form_class(instance=transaction, initial=initial)
 
-    return render(
-        request,
-        "transactions/edit_transaction.html",
-        {"form": form, "transaction": transaction},
+    return _form_response(
+        request, form, transaction.kind, "transactions/edit_transaction.html", transaction,
     )
 
 
+@never_cache
+@vary_on_headers("X-Requested-With")
+@require_http_methods(["GET", "POST"])
 @login_required
 def delete_transaction(request, pk):
     # Only the owner can delete a non-demo transaction.
@@ -269,8 +408,7 @@ def delete_transaction(request, pk):
 
     if request.method == "POST":
         transaction.delete()
-        messages.success(request, "Transaction deleted.")
-        return redirect("dashboard")
+        return _saved_response(request, "Transaction deleted.", "dashboard")
 
     return render(
         request,
@@ -295,32 +433,9 @@ def month_from_query(value):
 def spending_by_category(request):
     month = month_from_query(request.GET.get("month", ""))
 
-    # One row per category with its total, largest first. Equal totals are
-    # ordered by name so the chart never reshuffles between page loads.
-    totals = list(
-        Transaction.objects.filter(
-            owner=request.user,
-            is_demo=False,
-            kind=Transaction.Kind.EXPENSE,
-            date__year=month.year,
-            date__month=month.month,
-        )
-        .values("category")
-        .annotate(total=Sum("amount"))
-        .order_by("-total", "category")
-    )
-
-    # Each bar's length is its share of the largest category, kept as exact
-    # decimals and formatted here so the template only places the value.
-    largest = totals[0]["total"] if totals else None
-    categories = [
-        {
-            "category": row["category"],
-            "total": row["total"],
-            "width": f"{row['total'] * 100 / largest:.2f}",
-        }
-        for row in totals
-    ]
+    categories = category_totals(Transaction.objects.filter(
+        owner=request.user, is_demo=False, date__year=month.year, date__month=month.month,
+    ).values("kind", "category", "amount"))
 
     return render(
         request,

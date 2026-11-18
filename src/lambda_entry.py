@@ -39,4 +39,12 @@ def handler(event, context):
             return {"database": "ok"}
         finally:
             connection.close()
+    if event == {"operation": "send_fixed_expense_reminders"}:
+        from django.core.management import call_command
+
+        try:
+            call_command("send_fixed_expense_reminders")
+            return {"reminders": "sent"}
+        finally:
+            connection.close()
     return http_handler(event, context)

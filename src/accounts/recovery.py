@@ -47,6 +47,12 @@ def claim_recovery_request(remote_address):
     return True
 
 
+def send_recovery_email(email, remote_address):
+    """Share aggregate admission and per-email limits across recovery entry points."""
+    if claim_recovery_request(remote_address):
+        request_password_reset(email)
+
+
 @sensitive_post_parameters("email")
 @never_cache
 @require_http_methods(["GET", "POST"])
@@ -54,8 +60,7 @@ def claim_recovery_request(remote_address):
 def forgot_password(request):
     if request.method == "POST":
         # REMOTE_ADDR is supplied by the server/API Gateway, not forwarded headers.
-        if claim_recovery_request(request.META.get("REMOTE_ADDR", "")):
-            request_password_reset(request.POST.get("email", ""))
+        send_recovery_email(request.POST.get("email", ""), request.META.get("REMOTE_ADDR", ""))
         return redirect("accounts:reset_sent")
     return render(request, "accounts/recovery.html", {"form": SignupForm(), "request_reset": True})
 

@@ -1,0 +1,22 @@
+<form method="post" action="{{ form_action }}" class="transaction-form" data-kind="{{ kind }}">
+    {% csrf_token %}
+    <div class="transaction-form-body">
+        {{ form.non_field_errors }}
+        {% if kind == "expense" %}
+            {% include "transactions/expense_fields.html" %}
+        {% else %}
+            <div class="field-pair">
+                <div>{{ form.amount.as_field_group }}</div>
+                <div>{{ form.date.as_field_group }}</div>
+            </div>
+            <div>{{ form.description.as_field_group }}</div>
+        {% endif %}
+    </div>
+    <footer class="transaction-form-actions">
+        {% if transaction %}
+            <a class="delete-action" href="{% url 'delete_transaction' transaction.pk %}" data-delete-transaction data-description="{{ transaction.description }}">Delete</a>
+        {% endif %}
+        <a class="button secondary" href="{% url 'dashboard' %}" data-close-transaction>Cancel</a>
+        <button type="submit">{{ submit_label }}</button>
+    </footer>
+</form>

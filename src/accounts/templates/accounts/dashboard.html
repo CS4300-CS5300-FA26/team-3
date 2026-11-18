@@ -3,126 +3,73 @@
 {% block title %}My dashboard | BudgetWise{% endblock %}
 
 {% block extra_style %}
-<style>
-    main { max-width: 860px; }
-    h1 { margin-bottom: 8px; }
-    .dashboard-intro { margin: 0; color: #56616b; }
-    h2 { margin: 32px 0 16px; color: #104b25; font: 28px/1.2 Georgia, serif; }
-    .monthly-budget { margin-top: 32px; padding: 28px; background: white; border: 1px solid #afc0ad; border-radius: 12px; box-shadow: 0 6px 20px rgb(16 24 32 / 6%); }
-    .monthly-budget-header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 20px; }
-    .monthly-budget h2 { margin: 4px 0 0; }
-    .eyebrow { margin: 0; color: #56616b; font-size: 14px; font-weight: bold; letter-spacing: .08em; text-transform: uppercase; }
-    .month-picker { flex: 0 1 240px; padding: 0; border: 0; background: transparent; }
-    .month-picker label { font-size: 15px; }
-    .month-picker input { margin: 0; background: #fff; }
-    .month-picker button { margin-top: 10px; }
-    .budget-total { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-top: 24px; padding: 20px 24px; border-left: 5px solid #104b25; border-radius: 8px; background: #e9efe6; }
-    .budget-label, .budget-amount, .budget-description, .budget-activity { margin: 0; }
-    .budget-label { color: #34443a; font-weight: bold; }
-    .budget-amount { color: #104b25; font-size: clamp(32px, 6vw, 44px); font-weight: bold; font-variant-numeric: tabular-nums; line-height: 1.15; overflow-wrap: anywhere; }
-    .budget-description { max-width: 240px; color: #56616b; }
-    .budget-activity { margin-top: 14px; color: #56616b; font-size: 15px; }
-    .threshold-setting { margin-top: 14px; }
-    .threshold-summary { color: #56616b; cursor: pointer; }
-    .threshold-summary:hover { text-decoration: underline; }
-    .threshold-summary strong { color: #104b25; font-variant-numeric: tabular-nums; }
-    .threshold-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-top: 12px; }
-    .threshold-form div { flex: 1 1 180px; }
-    .threshold-form input { margin: 0; }
-    .threshold-form .errorlist { flex-basis: 100%; }
-    .low-balance-warning { margin: 14px 0 0; padding: 12px 16px; border: 1px solid #bd7a08; border-radius: 8px; background: #fff3dc; color: #6d3b00; }
-    .fixed-expense-reminder { margin: 14px 0 0; padding: 12px 16px; border: 1px solid #afc0ad; border-radius: 8px; background: #e9efe6; color: #104b25; }
-    .transactions { padding: 0 24px; list-style: none; background: white; border: 1px solid #afc0ad; border-radius: 8px; }
-    .transactions li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; padding: 20px 0; }
-    .transactions li + li { border-top: 1px solid #afc0ad; }
-    .transaction-details { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
-    .transaction-details small { display: block; color: #56616b; }
-    .transaction-amount { margin-left: auto; font-variant-numeric: tabular-nums; }
-    .transaction-actions { display: flex; gap: 12px; }
-    .transaction-actions a { color: #104b25; font-weight: 600; text-decoration: none; }
-    .transaction-actions a:hover { text-decoration: underline; }
-    .history-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; padding: 12px 16px; border: 1px solid #afc0ad; border-radius: 8px; background: white; }
-    .period-picker { display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; background: transparent; }
-    .period-picker label { flex: 0 0 auto; margin: 0; color: #34443a; font-size: 14px; }
-    .period-picker select { box-sizing: border-box; flex: 0 1 180px; min-width: 145px; margin: 0; padding: 8px 34px 8px 10px; appearance: none; border: 1px solid #afc0ad; border-radius: 6px; color: #101820; background-color: #f3f6f1; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m3 6 5 5 5-5' stroke='%23104b25' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; font: inherit; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease; }
-    .period-picker select:hover { border-color: #104b25; background-color: #e9efe6; }
-    .period-picker select:focus-visible { outline: 3px solid #104b25; outline-offset: 2px; }
-    .period-date-range { flex: 0 0 auto; color: #56616b; font-size: 14px; white-space: nowrap; }
-    .period-picker button { margin-top: 0; }
-    .history-totals { display: flex; flex: 0 0 auto; flex-wrap: nowrap; gap: 12px; margin: 0; color: #56616b; font-size: 14px; white-space: nowrap; }
-    .history-totals strong { color: #104b25; font-variant-numeric: tabular-nums; }
-    .spending-summary { margin: 16px 0; padding: 16px 20px; border-left: 5px solid #104b25; border-radius: 8px; background: #e9efe6; }
-    .spending-summary h3 { margin: 0 0 8px; color: #104b25; }
-    .spending-summary ul { margin: 0; padding-left: 20px; }
-    @media (max-width: 680px) {
-        .history-controls { flex-wrap: wrap; align-items: stretch; }
-        .period-picker { flex-wrap: wrap; }
-        .period-picker select { width: 100%; }
-        .history-totals { justify-content: space-between; }
-    }
-</style>
+{% include "transactions/form_style.html" %}
+{% include "transactions/dialog_style.html" %}
+{% include "accounts/dashboard_style.html" %}
 {% endblock %}
 
 {% block content %}
-<h1>My budget dashboard</h1>
-<p class="dashboard-intro">Signed in as {{ request.user.email|default:request.user.username }}</p>
-
-<section class="monthly-budget" aria-labelledby="month-heading">
-    <div class="monthly-budget-header">
-        <div>
-            <p class="eyebrow">Monthly budget</p>
-            <h2 id="month-heading">{{ selected_month_label }}</h2>
-        </div>
-        <form class="month-picker" method="get" action="{% url 'dashboard' %}" data-auto-submit="month">
-            <input type="hidden" name="period" value="{{ selected_period }}">
-            <label for="month">Change month</label>
-            <input type="month" id="month" name="month" value="{{ selected_month }}">
-            <noscript><button type="submit">Update month</button></noscript>
-        </form>
-    </div>
-    <div class="budget-total">
-        <div>
-            <p class="budget-label">Remaining budget</p>
-            <p class="budget-amount">${{ remaining_budget|floatformat:2 }}</p>
-        </div>
-        <p class="budget-description">Income minus expenses for this month.</p>
-    </div>
-    <p class="budget-activity">Based on {{ budget_transaction_count }} transaction{{ budget_transaction_count|pluralize }}</p>
-</section>
-<script>
-    document.querySelectorAll('[data-auto-submit="month"] input[type="month"]').forEach((input) => {
-        input.addEventListener("change", () => input.form.requestSubmit());
-    });
-    document.addEventListener("change", (event) => {
-        if (event.target.matches('[data-auto-submit="period"]')) {
-            event.target.form.requestSubmit();
-        }
-    });
-</script>
-<details class="threshold-setting"{% if threshold_form.errors %} open{% endif %}>
-    <summary class="threshold-summary">Safety threshold: {% if current_threshold %}<strong>${{ current_threshold.amount|floatformat:2 }}</strong>{% else %}Not set{% endif %}</summary>
-    <form class="threshold-form" method="post" action="{% url 'dashboard' %}?month={{ selected_month }}&amp;period={{ selected_period }}">
-        {% csrf_token %}
-        {{ threshold_form.amount.errors }}
-        <div>
-            <label for="{{ threshold_form.amount.id_for_label }}">Safety threshold ($)</label>
-            {{ threshold_form.amount }}
-        </div>
-        <button type="submit" name="save_threshold">Save threshold</button>
+<p id="transaction-feedback" role="status" hidden></p>
+<div id="dashboard-content">
+<div class="dashboard-heading">
+    <div><h1>My dashboard</h1><p class="visually-hidden" id="month-heading">{{ selected_month_label }}</p></div>
+    <form class="month-picker" method="get" action="{% url 'dashboard' %}" data-auto-submit="month">
+        <input type="hidden" name="period" value="{{ selected_period }}">
+        <label class="visually-hidden" for="month">Change month</label>
+        <input type="month" id="month" name="month" value="{{ selected_month }}">
+        <noscript><button type="submit">Update month</button></noscript>
     </form>
-</details>
+    <div class="entry-actions">
+        <a class="button secondary" data-transaction-dialog href="{% url 'record_income' %}">Add income</a>
+        <a class="button" data-transaction-dialog href="{% url 'record_expense' %}">Add expense</a>
+    </div>
+</div>
+<section class="monthly-budget" aria-labelledby="month-heading">
+    <a class="summary-card" href="{{ income_url }}" aria-label="Income for {{ selected_month_label }}: ${{ monthly_income|floatformat:2 }}. Show transactions.">
+        <span class="budget-label">Income</span><strong class="budget-amount">${{ monthly_income|floatformat:2 }}</strong>
+    </a>
+    <a class="summary-card" href="{{ expense_url }}" aria-label="Expenses for {{ selected_month_label }}: ${{ monthly_expenses|floatformat:2 }}. Show transactions.">
+        <span class="budget-label">Expenses</span><strong class="budget-amount">${{ monthly_expenses|floatformat:2 }}</strong>
+    </a>
+    <div class="summary-card remaining">
+        <span class="budget-label">Remaining budget</span><strong class="budget-amount">${{ remaining_budget|floatformat:2 }}</strong>
+    </div>
+</section>
+<p class="budget-activity visually-hidden">Based on {{ budget_transaction_count }} transaction{{ budget_transaction_count|pluralize }}</p>
+
 {% if show_low_balance_warning %}
 <p class="low-balance-warning" role="alert">You are below your ${{ current_threshold.amount|floatformat:2 }} safety threshold</p>
 {% endif %}
-{% for reminder in upcoming_fixed_expenses %}
-<p class="fixed-expense-reminder" role="status">{{ reminder.transaction.description }} of ${{ reminder.transaction.amount|floatformat:2 }} is due in {{ reminder.days_until_due }} day{{ reminder.days_until_due|pluralize }}</p>
-{% endfor %}
+{% if upcoming_fixed_expenses %}
+<section class="upcoming" aria-labelledby="upcoming-heading">
+    <h2 id="upcoming-heading">Upcoming expenses</h2>
+    <table class="upcoming-table">
+        <colgroup><col class="upcoming-expense"><col class="upcoming-amount"><col class="upcoming-due"></colgroup>
+        <thead><tr><th scope="col">Expense</th><th scope="col">Amount</th><th scope="col">Due</th></tr></thead>
+        <tbody>
+        {% for reminder in upcoming_fixed_expenses %}
+        <tr class="fixed-expense-reminder" aria-label="{{ reminder.transaction.description }} of ${{ reminder.transaction.amount|floatformat:2 }} is due in {{ reminder.days_until_due }} day{{ reminder.days_until_due|pluralize }}">
+            <td>{{ reminder.transaction.description }}</td>
+            <td>${{ reminder.transaction.amount|floatformat:2 }}</td>
+            <td>In {{ reminder.days_until_due }} day{{ reminder.days_until_due|pluralize }}<span class="due-date-separator"> · </span><span class="reminder-date">{{ reminder.transaction.next_due_date|date:"M j, Y" }}</span></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
 
-<h2>My transactions</h2>
+{% include "accounts/dashboard_charts.html" %}
+<section id="history" aria-labelledby="history-heading" tabindex="-1">
+<div class="history-header">
+<div>
+<h2 id="history-heading">My transactions</h2>
+</div>
+
 <section class="history-controls" aria-label="Transaction history filters and totals">
     <form class="period-picker" method="get" action="{% url 'dashboard' %}">
         <input type="hidden" name="month" value="{{ selected_month }}">
-        <label for="period">Filter by period</label>
+        <label class="visually-hidden" for="period">Filter by period</label>
         <select id="period" name="period" data-auto-submit="period">
             {% for value, label in period_options.items %}
                 <option value="{{ value }}"{% if value == selected_period %} selected{% endif %}>{{ label }}</option>
@@ -137,12 +84,24 @@
         </span>
         <noscript><button type="submit">Apply filter</button></noscript>
     </form>
+    {% if show_history_totals %}
     <p class="history-totals">
+        <span>Filtered history totals</span>
         <span>Income <strong>${{ income_total|floatformat:2 }}</strong></span>
         <span>Expenses <strong>${{ expense_total|floatformat:2 }}</strong></span>
     </p>
+    {% endif %}
 </section>
-<form method="post" action="{% url 'explain_spending' %}">
+</div>
+{% if drilldown_filters %}
+<nav class="drilldown-filters" aria-label="Active transaction filters">
+    {% for filter in drilldown_filters %}
+    <a href="{{ filter.url }}" class="filter-chip" aria-label="Remove {{ filter.key }} filter: {{ filter.label }}">{{ filter.label }} <span aria-hidden="true">×</span></a>
+    {% endfor %}
+    <a href="{{ clear_filters_url }}">Clear filters</a>
+</nav>
+{% endif %}
+<form method="post" action="{% url 'explain_spending' %}?month={{ selected_month }}&amp;period={{ selected_period }}{% if drilldown_query %}&amp;{{ drilldown_query }}{% endif %}">
     {% csrf_token %}
     <input type="hidden" name="month" value="{{ selected_month }}">
     <input type="hidden" name="period" value="{{ selected_period }}">
@@ -162,30 +121,51 @@
     {% endif %}
 </section>
 {% endif %}
-<ul class="transactions">
+<table class="transactions">
+    <caption class="visually-hidden">Transactions for {{ history_scope }}{% if drilldown_filters %}, with the active filters applied{% endif %}</caption>
+    <colgroup><col class="date-column"><col class="description-column"><col class="category-column"><col class="amount-column"></colgroup>
+    <thead><tr><th scope="col" class="transaction-date">Date</th><th scope="col">Description</th><th scope="col" class="transaction-category">Category</th><th scope="col" class="transaction-amount">Amount</th></tr></thead>
+    <tbody>
     {% for transaction in transactions %}
-        <li>
-            <div class="transaction-details">
-                {{ transaction.description }}
-                <small>{{ transaction.date }} · {{ transaction.get_kind_display }}</small>
+        <tr class="transaction-row" data-transaction-row>
+            <td class="transaction-date">{{ transaction.date|date:"M j, Y" }}</td>
+            <td class="transaction-details">
+                <a data-transaction-dialog href="{% url 'edit_transaction' transaction.pk %}">{{ transaction.description }}</a>
+                <small class="mobile-transaction-meta">{{ transaction.date|date:"M j, Y" }} · {% if transaction.kind == "expense" %}{{ transaction.category }}{% else %}Income{% endif %}</small>
                 {% if transaction.next_due_date %}
                     <small>{{ transaction.get_recurrence_display }}, next due {{ transaction.next_due_date|date:"M j, Y" }}</small>
                 {% endif %}
-            </div>
-
-            <strong class="transaction-amount">
-                ${{ transaction.amount|floatformat:2 }}
-            </strong>
-
-            {% if not transaction.is_demo %}
-                <div class="transaction-actions">
-                    <a href="{% url 'edit_transaction' transaction.pk %}">Edit</a>
-                    <a href="{% url 'delete_transaction' transaction.pk %}">Delete</a>
-                </div>
-            {% endif %}
-        </li>
+            </td>
+            <td class="transaction-category">{% if transaction.kind == "expense" %}{{ transaction.category }}{% else %}Income{% endif %}</td>
+            <td class="transaction-amount"><strong>${{ transaction.amount|floatformat:2 }}</strong></td>
+        </tr>
     {% empty %}
-        <li>No transactions in this period</li>
+        <tr><td colspan="4">No transactions in this period</td></tr>
     {% endfor %}
-</ul>
+    </tbody>
+</table>
+</section>
+</div>
+<dialog id="transaction-dialog" aria-labelledby="transaction-dialog-heading">
+    <button type="button" class="dialog-close" aria-label="Close transaction dialog">×</button>
+    <p class="dialog-error" role="alert" hidden></p>
+    <div class="dialog-content"></div>
+</dialog>
+{% include "transactions/receipt_script.html" %}
+{% include "transactions/expense_script.html" %}
+{% include "transactions/dialog_script.html" %}
+<script>
+    // Delegation also covers the server-rendered charts replaced after a save.
+    document.addEventListener("pointerover", showChartDetail);
+    document.addEventListener("focusin", showChartDetail);
+    function showChartDetail(event) {
+        const point = event.target.closest('[data-chart-detail]');
+        if (point) document.getElementById('chart-detail').textContent = point.dataset.chartDetail;
+    }
+    document.addEventListener("change", (event) => {
+        if (event.target.matches('[data-auto-submit="month"] input[type="month"], [data-auto-submit="period"]')) {
+            event.target.form.requestSubmit();
+        }
+    });
+</script>
 {% endblock %}

@@ -1,0 +1,188 @@
+<script>
+(() => {
+    const dialog = document.getElementById('transaction-dialog');
+    if (!dialog.showModal) return; // Ordinary route links remain the fallback.
+    const content = dialog.querySelector('.dialog-content');
+    const error = dialog.querySelector('.dialog-error');
+    const closeButton = dialog.querySelector('.dialog-close');
+    const feedback = document.getElementById('transaction-feedback');
+    const headers = { 'X-Requested-With': 'XMLHttpRequest' };
+    let busy = false;
+    let loading = false;
+    let uncertain = false;
+    let generation = 0;
+    let controller;
+    let original = '';
+    let triggerHref = '';
+    let returnScroll = [0, 0];
+
+    function values() {
+        const form = content.querySelector('form');
+        if (!form) return '';
+        return JSON.stringify([...form.elements].filter(e => e.name && e.name !== 'csrfmiddlewaretoken')
+            .map(e => [e.name, e.value, e.checked, e.disabled]));
+    }
+    function showError(message) {
+        error.textContent = message;
+        error.hidden = false;
+    }
+    function installForm(html, resetDraft) {
+        content.innerHTML = html;
+        window.initializeExpenseForm(content);
+        if (resetDraft) original = values();
+        const target = content.querySelector('[aria-invalid="true"]') || content.querySelector('h2');
+        if (target) target.focus({ preventScroll: true });
+    }
+    function closeDialog() {
+        generation++;
+        loading = false;
+        controller?.abort();
+        dialog.close();
+        document.body.classList.remove('transaction-dialog-open');
+        const target = [...document.querySelectorAll('[data-transaction-dialog]')]
+            .find(a => a.href === triggerHref) || document.querySelector('[data-transaction-dialog]');
+        target?.focus({ preventScroll: true });
+        window.scrollTo(...returnScroll);
+    }
+    function dismiss() {
+        if (busy) return;
+        if (values() !== original && !window.confirm('Discard your unsaved changes?')) return;
+        closeDialog();
+    }
+    async function openForm(link) {
+        if (busy || loading) return;
+        loading = true;
+        uncertain = false;
+        triggerHref = link.href;
+        returnScroll = [window.scrollX, window.scrollY];
+        const current = ++generation;
+        controller = new AbortController();
+        original = '';
+        error.hidden = true;
+        feedback.hidden = true;
+        content.innerHTML = '<h2 id="transaction-dialog-heading">Loading transaction…</h2><p role="status">Please wait.</p>';
+        dialog.showModal();
+        document.body.classList.add('transaction-dialog-open');
+        try {
+            const response = await fetch(link.href, { headers, signal: controller.signal });
+            if (response.redirected || !response.ok) throw new Error('This transaction could not be opened. Close this window and try the page again.');
+            const html = await response.text();
+            if (current !== generation) return;
+            installForm(html, true);
+        } catch (failure) {
+            if (current === generation && failure.name !== 'AbortError') showError(failure.message);
+        } finally {
+            if (current === generation) loading = false;
+        }
+    }
+    async function refreshDashboard(message) {
+        const response = await fetch(window.location.href, { cache: 'no-store' });
+        if (response.redirected || !response.ok) throw new Error('refresh');
+        const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+        const updated = page.getElementById('dashboard-content');
+        if (!updated) throw new Error('refresh');
+        document.getElementById('dashboard-content').replaceWith(updated);
+        feedback.textContent = message;
+        feedback.hidden = false;
+    }
+    async function submit(form, url, deleting) {
+        if (busy || uncertain) return;
+        busy = true;
+        error.hidden = true;
+        dialog.setAttribute('aria-busy', 'true');
+        const data = new FormData(form);
+        // Freeze the submitted snapshot; later typing must not be discarded by a response.
+        const controls = [...dialog.querySelectorAll('button, input, select, textarea, fieldset')]
+            .map(control => [control, control.disabled]);
+        controls.forEach(([control]) => control.disabled = true);
+        let saved = false;
+        try {
+            const response = await fetch(url, { method: 'POST', headers, body: data });
+            if (response.status === 422 && !deleting) {
+                installForm(await response.text(), false);
+                return;
+            }
+            if (response.redirected || !response.ok) {
+                // A rejected request is never automatically replayed.
+                if (response.redirected || response.status >= 500 || response.status === 408) {
+                    // A gateway/server failure can arrive after the write committed.
+                    uncertain = true;
+                    showError('The result could not be confirmed. Check your transactions before trying again.');
+                } else {
+                    showError('Unable to save. Check your connection and session, then try again.');
+                }
+                return;
+            }
+            const result = await response.json();
+            saved = true;
+            try {
+                await refreshDashboard(result.message);
+            } catch (_) {
+                feedback.textContent = result.message + ' Refresh the page to update the dashboard.';
+                feedback.hidden = false;
+            }
+        } catch (_) {
+            uncertain = true;
+            showError('The result could not be confirmed. Check your transactions before trying again.');
+        } finally {
+            busy = false;
+            dialog.removeAttribute('aria-busy');
+            controls.forEach(([control, disabled]) => control.disabled = disabled);
+            if (uncertain) content.querySelector('button[type="submit"]')?.setAttribute('disabled', '');
+            if (saved) closeDialog();
+        }
+    }
+    document.addEventListener('click', event => {
+        if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        const link = event.target.closest('[data-transaction-dialog]');
+        if (link) {
+            event.preventDefault();
+            openForm(link);
+            return;
+        }
+        const row = event.target.closest('[data-transaction-row]');
+        if (row && !event.target.closest('a, button, input, select, textarea, label') && !window.getSelection().toString()) {
+            event.preventDefault();
+            openForm(row.querySelector('[data-transaction-dialog]'));
+        }
+    });
+    dialog.addEventListener('submit', event => {
+        event.preventDefault();
+        submit(event.target, event.target.action, false);
+    });
+    dialog.addEventListener('click', event => {
+        const dismissLink = event.target.closest('[data-close-transaction]');
+        if (dismissLink || event.target === closeButton) {
+            event.preventDefault();
+            dismiss();
+        }
+        const deletion = event.target.closest('[data-delete-transaction]');
+        if (deletion) {
+            event.preventDefault();
+            if (!busy && !uncertain && window.confirm('Delete “' + deletion.dataset.description + '”? This cannot be undone.')) {
+                submit(content.querySelector('form'), deletion.href, true);
+            }
+        }
+    });
+    dialog.addEventListener('cancel', event => {
+        event.preventDefault();
+        dismiss();
+    });
+    let backdropStart = false;
+    function outside(event) {
+        const rect = dialog.getBoundingClientRect();
+        return event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
+    }
+    dialog.addEventListener('pointerdown', event => { backdropStart = event.target === dialog && outside(event); });
+    dialog.addEventListener('click', event => {
+        if (backdropStart && event.target === dialog && outside(event)) dismiss();
+        backdropStart = false;
+    });
+    window.addEventListener('beforeunload', event => {
+        if (dialog.open && (busy || values() !== original)) {
+            event.preventDefault();
+            event.returnValue = '';
+        }
+    });
+})();
+</script>

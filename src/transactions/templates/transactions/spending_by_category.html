@@ -7,7 +7,7 @@
     main { max-width: 800px; }
     h2 { margin: 32px 0 16px; color: #104b25; font: 28px/1.2 Georgia, serif; }
     .month-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
-    .month-form div { flex: 1 1 220px; }
+    .month-form div { flex: 0 1 280px; min-width: 0; margin: 0; }
     .month-form input { margin: 0; }
     .category-chart { margin: 0; padding: 8px 24px; list-style: none; background: white; border: 1px solid #afc0ad; border-radius: 8px; }
     .category-chart li { padding: 16px 0; }
@@ -34,6 +34,7 @@
 
 <h2>{{ month|date:"F Y" }}</h2>
 {% if categories %}
+    <p>Bars compare with the largest category; percentages show share of total spending.</p>
     <ol class="category-chart">
         {% for row in categories %}
             <li>
@@ -41,6 +42,7 @@
                     <span class="category-name">{{ row.category }}</span>
                     <strong>${{ row.total|floatformat:2 }}</strong>
                 </div>
+                <p>{{ row.share }}% of total spending</p>
                 <div class="bar-track" aria-hidden="true">
                     <div class="bar" style="width: {{ row.width }}%"></div>
                 </div>

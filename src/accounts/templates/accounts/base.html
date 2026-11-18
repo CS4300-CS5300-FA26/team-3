@@ -7,26 +7,43 @@
     <style>
         body {
             margin: 0;
-            background: #f3f6f1;
+            background: #f6f7f2;
             color: #101820;
             font: 18px/1.5 Arial, sans-serif;
         }
-        header {
-            padding: 18px 3%;
+        .site-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px 24px;
+            padding: 14px 3%;
             background: #e9efe6;
             border-bottom: 1px solid #afc0ad;
             color: #104b25;
             font: 32px/1.2 Georgia, serif;
         }
-        header a { color: inherit; text-decoration: none; }
-        header a:hover, header a:focus-visible { text-decoration: underline; }
+        .brand { color: #104b25; text-decoration: none; font: 32px/1.2 Georgia, serif; }
+        a { color: #104b25; }
+        a:hover { text-decoration: underline; }
+        :focus-visible { outline: 3px solid #104b25; outline-offset: 3px; }
+        .site-nav { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; font: 18px/1.5 Arial, sans-serif; }
+        .site-nav a { padding: 8px 0; }
+        .site-nav form { margin: 0; padding: 0; border: 0; background: transparent; }
+        .site-nav button, .button.secondary { border: 1px solid #104b25; background: transparent; color: #104b25; }
+        .skip-link { position: absolute; left: 16px; top: -100px; padding: 10px; background: white; z-index: 1; }
+        .skip-link:focus { top: 12px; }
         main { max-width: 480px; margin: 48px auto; padding: 0 20px; }
         main > p { overflow-wrap: anywhere; }
         h1 { margin: 0 0 24px; color: #104b25; font: 36px/1.2 Georgia, serif; }
-        form { padding: 24px; background: white; border: 1px solid #afc0ad; border-radius: 8px; }
+        h2 { margin: 0 0 24px; color: #104b25; font: 28px/1.2 Georgia, serif; }
+        .panel, form { padding: 24px; background: white; border: 1px solid #afc0ad; border-radius: 10px; }
         form p { margin: 0 0 20px; }
-        label { display: block; margin-bottom: 6px; font-weight: bold; }
-        input {
+        label, legend { display: block; margin-bottom: 6px; font-weight: bold; }
+        fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+        fieldset label { font-weight: normal; }
+        form > div, fieldset > div { margin-bottom: 20px; }
+        select, input:not([type="radio"]):not([type="checkbox"]) {
             box-sizing: border-box;
             width: 100%;
             padding: 10px;
@@ -46,6 +63,16 @@
             display: inline-block;
             text-decoration: none;
         }
+        [role="status"] { padding: 12px 16px; background: #e9efe6; border-left: 4px solid #104b25; }
+        [role="status"]:empty { display: none; }
+        @media (max-width: 480px) {
+            main { margin: 32px auto; padding: 0 16px; }
+            .panel, form { padding: 20px; }
+            h1 { font-size: 32px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition: none !important; animation: none !important; }
+        }
         button:disabled { cursor: wait; opacity: 0.75; }
         .errorlist { margin: 0 0 8px; padding: 0; list-style: none; color: #9b1c1c; }
         .password-field { position: relative; display: block; }
@@ -58,9 +85,12 @@
     {% block extra_style %}{% endblock %}
 </head>
 <body>
-    <header><a href="{% if request.user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'sign_in' %}{% endif %}">BudgetWise</a></header>
-    {% include "accounts/navigation.html" %}
-    <main>{% block content %}{% endblock %}</main>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="site-header">
+        <a class="brand" href="{% url 'dashboard' %}">BudgetWise</a>
+        {% include "accounts/navigation.html" %}
+    </header>
+    <main id="main-content" tabindex="-1">{% block content %}{% endblock %}</main>
     <script>
         document.querySelectorAll('button[data-pending-label]').forEach((button) => {
             const form = button.form;

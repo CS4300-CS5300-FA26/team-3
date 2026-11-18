@@ -1,0 +1,37 @@
+# Dependabot checks pinned dependencies for updates. Vulnerability alerts and
+# security updates are turned on in the repository settings.
+# Its pull requests run the same CI checks and need the same approval as any other PR.
+version: 2
+updates:
+  # requirements.txt (runtime) and requirements-dev.txt (test and CI tools).
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "America/Denver"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    # One PR for routine minor and patch updates; major updates stay separate.
+    groups:
+      python-minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Actions in .github/workflows, which are pinned to commit SHAs.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "America/Denver"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      github-actions:
+        update-types: ["minor", "patch"]

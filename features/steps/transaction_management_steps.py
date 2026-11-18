@@ -156,7 +156,7 @@ def view_dashboard(context):
     )
 
 
-@then("I see Edit and Delete links for my transaction")
+@then("my transaction description links to its editor")
 def verify_transaction_links(context):
     from django.urls import reverse
 
@@ -167,12 +167,9 @@ def verify_transaction_links(context):
         args=[context.transaction.pk],
     )
 
-    delete_url = reverse(
-        "delete_transaction",
-        args=[context.transaction.pk],
-    )
-
     content = context.response.content.decode()
 
     assert f'href="{edit_url}"' in content
-    assert f'href="{delete_url}"' in content
+    assert "data-transaction-dialog" in content
+    assert ">Edit</a>" not in content
+    assert ">Delete</a>" not in content

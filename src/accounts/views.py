@@ -1,16 +1,19 @@
 from calendar import monthrange
+from collections import Counter
 from datetime import date, timedelta
 from decimal import Decimal
 from smtplib import SMTPException
+from urllib.parse import urlencode
 
 from django import forms
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_not_required, login_required
 from django.core import signing
 from django.core.exceptions import ValidationError
+from django.http import HttpResponseBadRequest, HttpResponseNotAllowed
 from django.db import IntegrityError
-from django.db.models import Count, Max, Min, Q, Sum
 from django.shortcuts import redirect, render, resolve_url
 from django.urls import reverse
 from django.utils import timezone
@@ -18,6 +21,8 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from accounts import recovery
+from accounts.dashboard import drilldown_context, monthly_context
 from accounts.forms import SetPasswordForm, SignupForm
 from accounts.identity import normalize_email
 from accounts.lockout import SignInRateLimited, check_login
@@ -30,6 +35,7 @@ from accounts.spending_summary import (
 )
 from accounts.verification import complete_registration, email_from_verification_token
 from transactions.models import Transaction
+from transactions.spending import category_totals
 
 
 @sensitive_post_parameters("email")
@@ -111,7 +117,7 @@ def sign_in(request):
     destination = request.POST.get("next", request.GET.get("next", ""))
     if destination not in {
         reverse(name)
-        for name in ("dashboard", "record_income", "record_expense", "spending_by_category")
+        for name in ("dashboard", "record_income", "record_expense", "spending_by_category", "account_settings")
     }:
         destination = reverse("dashboard")
 
@@ -173,13 +179,43 @@ class LowBalanceThresholdForm(forms.ModelForm):
         model = LowBalanceThreshold
         fields = ["amount"]
         labels = {"amount": "Safety threshold ($)"}
-        widgets = {"amount": forms.NumberInput(attrs={"min": "0", "step": "0.01"})}
+        widgets = {"amount": forms.TextInput(attrs={"inputmode": "decimal"})}
+
+
+@never_cache
+@require_http_methods(["GET", "POST"])
+@login_required(login_url="sign_in")
+def account_settings(request):
+    current_threshold = LowBalanceThreshold.objects.filter(owner=request.user).first()
+    action = request.POST.get("action", "threshold")
+    if request.method == "POST" and action == "reset_password":
+        # The recipient is always the session identity, never submitted form data.
+        recovery.send_recovery_email(request.user.email, request.META.get("REMOTE_ADDR", ""))
+        messages.info(request, "Password reset requested. Check your email for instructions.",
+                      extra_tags="password_reset")
+        return redirect("account_settings")
+    if request.method == "POST" and action != "threshold":
+        return HttpResponseBadRequest("Unknown account action.")
+    threshold_form = LowBalanceThresholdForm(
+        request.POST if request.method == "POST" else None,
+        instance=current_threshold,
+    )
+    if request.method == "POST" and threshold_form.is_valid():
+        LowBalanceThreshold.objects.update_or_create(
+            owner=request.user, defaults={"amount": threshold_form.cleaned_data["amount"]},
+        )
+        messages.success(request, "Safety threshold saved.", extra_tags="threshold")
+        return redirect("account_settings")
+    return render(request, "accounts/account_settings.html", {"threshold_form": threshold_form})
 
 
 # Show the current user's monthly budget dashboard
 @never_cache
+@require_http_methods(["GET", "POST"])
 @login_required(login_url="sign_in")
 def dashboard(request):
+    if request.method == "POST" and "explain_spending" not in request.POST:
+        return HttpResponseNotAllowed(["GET"])
     # Default to the current calendar month
     selected_month = timezone.localdate().replace(day=1)
     month_value = request.GET.get("month", request.POST.get("month", ""))
@@ -212,19 +248,6 @@ def dashboard(request):
 
     current_threshold = LowBalanceThreshold.objects.filter(owner=request.user).first()
     is_summary_request = request.method == "POST" and "explain_spending" in request.POST
-    threshold_form = LowBalanceThresholdForm(
-        request.POST if request.method == "POST" and not is_summary_request else None,
-        instance=current_threshold,
-    )
-    if request.method == "POST" and not is_summary_request and threshold_form.is_valid():
-        LowBalanceThreshold.objects.update_or_create(
-            owner=request.user,
-            defaults={"amount": threshold_form.cleaned_data["amount"]},
-        )
-        redirect_url = f"{reverse('dashboard')}?month={selected_month:%Y-%m}"
-        if selected_period != "selected_month":
-            redirect_url += f"&period={selected_period}"
-        return redirect(redirect_url)
 
     # Keep the monthly budget independent from the transaction-history filter.
     budget_transactions = Transaction.objects.filter(
@@ -269,24 +292,28 @@ def dashboard(request):
     else:
         period_start = None
         period_end = None
+    criteria, drilldown_filters = drilldown_context(request.GET, selected_month, selected_period)
+    if "kind" in criteria:
+        transactions = transactions.filter(kind=criteria["kind"])
+    if "category" in criteria:
+        transactions = transactions.filter(kind="expense", category=criteria["category"])
+    if "date" in criteria:
+        period_start = period_end = date.fromisoformat(criteria["date"])
+        transactions = transactions.filter(date=period_start)
     transactions = transactions.order_by("-date", "-id")
 
-    period_totals = transactions.aggregate(
-        income_total=Sum("amount", filter=Q(kind=Transaction.Kind.INCOME)),
-        expense_total=Sum("amount", filter=Q(kind=Transaction.Kind.EXPENSE)),
-        first_date=Min("date"),
-        last_date=Max("date"),
-    )
-    income_total = period_totals["income_total"] or Decimal("0.00")
-    expense_total = period_totals["expense_total"] or Decimal("0.00")
+    # These rows are also rendered below; sum their stored Decimal amounts exactly.
+    transactions = list(transactions)
+    income_total = sum((t.amount for t in transactions if t.kind == "income"), Decimal("0.00"))
+    expense_total = sum((t.amount for t in transactions if t.kind == "expense"), Decimal("0.00"))
     if selected_period == "all":
-        period_start = period_totals["first_date"]
-        period_end = period_totals["last_date"]
+        period_start = transactions[-1].date if transactions else None
+        period_end = transactions[0].date if transactions else None
 
     summary_observations = []
     summary_message = ""
     if is_summary_request:
-        if transactions.count() < 10:
+        if len(transactions) < 10:
             summary_message = "Not enough activity yet to summarize"
         else:
             category_totals = list(
@@ -307,13 +334,13 @@ def dashboard(request):
                         provider_observations, category_totals
                     )
 
-    # Calculate the remaining balance using existing model logic
-    remaining_budget = sum(
-        (item.signed_amount for item in budget_transactions),
-        Decimal("0.00"),
+    monthly = monthly_context(budget_transactions, selected_month, today)
+    show_history_totals = bool(criteria) or not (
+        period_start == selected_month and period_end == monthly["month_end"]
+        and selected_period != "all"
     )
     show_low_balance_warning = (
-        current_threshold is not None and remaining_budget < current_threshold.amount
+        current_threshold is not None and monthly["remaining_budget"] < current_threshold.amount
     )
     upcoming_fixed_expenses = [
         {"transaction": expense, "days_until_due": (expense.next_due_date - today).days}
@@ -342,12 +369,14 @@ def dashboard(request):
             "period_options": period_options,
             "period_start": period_start,
             "period_end": period_end,
-            "remaining_budget": remaining_budget,
+            **monthly,
+            "drilldown_filters": drilldown_filters,
+            "drilldown_query": urlencode(criteria),
+            "show_history_totals": show_history_totals,
+            "history_scope": period_options[selected_period],
             "selected_month": selected_month.isoformat()[:7],
             "selected_month_label": selected_month.strftime("%B %Y"),
-            "budget_transaction_count": budget_transactions.count(),
             "current_threshold": current_threshold,
-            "threshold_form": threshold_form,
             "show_low_balance_warning": show_low_balance_warning,
             "summary_observations": summary_observations,
             "summary_message": summary_message,
