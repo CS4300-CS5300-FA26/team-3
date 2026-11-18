@@ -108,7 +108,7 @@ def validate_spending_observations(observations, category_totals):
         if not isinstance(observation, str):
             continue
 
-        monetary_tokens = set(re.findall(r"\$\d+(?:\.\d{2})?", observation))
+        monetary_tokens = set(re.findall(r"\$\d+(?:,\d{3})*(?:\.\d+)?", observation))
         if not monetary_tokens or not monetary_tokens.issubset(known_amounts):
             continue
 
@@ -128,17 +128,19 @@ def validate_spending_observations(observations, category_totals):
                 if re.search(rf"\b{re.escape(category)}\b", clause, re.IGNORECASE)
             ]
             if not category_matches:
-                if re.search(r"\$\d+(?:\.\d{2})?", clause):
+                if re.search(r"\$\d+(?:,\d{3})*(?:\.\d+)?", clause):
                     valid = False
                     break
                 continue
 
+            # Multiple pairs in one clause are ambiguous (amounts may be swapped).
+            # Separate clauses such as "Food ... and Housing ..." remain supported.
+            if len(category_matches) != 1:
+                valid = False
+                break
             matched_category_count += len(category_matches)
-            clause_amounts = set(re.findall(r"\$\d+(?:\.\d{2})?", clause))
-            if not clause_amounts or any(
-                known_totals[category] not in clause_amounts
-                for category in category_matches
-            ):
+            clause_amounts = set(re.findall(r"\$\d+(?:,\d{3})*(?:\.\d+)?", clause))
+            if clause_amounts != {known_totals[category_matches[0]]}:
                 valid = False
                 break
 

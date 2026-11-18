@@ -316,22 +316,23 @@ def dashboard(request):
         if len(transactions) < 10:
             summary_message = "Not enough activity yet to summarize"
         else:
-            category_totals = list(
-                transactions.filter(kind=Transaction.Kind.EXPENSE)
-                .values("category")
-                .annotate(total=Sum("amount"), count=Count("id"))
-                .order_by("-total", "category")
-            )
-            if not category_totals:
+            counts = Counter(t.category for t in transactions if t.kind == Transaction.Kind.EXPENSE)
+            summary_totals = [
+                {"category": row["category"], "total": row["total"], "count": counts[row["category"]]}
+                for row in category_totals(
+                    {"kind": t.kind, "category": t.category, "amount": t.amount} for t in transactions
+                )
+            ]
+            if not summary_totals:
                 summary_message = "No expense activity yet to summarize"
             else:
                 try:
-                    provider_observations = generate_spending_summary(category_totals)
+                    provider_observations = generate_spending_summary(summary_totals)
                 except SpendingSummaryError:
                     summary_message = "Unable to generate spending summary right now."
                 else:
                     summary_observations = validate_spending_observations(
-                        provider_observations, category_totals
+                        provider_observations, summary_totals
                     )
 
     monthly = monthly_context(budget_transactions, selected_month, today)

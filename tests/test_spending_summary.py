@@ -130,3 +130,9 @@ class SpendingObservationValidationTests(TestCase):
             validate_spending_observations([observation], self.totals),
             [observation],
         )
+
+    def test_rejects_comma_separated_swapped_amounts_and_partial_money_tokens(self):
+        self.assertEqual(validate_spending_observations([
+            "Housing was $20.00, Food was $200.00.",
+            "Food totaled $20.001.",
+        ], self.totals), [])
