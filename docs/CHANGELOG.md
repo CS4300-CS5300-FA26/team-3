@@ -19,8 +19,9 @@ Keep validation results and execution history out of this record.
 - Issue and PR pending. [Dependabot](../.github/dependabot.yml) checks the pip
   requirements and pinned GitHub Actions weekly and opens update PRs, grouping
   minor and patch updates. The CI pip-audit check still blocks known
-  vulnerabilities; Dependabot adds update PRs and Security tab alerts. The Luna
-  review skips Dependabot PRs because they cannot use the OpenAI secret.
+  vulnerabilities. Dependabot alerts and security updates are repository
+  settings, not part of this file. The Luna review skips Dependabot PRs because
+  they cannot use the OpenAI secret.
 
 ### 2026-11-15 — Explain spending from aggregated category totals
 
