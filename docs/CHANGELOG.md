@@ -14,20 +14,6 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
-### 2026-11-16 — Explore monthly spending from the dashboard
-
-- [#74](https://github.com/CS4300-CS5300-FA26/team-3/issues/74); PR pending.
-  Group monthly income, expenses and remaining budget above ranked category
-  spending and a cumulative daily chart. [Dashboard calculations](../src/accounts/dashboard.py)
-  use exact Decimal amounts and distinguish chart cutoffs from future-dated totals.
-  Align dashboard controls and use compact desktop transaction columns, with
-  stacked date/category details on phones.
-- Keep kind, category and day drill-downs in the URL with removable criteria.
-  Chart actions select their own month; independent history presets remain labeled.
-  Reuse the existing transaction dialogs and reminder behavior. Receipt scanning,
-  spending explanations and the enhanced details dialog remain later integration work.
-  [Acceptance scenarios](../features/dashboard_exploration.feature).
-
 ### 2026-11-15 — Explain spending from aggregated category totals
 
 - Add the D9 dashboard action for selected-period spending summaries. The request
@@ -36,6 +22,20 @@ Keep validation results and execution history out of this record.
   transactions are excluded. [Summary service](../src/accounts/spending_summary.py)
   and [dashboard tests](../tests/test_transaction_period_filter.py) cover the
   activity threshold, response validation, and provider failures.
+
+### 2026-11-14 — Email upcoming fixed expense reminders
+
+- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.
+  The private [daily check](../src/transactions/management/commands/send_fixed_expense_reminders.py)
+  emails active students about fixed daily, weekly, or monthly expenses inside
+  their saved notice window, including a missed first day. It skips demo
+  entries, missing addresses, and overdue expenses; no text is sent.
+  [Email scenarios](../features/fixed_expense_reminders.feature).
+- A successful due-date email is recorded on the schedule so a repeated check
+  does not resend it; a later due date can receive a new email. Individual mail
+  failures remain retryable and make the check fail after other schedules are
+  processed. The [scheduled workflow](../.github/workflows/fixed-expense-reminders.yml)
+  invokes the live Lambda alias through a private event, not an HTTP route.
 
 ### 2026-11-14 — Choose when fixed expense reminders appear
 

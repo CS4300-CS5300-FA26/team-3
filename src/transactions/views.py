@@ -269,7 +269,9 @@ def edit_transaction(request, pk):
         form = form_class(request.POST, instance=transaction)
 
         if form.is_valid():
-            form.save()
+            edited = form.save(commit=False)
+            # Preserve command-managed fields that may have changed since this edit loaded.
+            edited.save(update_fields=form.fields)
             return _saved_response(request, "Transaction updated.", "dashboard")
     else:
         initial = {}
