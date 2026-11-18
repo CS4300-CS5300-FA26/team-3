@@ -1,7 +1,11 @@
 from calendar import monthrange
 from datetime import date, timedelta
 import unicodedata
-
+import tempfile
+from pathlib import Path
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from .services.receipt_scanner import scan_receipt
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -214,6 +218,73 @@ def record_expense(request):
         return redirect("record_expense")
 
     return render(request, "transactions/record_expense.html", {"form": form})
+
+
+
+@login_required
+@require_POST
+def scan_receipt_upload(request):
+    """
+    Accept a receipt image and return its detected total.
+
+    The endpoint does not save or modify any transactions.
+    """
+    receipt = request.FILES.get("receipt")
+
+    if receipt is None:
+        return JsonResponse(
+            {"error": "Please upload a receipt image."},
+            status=400,
+        )
+
+    allowed_types = {
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+    }
+
+    extension = allowed_types.get(receipt.content_type)
+
+    if extension is None:
+        return JsonResponse(
+            {"error": "Unsupported receipt image format."},
+            status=400,
+        )
+
+    max_file_size = 5 * 1024 * 1024
+
+    if receipt.size > max_file_size:
+        return JsonResponse(
+            {"error": "Receipt image must be 5 MB or smaller."},
+            status=400,
+        )
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        image_path = Path(temp_dir) / f"receipt{extension}"
+
+        with image_path.open("wb") as destination:
+            for chunk in receipt.chunks():
+                destination.write(chunk)
+
+        try:
+            amount = scan_receipt(image_path)
+        except RuntimeError:
+            return JsonResponse(
+                {"error": "Receipt scanning is currently unavailable."},
+                status=503,
+            )
+
+    if amount is None:
+        return JsonResponse(
+            {
+                "amount": None,
+                "message": (
+                    "Could not read a total, please enter it manually"
+                ),
+            }
+        )
+
+    return JsonResponse({"amount": str(amount)})
 
 
 @login_required

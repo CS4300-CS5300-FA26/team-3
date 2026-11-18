@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -35,7 +36,10 @@
             border-radius: 4px;
             font: inherit;
         }
-        select:focus-visible, input:focus-visible, button:focus-visible { outline: 3px solid #104b25; outline-offset: 2px; }
+        select:focus-visible, input:focus-visible, button:focus-visible {
+            outline: 3px solid #104b25;
+            outline-offset: 2px;
+        }
         button {
             padding: 10px 18px;
             border: 0;
@@ -45,8 +49,24 @@
             font: inherit;
             cursor: pointer;
         }
+        button:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
         .errorlist { margin: 0 0 8px; padding: 0; list-style: none; color: #9b1c1c; }
         [role="status"] { padding: 12px; background: #e9efe6; border-left: 4px solid #104b25; }
+        .receipt-help {
+            margin: 6px 0;
+            color: #56616b;
+            font-size: 14px;
+        }
+        .receipt-status {
+            margin: 10px 0 0;
+            font-size: 15px;
+        }
+        .receipt-error {
+            color: #9b1c1c;
+        }
     </style>
 </head>
 <body>
@@ -54,14 +74,134 @@
     {% include "accounts/navigation.html" %}
     <main>
         <h1>Record expense</h1>
+
         {% for message in messages %}
             <p role="status">{{ message }}</p>
         {% endfor %}
-        <form method="post">
+
+        <form method="post" id="expense-form">
             {% csrf_token %}
+
+            <div>
+                <label for="receipt-upload">Scan a receipt (optional)</label>
+                <input
+                    type="file"
+                    id="receipt-upload"
+                    accept="image/jpeg,image/png,image/webp"
+                >
+                <p class="receipt-help">
+                    Upload a JPG, PNG, or WebP image (maximum 5 MB).
+                    The detected total will fill the amount field.
+                </p>
+                <p
+                    id="receipt-status"
+                    class="receipt-status"
+                    role="status"
+                    aria-live="polite"
+                ></p>
+            </div>
+
             {% include "transactions/expense_fields.html" %}
-            <button type="submit">Save expense</button>
+
+            <button type="submit" id="save-expense">Save expense</button>
         </form>
     </main>
+
+    <script>
+        const receiptUpload = document.getElementById("receipt-upload");
+        const receiptStatus = document.getElementById("receipt-status");
+        const amountInput = document.getElementById("id_amount");
+        const csrfToken = document.querySelector(
+            "#expense-form input[name='csrfmiddlewaretoken']"
+        ).value;
+
+        let scanController = null;
+
+        receiptUpload.addEventListener("change", async function () {
+            if (scanController) {
+                scanController.abort();
+            }
+
+            const file = receiptUpload.files[0];
+
+            if (!file) {
+                receiptStatus.textContent = "";
+                return;
+            }
+
+            const allowedTypes = [
+                "image/jpeg",
+                "image/png",
+                "image/webp"
+            ];
+
+            if (!allowedTypes.includes(file.type)) {
+                receiptStatus.textContent = "Unsupported receipt image format.";
+                receiptStatus.classList.add("receipt-error");
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                receiptStatus.textContent = "Receipt image must be 5 MB or smaller.";
+                receiptStatus.classList.add("receipt-error");
+                return;
+            }
+
+            receiptStatus.classList.remove("receipt-error");
+            receiptStatus.textContent = "Scanning receipt...";
+
+            const formData = new FormData();
+            formData.append("receipt", file);
+
+            const controller = new AbortController();
+            scanController = controller;
+
+            try {
+                const response = await fetch(
+                    "{% url 'scan_receipt_upload' %}",
+                    {
+                        method: "POST",
+                        headers: {
+                            "X-CSRFToken": csrfToken
+                        },
+                        body: formData,
+                        signal: controller.signal
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.error || "Receipt scanning failed."
+                    );
+                }
+
+                if (data.amount !== null && data.amount !== undefined) {
+                    amountInput.value = data.amount;
+                    receiptStatus.textContent =
+                        "Receipt total detected: $" + data.amount +
+                        ". You can edit the amount before saving.";
+                } else {
+                    receiptStatus.textContent =
+                        data.message ||
+                        "Could not read a total, please enter it manually";
+                    receiptStatus.classList.add("receipt-error");
+                }
+            } catch (error) {
+                if (error.name === "AbortError") {
+                    return;
+                }
+
+                receiptStatus.textContent =
+                    error.message || "Receipt scanning failed.";
+                receiptStatus.classList.add("receipt-error");
+            } finally {
+                if (scanController === controller) {
+                    scanController = null;
+                }
+            }
+        });
+    </script>
 </body>
 </html>
