@@ -14,6 +14,13 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-11-17 — Add Dependabot dependency scans
+
+- Issue and PR pending. [Dependabot](../.github/dependabot.yml) checks the pip
+  requirements and pinned GitHub Actions weekly and opens update PRs, grouping
+  minor and patch updates. The CI pip-audit check still blocks known
+  vulnerabilities; Dependabot adds update PRs and Security tab alerts.
+
 ### 2026-11-15 — Explain spending from aggregated category totals
 
 - Add the D9 dashboard action for selected-period spending summaries. The request

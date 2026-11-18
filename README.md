@@ -62,6 +62,12 @@ smallest affected pin, and rerun CI. Any proposed temporary exception needs an
 issue recording the advisory ID, reason, owner, and expiry before changing the
 audit command; no exceptions are currently configured.
 
+Dependabot ([.github/dependabot.yml](.github/dependabot.yml)) checks the pip
+requirements and the pinned GitHub Actions each Monday and opens update PRs,
+grouping routine minor and patch updates. Its vulnerability alerts are listed
+under the repository's Security tab. Dependabot PRs run the same CI checks and
+need the same approval before merging.
+
 The certifi update and its advisory are recorded in the
 [changelog](docs/CHANGELOG.md#2026-10-29--address-sprint-1-ci-feedback).
 Use the latest audit artifact for current results; dependency counts and findings
@@ -564,3 +570,18 @@ behavior changed, then verified the focused email and scheduler checks. The
 daily check uses each student's saved notice and avoids repeating a recorded
 due-date email; a failed delivery can be retried on a later check. Text
 messages are outside this change.
+
+### Sprint 3: Nov 17, 2026 — Dependabot dependency scans
+
+**Tool:** Claude Code
+
+**What it helped with:**
+
+- Compared the Sprint 3 rubric with the CI pipeline and found that the
+  Dependabot requirement was not yet configured.
+- Drafted the Dependabot configuration for the pip requirements and pinned
+  GitHub Actions.
+
+**How we used the result:** Noah kept pip-audit in CI as the blocking check and
+added Dependabot for weekly update PRs and vulnerability alerts, with routine
+updates grouped to keep review manageable.
