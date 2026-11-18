@@ -65,6 +65,14 @@ smallest affected pin, and rerun CI. Any proposed temporary exception needs an
 issue recording the advisory ID, reason, owner, and expiry before changing the
 audit command; no exceptions are currently configured.
 
+Dependabot ([.github/dependabot.yml](.github/dependabot.yml)) checks the pip
+requirements and the pinned GitHub Actions each Monday and opens update PRs,
+grouping routine minor and patch updates. Vulnerability alerts and security
+updates are turned on in the repository settings, and alerts are listed under
+the Security tab. Dependabot PRs run the same CI checks, skip the Luna review,
+and need the same approval before merging. Use `@dependabot rebase` to update
+a Dependabot PR that is behind `main`.
+
 The certifi update and its advisory are recorded in the
 [changelog](docs/CHANGELOG.md#2026-10-29--address-sprint-1-ci-feedback).
 Use the latest audit artifact for current results; dependency counts and findings
@@ -589,3 +597,17 @@ We integrated receipt scanning into the existing transaction workflow,
 validated supported image formats and upload limits, and ensured scanning
 does not automatically create an expense. We verified the implementation
 with 398 passing Django tests (8 skipped) and the Behave acceptance suite.
+### Sprint 3: Nov 17, 2026 — Dependabot dependency scans
+
+**Tool:** Claude Code
+
+**What it helped with:**
+
+- Compared the Sprint 3 rubric with the CI pipeline and found that the
+  Dependabot requirement was not yet configured.
+- Drafted the Dependabot configuration for the pip requirements and pinned
+  GitHub Actions.
+
+**How we used the result:** Noah kept pip-audit in CI as the blocking check and
+added Dependabot for weekly update PRs alongside its vulnerability alerts, with
+routine updates grouped to keep review manageable.
