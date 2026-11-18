@@ -12,7 +12,6 @@ from django.core import signing
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseBadRequest
 from django.db import IntegrityError
-from django.db.models import Max, Min, Q, Sum
 from django.shortcuts import redirect, render, resolve_url
 from django.urls import reverse
 from django.utils import timezone
@@ -21,6 +20,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from accounts import recovery
+from accounts.dashboard import drilldown_context, monthly_context
 from accounts.forms import SetPasswordForm, SignupForm
 from accounts.identity import normalize_email
 from accounts.lockout import SignInRateLimited, check_login
@@ -278,27 +278,31 @@ def dashboard(request):
     else:
         period_start = None
         period_end = None
+    criteria, drilldown_filters = drilldown_context(request.GET, selected_month, selected_period)
+    if "kind" in criteria:
+        transactions = transactions.filter(kind=criteria["kind"])
+    if "category" in criteria:
+        transactions = transactions.filter(kind="expense", category=criteria["category"])
+    if "date" in criteria:
+        period_start = period_end = date.fromisoformat(criteria["date"])
+        transactions = transactions.filter(date=period_start)
     transactions = transactions.order_by("-date", "-id")
 
-    period_totals = transactions.aggregate(
-        income_total=Sum("amount", filter=Q(kind=Transaction.Kind.INCOME)),
-        expense_total=Sum("amount", filter=Q(kind=Transaction.Kind.EXPENSE)),
-        first_date=Min("date"),
-        last_date=Max("date"),
-    )
-    income_total = period_totals["income_total"] or Decimal("0.00")
-    expense_total = period_totals["expense_total"] or Decimal("0.00")
+    # These rows are also rendered below; sum their stored Decimal amounts exactly.
+    transactions = list(transactions)
+    income_total = sum((t.amount for t in transactions if t.kind == "income"), Decimal("0.00"))
+    expense_total = sum((t.amount for t in transactions if t.kind == "expense"), Decimal("0.00"))
     if selected_period == "all":
-        period_start = period_totals["first_date"]
-        period_end = period_totals["last_date"]
+        period_start = transactions[-1].date if transactions else None
+        period_end = transactions[0].date if transactions else None
 
-    # Calculate the remaining balance using existing model logic
-    remaining_budget = sum(
-        (item.signed_amount for item in budget_transactions),
-        Decimal("0.00"),
+    monthly = monthly_context(budget_transactions, selected_month, today)
+    show_history_totals = bool(criteria) or not (
+        period_start == selected_month and period_end == monthly["month_end"]
+        and selected_period != "all"
     )
     show_low_balance_warning = (
-        current_threshold is not None and remaining_budget < current_threshold.amount
+        current_threshold is not None and monthly["remaining_budget"] < current_threshold.amount
     )
     upcoming_fixed_expenses = [
         {"transaction": expense, "days_until_due": (expense.next_due_date - today).days}
@@ -327,10 +331,12 @@ def dashboard(request):
             "period_options": period_options,
             "period_start": period_start,
             "period_end": period_end,
-            "remaining_budget": remaining_budget,
+            **monthly,
+            "drilldown_filters": drilldown_filters,
+            "show_history_totals": show_history_totals,
+            "history_scope": period_options[selected_period],
             "selected_month": selected_month.isoformat()[:7],
             "selected_month_label": selected_month.strftime("%B %Y"),
-            "budget_transaction_count": budget_transactions.count(),
             "current_threshold": current_threshold,
             "show_low_balance_warning": show_low_balance_warning,
             "upcoming_fixed_expenses": upcoming_fixed_expenses,

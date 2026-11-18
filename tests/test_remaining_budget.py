@@ -80,7 +80,7 @@ class RemainingBudgetViewTests(TestCase):
         content = response.content.decode()
 
         self.assertContains(response, "October 2026")
-        self.assertContains(response, "Income minus expenses for this month")
+        self.assertNotContains(response, "Income minus expenses for this month")
         self.assertContains(response, "Based on 4 transactions")
         self.assertIn('data-auto-submit="month"', content)
         self.assertNotContains(response, "View month")

@@ -545,3 +545,17 @@ the original behavior, but let each student choose 1–30 days, with a bounded
 confirmed the focused Django tests and Behave examples passed. Matching
 payments advance daily, weekly, or monthly dates. Email reminders are planned
 for a separate PR.
+
+### Sprint 3: Nov 16, 2026 — Monthly dashboard and spending exploration
+
+**Tool:** Codex
+
+**What it helped with:** Implemented the third UI/UX increment for #74: monthly
+summaries, category and cumulative charts, and URL-backed transaction filters.
+
+**How we used the result:** Kept the selected month separate from history presets,
+used Decimal amounts for chart calculations, and checked date boundaries and
+filter behavior with tests and local desktop/mobile browser checks. Reused the
+existing dialogs and preserved recurrence, reminders and payment matching.
+Compared the rendered dashboard with the approved mockup and corrected toolbar
+alignment, chart sizing, and desktop/mobile transaction layout.

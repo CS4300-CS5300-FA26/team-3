@@ -6,7 +6,6 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
@@ -15,6 +14,7 @@ from django.views.decorators.vary import vary_on_headers
 from django.utils import timezone
 
 from .models import Transaction
+from .spending import category_totals
 
 
 class IncomeForm(forms.ModelForm):
@@ -327,32 +327,9 @@ def month_from_query(value):
 def spending_by_category(request):
     month = month_from_query(request.GET.get("month", ""))
 
-    # One row per category with its total, largest first. Equal totals are
-    # ordered by name so the chart never reshuffles between page loads.
-    totals = list(
-        Transaction.objects.filter(
-            owner=request.user,
-            is_demo=False,
-            kind=Transaction.Kind.EXPENSE,
-            date__year=month.year,
-            date__month=month.month,
-        )
-        .values("category")
-        .annotate(total=Sum("amount"))
-        .order_by("-total", "category")
-    )
-
-    # Each bar's length is its share of the largest category, kept as exact
-    # decimals and formatted here so the template only places the value.
-    largest = totals[0]["total"] if totals else None
-    categories = [
-        {
-            "category": row["category"],
-            "total": row["total"],
-            "width": f"{row['total'] * 100 / largest:.2f}",
-        }
-        for row in totals
-    ]
+    categories = category_totals(Transaction.objects.filter(
+        owner=request.user, is_demo=False, date__year=month.year, date__month=month.month,
+    ).values("kind", "category", "amount"))
 
     return render(
         request,

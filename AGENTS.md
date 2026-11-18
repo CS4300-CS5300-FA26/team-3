@@ -31,6 +31,13 @@ requirements*.txt                 Runtime and development dependencies
 .flake8                           Python lint rules
 ```
 
+`accounts/dashboard.py` builds monthly summaries, cumulative days and URL-backed
+exploration links for the dashboard view. `transactions/spending.py` shares exact
+category ranking with the spending fallback page. The dashboard template includes
+`dashboard_charts.html` and `dashboard_style.html`; delegated chart details survive
+transaction-dialog refreshes. Coverage is in `tests/test_dashboard_exploration.py`
+and `features/dashboard_exploration.feature`.
+
 - Identify the requirement, issue, or acceptance criterion being addressed. Read
   its current details and affected source/tests; the initial backlog and sprint
   plan do not prove a feature is implemented. Never invent identifiers or rules.

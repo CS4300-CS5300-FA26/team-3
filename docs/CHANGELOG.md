@@ -14,6 +14,20 @@ Keep validation results and execution history out of this record.
 
 ## Changes
 
+### 2026-11-16 — Explore monthly spending from the dashboard
+
+- [#74](https://github.com/CS4300-CS5300-FA26/team-3/issues/74); PR pending.
+  Group monthly income, expenses and remaining budget above ranked category
+  spending and a cumulative daily chart. [Dashboard calculations](../src/accounts/dashboard.py)
+  use exact Decimal amounts and distinguish chart cutoffs from future-dated totals.
+  Align dashboard controls and use compact desktop transaction columns, with
+  stacked date/category details on phones.
+- Keep kind, category and day drill-downs in the URL with removable criteria.
+  Chart actions select their own month; independent history presets remain labeled.
+  Reuse the existing transaction dialogs and reminder behavior. Receipt scanning,
+  spending explanations and the enhanced details dialog remain later integration work.
+  [Acceptance scenarios](../features/dashboard_exploration.feature).
+
 ### 2026-11-14 — Choose when fixed expense reminders appear
 
 - [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.
