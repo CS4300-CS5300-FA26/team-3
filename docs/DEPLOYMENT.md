@@ -14,6 +14,11 @@ Cloudflare manages DNS and filters public HTTP traffic. API Gateway calls the `l
 
 Set `DJANGO_SECRET_KEY` in Lambda to a private, randomly generated value of at least 50 characters. Never commit its value. Dependencies are recorded in `requirements.txt`.
 
+For D9 spending summaries, set `OPENAI_API_KEY` in the `budgetwise` Lambda
+environment. The default model is `gpt-6-luna`; optionally set
+`OPENAI_SPENDING_SUMMARY_MODEL` to override it. Keep both values out of source
+control and GitHub workflow files.
+
 GitHub Actions builds the deployment ZIP from `src/` and Linux-compatible dependencies, excluding local databases, `.env` files, virtual environments, and caches.
 
 ## Signup email

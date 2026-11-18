@@ -28,6 +28,15 @@ Keep validation results and execution history out of this record.
   spending explanations and the enhanced details dialog remain later integration work.
   [Acceptance scenarios](../features/dashboard_exploration.feature).
 
+### 2026-11-15 — Explain spending from aggregated category totals
+
+- Add the D9 dashboard action for selected-period spending summaries. The request
+  sends only category totals and transaction counts to the configured OpenAI
+  Responses API; descriptions, other students' data, demo rows, and out-of-period
+  transactions are excluded. [Summary service](../src/accounts/spending_summary.py)
+  and [dashboard tests](../tests/test_transaction_period_filter.py) cover the
+  activity threshold, response validation, and provider failures.
+
 ### 2026-11-14 — Choose when fixed expense reminders appear
 
 - [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.

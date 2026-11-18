@@ -53,6 +53,23 @@ class DashboardExplorationTests(TestCase):
         self.assertContains(response, "Filtered history totals")
         self.assertNotContains(response, "Bars compare with the largest category")
 
+    @patch("accounts.views.generate_spending_summary")
+    def test_explanation_keeps_exact_totals_after_dashboard_exploration(self, generate_summary):
+        for amount in ("0.10", "0.20") * 5:
+            self.entry(amount, "2026-11-01")
+        self.entry("99", "2026-11-01", owner=self.other)
+        self.entry("88", "2026-11-01", is_demo=True)
+        self.entry("77", "2026-10-01")
+        generate_summary.return_value = ["Food totaled $1.50."]
+        response = self.client.post(reverse("explain_spending"), {
+            "month": "2026-11", "period": "selected_month", "explain_spending": "1",
+        })
+        self.assertContains(response, "Food totaled $1.50.")
+        generate_summary.assert_called_once_with([
+            {"category": "Food", "total": Decimal("1.50"), "count": 10},
+        ])
+        self.assertEqual(response.context["monthly_expenses"], Decimal("1.50"))
+
     def test_dashboard_omits_repeated_explanations_but_keeps_period_controls(self):
         response = self.dashboard()
         for text in ("Income minus expenses for this month", "History: Selected month", "all recorded expenses"):

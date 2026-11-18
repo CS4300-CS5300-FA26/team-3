@@ -101,6 +101,26 @@
     <a href="{{ clear_filters_url }}">Clear filters</a>
 </nav>
 {% endif %}
+<form method="post" action="{% url 'explain_spending' %}">
+    {% csrf_token %}
+    <input type="hidden" name="month" value="{{ selected_month }}">
+    <input type="hidden" name="period" value="{{ selected_period }}">
+    <button type="submit" name="explain_spending">Explain my spending</button>
+</form>
+{% if summary_message or summary_observations %}
+<section class="spending-summary" aria-live="polite">
+    {% if summary_message %}
+        <p>{{ summary_message }}</p>
+    {% else %}
+        <h3>Spending observations</h3>
+        <ul>
+            {% for observation in summary_observations %}
+                <li>{{ observation }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</section>
+{% endif %}
 <table class="transactions">
     <caption class="visually-hidden">Transactions for {{ history_scope }}{% if drilldown_filters %}, with the active filters applied{% endif %}</caption>
     <colgroup><col class="date-column"><col class="description-column"><col class="category-column"><col class="amount-column"></colgroup>
