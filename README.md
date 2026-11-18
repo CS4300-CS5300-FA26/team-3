@@ -29,6 +29,11 @@ python src/manage.py runserver 0.0.0.0:3000
 
 `check` validates the Django project, and `migrate` creates or updates local SQLite tables. The development server uses port 3000 for DevEdu; open `http://localhost:3000/` for a local setup. Stop it with `Ctrl+C`. The root page requires sign-in and displays the current student's transactions and monthly remaining budget.
 
+To enable AI spending observations locally, set `OPENAI_API_KEY` before starting
+the server. The optional `OPENAI_SPENDING_SUMMARY_MODEL` selects the model and
+defaults to `gpt-6-luna`. Without a key, the dashboard keeps working and shows a
+temporary-unavailable message when a summary is requested.
+
 Development always accepts `localhost`, `127.0.0.1`, and `[::1]`. Set
 `DJANGO_DEVELOPMENT_HOSTS` only if you access the server through another hostname,
 using that hostname without a scheme, port, or path (or a comma-separated list).

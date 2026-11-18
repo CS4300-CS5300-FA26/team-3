@@ -36,6 +36,23 @@ class AccountSettingsTests(TestCase):
             self.assertContains(response, 'href="/account/"', count=1)
             self.assertContains(response, f'action="{reverse("sign_out")}"', count=1)
 
+    @patch("accounts.views.generate_spending_summary")
+    def test_spending_summary_preserves_account_threshold_and_requires_csrf(self, generate_summary):
+        threshold = LowBalanceThreshold.objects.create(owner=self.user, amount="12.34")
+        data = {"explain_spending": "1", "month": "2026-10", "amount": "999"}
+        response = self.client.post(reverse("explain_spending"), data)
+        self.assertContains(response, "Not enough activity yet to summarize")
+        self.assertNotContains(response, 'name="amount"')
+        threshold.refresh_from_db()
+        self.assertEqual(str(threshold.amount), "12.34")
+        generate_summary.assert_not_called()
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
+        self.assertEqual(csrf_client.post(reverse("explain_spending"), data).status_code, 403)
+        self.client.logout()
+        self.assertRedirects(self.client.post(reverse("explain_spending"), data),
+                             reverse("sign_in") + "?next=" + reverse("explain_spending"))
+
     @override_settings(DEBUG=False)
     def test_dashboard_navigation_is_visible_only_signed_in_away_from_dashboard(self):
         link = f'<a href="{reverse("dashboard")}">Dashboard</a>'
