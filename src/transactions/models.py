@@ -56,6 +56,8 @@ class Transaction(models.Model):
         db_default=3,
         validators=[MinValueValidator(1), MaxValueValidator(30)],
     )
+    # One email per due-date occurrence, even if the daily check is retried.
+    last_reminded_due_date = models.DateField(null=True, blank=True)
 
     class Meta:
         ordering = ["-date", "-id"]

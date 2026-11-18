@@ -22,6 +22,21 @@ Keep validation results and execution history out of this record.
   transactions are excluded. [Summary service](../src/accounts/spending_summary.py)
   and [dashboard tests](../tests/test_transaction_period_filter.py) cover the
   activity threshold, response validation, and provider failures.
+
+### 2026-11-14 — Email upcoming fixed expense reminders
+
+- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.
+  The private [daily check](../src/transactions/management/commands/send_fixed_expense_reminders.py)
+  emails active students about fixed daily, weekly, or monthly expenses inside
+  their saved notice window, including a missed first day. It skips demo
+  entries, missing addresses, and overdue expenses; no text is sent.
+  [Email scenarios](../features/fixed_expense_reminders.feature).
+- A successful due-date email is recorded on the schedule so a repeated check
+  does not resend it; a later due date can receive a new email. Individual mail
+  failures remain retryable and make the check fail after other schedules are
+  processed. The [scheduled workflow](../.github/workflows/fixed-expense-reminders.yml)
+  invokes the live Lambda alias through a private event, not an HTTP route.
+
 ### 2026-11-14 — Choose when fixed expense reminders appear
 
 - [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.
