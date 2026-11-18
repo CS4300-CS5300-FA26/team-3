@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_not_required, login_required
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from django.db.models import Max, Min, Q, Sum
+from django.db.models import Count, Max, Min, Q, Sum
 from django.shortcuts import redirect, render, resolve_url
 from django.urls import reverse
 from django.utils import timezone
@@ -23,6 +23,11 @@ from accounts.identity import normalize_email
 from accounts.lockout import SignInRateLimited, check_login
 from accounts.models import LowBalanceThreshold
 from accounts.signup import send_signup_email
+from accounts.spending_summary import (
+    SpendingSummaryError,
+    generate_spending_summary,
+    validate_spending_observations,
+)
 from accounts.verification import complete_registration, email_from_verification_token
 from transactions.models import Transaction
 
@@ -177,7 +182,7 @@ class LowBalanceThresholdForm(forms.ModelForm):
 def dashboard(request):
     # Default to the current calendar month
     selected_month = timezone.localdate().replace(day=1)
-    month_value = request.GET.get("month", "")
+    month_value = request.GET.get("month", request.POST.get("month", ""))
 
     # Allow the user to select a different month
     if month_value:
@@ -199,16 +204,19 @@ def dashboard(request):
         "this_quarter": "This quarter",
         "all": "All time",
     }
-    selected_period = request.GET.get("period", "selected_month")
+    selected_period = request.GET.get(
+        "period", request.POST.get("period", "selected_month")
+    )
     if selected_period not in period_options:
         selected_period = "selected_month"
 
     current_threshold = LowBalanceThreshold.objects.filter(owner=request.user).first()
+    is_summary_request = request.method == "POST" and "explain_spending" in request.POST
     threshold_form = LowBalanceThresholdForm(
-        request.POST if request.method == "POST" else None,
+        request.POST if request.method == "POST" and not is_summary_request else None,
         instance=current_threshold,
     )
-    if request.method == "POST" and threshold_form.is_valid():
+    if request.method == "POST" and not is_summary_request and threshold_form.is_valid():
         LowBalanceThreshold.objects.update_or_create(
             owner=request.user,
             defaults={"amount": threshold_form.cleaned_data["amount"]},
@@ -275,6 +283,27 @@ def dashboard(request):
         period_start = period_totals["first_date"]
         period_end = period_totals["last_date"]
 
+    summary_observations = []
+    summary_message = ""
+    if is_summary_request:
+        if transactions.count() < 10:
+            summary_message = "Not enough activity yet to summarize"
+        else:
+            category_totals = list(
+                transactions.filter(kind=Transaction.Kind.EXPENSE)
+                .values("category")
+                .annotate(total=Sum("amount"), count=Count("id"))
+                .order_by("-total", "category")
+            )
+            try:
+                provider_observations = generate_spending_summary(category_totals)
+            except SpendingSummaryError:
+                summary_message = "Unable to generate spending summary right now."
+            else:
+                summary_observations = validate_spending_observations(
+                    provider_observations, category_totals
+                )
+
     # Calculate the remaining balance using existing model logic
     remaining_budget = sum(
         (item.signed_amount for item in budget_transactions),
@@ -317,6 +346,8 @@ def dashboard(request):
             "current_threshold": current_threshold,
             "threshold_form": threshold_form,
             "show_low_balance_warning": show_low_balance_warning,
+            "summary_observations": summary_observations,
+            "summary_message": summary_message,
             "upcoming_fixed_expenses": upcoming_fixed_expenses,
         },
     )

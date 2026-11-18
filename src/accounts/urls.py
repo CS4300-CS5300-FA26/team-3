@@ -18,5 +18,6 @@ urlpatterns = [
     path("sign-in/", views.sign_in, name="sign_in"),
     path("sign-out/", views.sign_out, name="sign_out"),
     path("dashboard/", views.dashboard, name="dashboard"),
+    path("dashboard/explain/", views.dashboard, name="explain_spending"),
     path("accounts/", include((registration_patterns, "accounts"))),
 ]
