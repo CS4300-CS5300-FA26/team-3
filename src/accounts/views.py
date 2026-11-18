@@ -5,10 +5,12 @@ from smtplib import SMTPException
 
 from django import forms
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_not_required, login_required
 from django.core import signing
 from django.core.exceptions import ValidationError
+from django.http import HttpResponseBadRequest, HttpResponseNotAllowed
 from django.db import IntegrityError
 from django.db.models import Count, Max, Min, Q, Sum
 from django.shortcuts import redirect, render, resolve_url
@@ -18,6 +20,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from accounts import recovery
 from accounts.forms import SetPasswordForm, SignupForm
 from accounts.identity import normalize_email
 from accounts.lockout import SignInRateLimited, check_login
@@ -111,7 +114,7 @@ def sign_in(request):
     destination = request.POST.get("next", request.GET.get("next", ""))
     if destination not in {
         reverse(name)
-        for name in ("dashboard", "record_income", "record_expense", "spending_by_category")
+        for name in ("dashboard", "record_income", "record_expense", "spending_by_category", "account_settings")
     }:
         destination = reverse("dashboard")
 
@@ -173,13 +176,42 @@ class LowBalanceThresholdForm(forms.ModelForm):
         model = LowBalanceThreshold
         fields = ["amount"]
         labels = {"amount": "Safety threshold ($)"}
-        widgets = {"amount": forms.NumberInput(attrs={"min": "0", "step": "0.01"})}
+        widgets = {"amount": forms.TextInput(attrs={"inputmode": "decimal"})}
+
+
+@never_cache
+@require_http_methods(["GET", "POST"])
+@login_required(login_url="sign_in")
+def account_settings(request):
+    current_threshold = LowBalanceThreshold.objects.filter(owner=request.user).first()
+    action = request.POST.get("action", "threshold")
+    if request.method == "POST" and action == "reset_password":
+        # The recipient is always the session identity, never submitted form data.
+        recovery.send_recovery_email(request.user.email, request.META.get("REMOTE_ADDR", ""))
+        messages.info(request, recovery.RESET_CONFIRMATION, extra_tags="password_reset")
+        return redirect("account_settings")
+    if request.method == "POST" and action != "threshold":
+        return HttpResponseBadRequest("Unknown account action.")
+    threshold_form = LowBalanceThresholdForm(
+        request.POST if request.method == "POST" else None,
+        instance=current_threshold,
+    )
+    if request.method == "POST" and threshold_form.is_valid():
+        LowBalanceThreshold.objects.update_or_create(
+            owner=request.user, defaults={"amount": threshold_form.cleaned_data["amount"]},
+        )
+        messages.success(request, "Safety threshold saved.", extra_tags="threshold")
+        return redirect("account_settings")
+    return render(request, "accounts/account_settings.html", {"threshold_form": threshold_form})
 
 
 # Show the current user's monthly budget dashboard
 @never_cache
+@require_http_methods(["GET", "POST"])
 @login_required(login_url="sign_in")
 def dashboard(request):
+    if request.method == "POST" and "explain_spending" not in request.POST:
+        return HttpResponseNotAllowed(["GET"])
     # Default to the current calendar month
     selected_month = timezone.localdate().replace(day=1)
     month_value = request.GET.get("month", request.POST.get("month", ""))
@@ -212,19 +244,6 @@ def dashboard(request):
 
     current_threshold = LowBalanceThreshold.objects.filter(owner=request.user).first()
     is_summary_request = request.method == "POST" and "explain_spending" in request.POST
-    threshold_form = LowBalanceThresholdForm(
-        request.POST if request.method == "POST" and not is_summary_request else None,
-        instance=current_threshold,
-    )
-    if request.method == "POST" and not is_summary_request and threshold_form.is_valid():
-        LowBalanceThreshold.objects.update_or_create(
-            owner=request.user,
-            defaults={"amount": threshold_form.cleaned_data["amount"]},
-        )
-        redirect_url = f"{reverse('dashboard')}?month={selected_month:%Y-%m}"
-        if selected_period != "selected_month":
-            redirect_url += f"&period={selected_period}"
-        return redirect(redirect_url)
 
     # Keep the monthly budget independent from the transaction-history filter.
     budget_transactions = Transaction.objects.filter(
@@ -344,7 +363,6 @@ def dashboard(request):
             "selected_month_label": selected_month.strftime("%B %Y"),
             "budget_transaction_count": budget_transactions.count(),
             "current_threshold": current_threshold,
-            "threshold_form": threshold_form,
             "show_low_balance_warning": show_low_balance_warning,
             "summary_observations": summary_observations,
             "summary_message": summary_message,

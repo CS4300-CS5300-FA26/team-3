@@ -1,15 +1,9 @@
-<style>
-    .site-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 14px 3%; background: #e9efe6; font: 18px/1.5 Arial, sans-serif; }
-    .site-nav a { color: #104b25; }
-    .site-nav form { display: inline; margin: 0; padding: 0; border: 0; background: none; }
-    .site-nav button { padding: 6px 12px; border: 1px solid #104b25; border-radius: 4px; color: #104b25; background: white; font: inherit; cursor: pointer; }
-</style>
 <nav class="site-nav" aria-label="Main navigation">
     {% if request.user.is_authenticated %}
-        <a href="{% url 'dashboard' %}">My dashboard</a>
-        <a href="{% url 'record_income' %}">Record income</a>
-        <a href="{% url 'record_expense' %}">Record expense</a>
-        <a href="{% url 'spending_by_category' %}">Spending by category</a>
+        {% if request.resolver_match.url_name != 'dashboard' and request.resolver_match.url_name != 'home' %}
+            <a href="{% url 'dashboard' %}">Dashboard</a>
+        {% endif %}
+        <a href="{% url 'account_settings' %}"{% if request.resolver_match.url_name == 'account_settings' %} aria-current="page"{% endif %}>Account</a>
         <form method="post" action="{% url 'sign_out' %}">
             {% csrf_token %}
             <button type="submit">Sign out</button>
