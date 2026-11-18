@@ -1,4 +1,5 @@
-# Dependabot checks pinned dependencies for updates and known vulnerabilities.
+# Dependabot checks pinned dependencies for updates. Vulnerability alerts and
+# security updates are turned on in the repository settings.
 # Its pull requests run the same CI checks and need the same approval as any other PR.
 version: 2
 updates:
@@ -33,4 +34,4 @@ updates:
       include: "scope"
     groups:
       github-actions:
-        patterns: ["*"]
+        update-types: ["minor", "patch"]

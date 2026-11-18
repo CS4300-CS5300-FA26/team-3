@@ -17,8 +17,9 @@ concurrency:
 
 jobs:
   review:
-    # Drafts skip normally; current author/repository trust is checked by the script.
-    if: github.event.pull_request.draft != true
+    # Drafts and Dependabot PRs skip; Dependabot runs cannot use the OpenAI secret.
+    # Current author/repository trust is checked by the script.
+    if: github.event.pull_request.draft != true && github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:

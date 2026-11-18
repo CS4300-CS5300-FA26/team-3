@@ -64,9 +64,11 @@ audit command; no exceptions are currently configured.
 
 Dependabot ([.github/dependabot.yml](.github/dependabot.yml)) checks the pip
 requirements and the pinned GitHub Actions each Monday and opens update PRs,
-grouping routine minor and patch updates. Its vulnerability alerts are listed
-under the repository's Security tab. Dependabot PRs run the same CI checks and
-need the same approval before merging.
+grouping routine minor and patch updates. Vulnerability alerts and security
+updates are turned on in the repository settings, and alerts are listed under
+the Security tab. Dependabot PRs run the same CI checks, skip the Luna review,
+and need the same approval before merging. Use `@dependabot rebase` to update
+a Dependabot PR that is behind `main`.
 
 The certifi update and its advisory are recorded in the
 [changelog](docs/CHANGELOG.md#2026-10-29--address-sprint-1-ci-feedback).
@@ -583,5 +585,5 @@ messages are outside this change.
   GitHub Actions.
 
 **How we used the result:** Noah kept pip-audit in CI as the blocking check and
-added Dependabot for weekly update PRs and vulnerability alerts, with routine
-updates grouped to keep review manageable.
+added Dependabot for weekly update PRs alongside its vulnerability alerts, with
+routine updates grouped to keep review manageable.
