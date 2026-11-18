@@ -10,6 +10,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from transactions.models import Transaction
+from transactions.views import ExpenseForm
 
 
 DIALOG = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"}
@@ -122,6 +123,24 @@ class TransactionDialogTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.entry.refresh_from_db()
         self.assertEqual(self.entry.next_due_date, date(2026, 11, 17))
+
+    def test_dialog_edit_preserves_a_concurrent_reminder_delivery_marker(self):
+        original_save = ExpenseForm.save
+        due = date(2026, 11, 1)
+
+        def record_delivery_before_save(form, *args, **kwargs):
+            Transaction.objects.filter(pk=self.entry.pk).update(last_reminded_due_date=due)
+            return original_save(form, *args, **kwargs)
+
+        with patch.object(ExpenseForm, "save", record_delivery_before_save):
+            response = self.client.post(reverse("edit_transaction", args=[self.entry.pk]),
+                                       self.expense(amount="42.00"), **DIALOG)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"message": "Transaction updated."})
+        self.entry.refresh_from_db()
+        self.assertEqual(self.entry.amount, Decimal("42.00"))
+        self.assertEqual(self.entry.last_reminded_due_date, due)
 
     def test_delete_get_is_not_a_mutation_and_post_returns_confirmation(self):
         url = reverse("delete_transaction", args=[self.entry.pk])
