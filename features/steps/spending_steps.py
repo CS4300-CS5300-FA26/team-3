@@ -61,7 +61,7 @@ def bar_chart(context, bars):
     assert sorted(shown) == sorted(expected), f"Chart shows {shown}"
 
     html = context.response.content.decode()
-    assert html.count('class="bar"') == len(expected), "Expected one bar per category"
+    assert html.count('class="share-track"') == len(expected), "Expected one bar per category"
     for category, amount in expected:
         assert f"{category}</span>" in html and f"${amount}" in html
 

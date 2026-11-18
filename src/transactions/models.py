@@ -121,3 +121,9 @@ class Transaction(models.Model):
         if self.kind == self.Kind.EXPENSE:
             return -self.amount
         return self.amount
+
+
+class ReceiptScanBudget(models.Model):
+    # A bounded rolling-hour ledger, separate from explanation/recovery budgets.
+    id = models.PositiveSmallIntegerField(primary_key=True)
+    admitted_at = models.JSONField(default=list)

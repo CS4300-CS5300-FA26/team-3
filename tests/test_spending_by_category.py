@@ -73,14 +73,14 @@ class SpendingByCategoryTests(TestCase):
 
         self.assertEqual(sum(totals.values()), Decimal("830.00"))
 
-    def test_bars_are_scaled_to_the_largest_category(self):
+    def test_details_bars_show_share_of_total(self):
         response = self.view()
         widths = [row["width"] for row in response.context["categories"]]
 
         self.assertEqual(widths, ["100.00", "18.46", "9.23"])
         html = response.content.decode()
-        self.assertIn('style="width: 100.00%"', html)
-        self.assertIn('style="width: 9.23%"', html)
+        self.assertIn('style="width: 78.31%"', html)
+        self.assertIn('style="width: 7.23%"', html)
 
     def test_page_lists_each_category_with_its_total_in_order(self):
         html = self.view().content.decode()
@@ -133,7 +133,7 @@ class SpendingByCategoryTests(TestCase):
 
         self.assertRedirects(self.client.get(url), reverse("sign_in") + "?next=" + url)
 
-    def test_dashboard_links_to_the_breakdown(self):
+    def test_dashboard_posts_directly_to_the_monthly_explanation(self):
         response = self.client.get(reverse("dashboard"))
 
-        self.assertContains(response, 'href="' + reverse("spending_by_category") + '?month=')
+        self.assertContains(response, 'action="' + reverse("explain_spending") + '?month=')

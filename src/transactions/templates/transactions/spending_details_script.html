@@ -1,0 +1,110 @@
+<script>
+(() => {
+    const dialog = document.getElementById('spending-dialog');
+    if (!dialog.showModal) return;
+    const content = dialog.querySelector('.details-content');
+    const headers = { 'X-Requested-With': 'XMLHttpRequest' };
+    let controller;
+    let generation = 0;
+    let busy = false;
+    let returnScroll = [0, 0];
+    function closeDetails() {
+        generation++;
+        controller?.abort();
+        busy = false;
+        dialog.close();
+        content.replaceChildren(); // Never retain observations across edits or another opening.
+        document.body.classList.remove('spending-dialog-open');
+        document.querySelector('[data-spending-details] button')?.focus({ preventScroll: true });
+        window.scrollTo(...returnScroll);
+    }
+    async function load(form) {
+        const current = ++generation;
+        controller?.abort();
+        controller = new AbortController();
+        busy = true;
+        const result = content.querySelector('.summary-result');
+        result.hidden = false;
+        result.textContent = 'Generating your spending explanation…';
+        const retryButton = content.querySelector('form button');
+        if (retryButton) retryButton.disabled = true;
+        content.setAttribute('aria-busy', 'true');
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST', body: new FormData(form),
+                headers, cache: 'no-store', signal: controller.signal,
+            });
+            if (current !== generation || !dialog.open) return;
+            const login = new URL("{% url 'sign_in' %}", window.location.origin);
+            if (response.status === 401 || (response.redirected && new URL(response.url).pathname === login.pathname)) {
+                result.textContent = 'Your session has expired. Sign in again to explain your spending. ';
+                login.searchParams.set('next', "{% url 'dashboard' %}" + window.location.search);
+                const link = document.createElement('a');
+                link.href = login.href;
+                link.textContent = 'Sign in again';
+                result.append(link);
+                content.querySelector('form')?.remove();
+                result.focus({ preventScroll: true });
+                return;
+            }
+            if (response.redirected || !response.ok) throw new Error('request');
+            const html = await response.text();
+            if (current !== generation || !dialog.open) return;
+            content.innerHTML = html;
+            content.querySelector('.summary-result')?.focus({ preventScroll: true });
+        } catch (error) {
+            if (current !== generation || error.name === 'AbortError') return;
+            result.textContent = 'Unable to generate spending summary right now. Try again.';
+            result.focus({ preventScroll: true });
+            // The first request uses the dashboard form; copy its safe POST fields for retry.
+            if (!content.querySelector('form')) {
+                const retry = form.cloneNode(true);
+                retry.removeAttribute('data-spending-details');
+                retry.className = 'explanation-form';
+                content.append(retry);
+            }
+            const button = content.querySelector('form button');
+            button.disabled = false;
+            button.textContent = 'Try again';
+        } finally {
+            if (current === generation) {
+                busy = false;
+                content.removeAttribute('aria-busy');
+            }
+        }
+    }
+    document.addEventListener('submit', event => {
+        const form = event.target;
+        if (!form.matches('[data-spending-details]')) return;
+        event.preventDefault();
+        if (dialog.open || document.getElementById('transaction-dialog').open) return;
+        returnScroll = [window.scrollX, window.scrollY];
+        content.innerHTML = '<h2 id="spending-details-heading" tabindex="-1">Spending details</h2><div class="summary-result" role="status" tabindex="-1"></div>';
+        dialog.showModal();
+        content.querySelector('h2').focus({ preventScroll: true });
+        document.body.classList.add('spending-dialog-open');
+        load(form);
+    });
+    dialog.addEventListener('submit', event => {
+        event.preventDefault();
+        if (!busy) load(event.target);
+    });
+    dialog.addEventListener('click', event => {
+        if (event.target.closest('.details-close, [data-close-details]')) closeDetails();
+    });
+    dialog.addEventListener('cancel', event => { event.preventDefault(); closeDetails(); });
+    let backdropStart = false;
+    function outside(event) {
+        const rect = dialog.getBoundingClientRect();
+        return event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
+    }
+    dialog.addEventListener('pointerdown', event => { backdropStart = event.target === dialog && outside(event); });
+    dialog.addEventListener('click', event => {
+        if (backdropStart && event.target === dialog && outside(event)) closeDetails();
+        backdropStart = false;
+    });
+    // Transaction mutations and navigation retire any in-flight explanation.
+    document.addEventListener('transaction-opening', () => { if (dialog.open) closeDetails(); });
+    window.addEventListener('pagehide', () => { if (dialog.open) closeDetails(); });
+})();
+</script>

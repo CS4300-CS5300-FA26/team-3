@@ -6,6 +6,7 @@
 {% include "transactions/form_style.html" %}
 {% include "transactions/dialog_style.html" %}
 {% include "accounts/dashboard_style.html" %}
+{% include "transactions/spending_details_style.html" %}
 {% endblock %}
 
 {% block content %}
@@ -62,11 +63,12 @@
 {% include "accounts/dashboard_charts.html" %}
 <section id="history" aria-labelledby="history-heading" tabindex="-1">
 <div class="history-header">
-<div>
+<div class="history-title">
 <h2 id="history-heading">My transactions</h2>
+<button type="button" class="button secondary" id="transaction-filter-toggle" aria-expanded="true" aria-controls="transaction-filters" hidden>Filters</button>
 </div>
 
-<section class="history-controls" aria-label="Transaction history filters and totals">
+<section class="history-controls" aria-label="Transaction history period">
     <form class="period-picker" method="get" action="{% url 'dashboard' %}">
         <input type="hidden" name="month" value="{{ selected_month }}">
         <label class="visually-hidden" for="period">Filter by period</label>
@@ -84,15 +86,36 @@
         </span>
         <noscript><button type="submit">Apply filter</button></noscript>
     </form>
-    {% if show_history_totals %}
-    <p class="history-totals">
-        <span>Filtered history totals</span>
-        <span>Income <strong>${{ income_total|floatformat:2 }}</strong></span>
-        <span>Expenses <strong>${{ expense_total|floatformat:2 }}</strong></span>
-    </p>
-    {% endif %}
 </section>
 </div>
+<form id="transaction-filters" class="transaction-filter-form" method="get" action="{% url 'dashboard' %}#history" aria-labelledby="transaction-filter-heading">
+    <p id="transaction-filter-heading" class="filter-scope">Filter {{ selected_month_label }} transactions</p>
+    <input type="hidden" name="month" value="{{ selected_month }}">
+    <input type="hidden" name="period" value="selected_month">
+    <div>
+        <label for="filter-kind">Type</label>
+        <select id="filter-kind" name="kind">
+            <option value="">All types</option>
+            <option value="income"{% if filter_values.kind == 'income' %} selected{% endif %}>Income</option>
+            <option value="expense"{% if filter_values.kind == 'expense' %} selected{% endif %}>Expenses</option>
+        </select>
+    </div>
+    <div>
+        <label for="filter-category">Expense category</label>
+        <select id="filter-category" name="category">
+            <option value="">All categories</option>
+            {% for category in filter_categories %}<option value="{{ category }}"{% if filter_values.category == category %} selected{% endif %}>{{ category }}</option>{% endfor %}
+        </select>
+    </div>
+    <div>
+        <label for="filter-date">Date</label>
+        <input type="date" id="filter-date" name="date" value="{{ filter_values.date }}" min="{{ selected_month }}-01" max="{{ month_end|date:'Y-m-d' }}">
+    </div>
+    <div class="filter-actions">
+        <button type="submit">Apply filters</button>
+        <a href="{{ clear_filters_url }}">Clear filters</a>
+    </div>
+</form>
 {% if drilldown_filters %}
 <nav class="drilldown-filters" aria-label="Active transaction filters">
     {% for filter in drilldown_filters %}
@@ -100,26 +123,6 @@
     {% endfor %}
     <a href="{{ clear_filters_url }}">Clear filters</a>
 </nav>
-{% endif %}
-<form method="post" action="{% url 'explain_spending' %}?month={{ selected_month }}&amp;period={{ selected_period }}{% if drilldown_query %}&amp;{{ drilldown_query }}{% endif %}">
-    {% csrf_token %}
-    <input type="hidden" name="month" value="{{ selected_month }}">
-    <input type="hidden" name="period" value="{{ selected_period }}">
-    <button type="submit" name="explain_spending">Explain my spending</button>
-</form>
-{% if summary_message or summary_observations %}
-<section class="spending-summary" aria-live="polite">
-    {% if summary_message %}
-        <p>{{ summary_message }}</p>
-    {% else %}
-        <h3>Spending observations</h3>
-        <ul>
-            {% for observation in summary_observations %}
-                <li>{{ observation }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
-</section>
 {% endif %}
 <table class="transactions">
     <caption class="visually-hidden">Transactions for {{ history_scope }}{% if drilldown_filters %}, with the active filters applied{% endif %}</caption>
@@ -151,10 +154,44 @@
     <p class="dialog-error" role="alert" hidden></p>
     <div class="dialog-content"></div>
 </dialog>
-{% include "transactions/receipt_script.html" %}
+<dialog id="spending-dialog" aria-labelledby="spending-details-heading">
+    <button type="button" class="details-close" aria-label="Close spending details">×</button>
+    <div class="details-content"></div>
+    <div class="details-footer"><button type="button" class="button secondary" data-close-details>Close</button></div>
+</dialog>
+{% include "transactions/spending_details_script.html" %}
 {% include "transactions/expense_script.html" %}
 {% include "transactions/dialog_script.html" %}
 <script>
+    // The form stays available without JavaScript. Refreshes reuse server-validated values.
+    function initializeTransactionFilters() {
+        const toggle = document.getElementById('transaction-filter-toggle');
+        toggle.hidden = false;
+        toggle.setAttribute('aria-expanded', 'false');
+        document.getElementById('transaction-filters').hidden = true;
+        updateFilterCategory();
+    }
+    function updateFilterCategory() {
+        const category = document.getElementById('filter-category');
+        category.disabled = document.getElementById('filter-kind').value === 'income';
+        if (category.disabled) category.value = '';
+    }
+    initializeTransactionFilters();
+    document.addEventListener('click', (event) => {
+        if (event.target.id !== 'transaction-filter-toggle') return;
+        const form = document.getElementById('transaction-filters');
+        form.hidden = !form.hidden;
+        event.target.setAttribute('aria-expanded', String(!form.hidden));
+        if (!form.hidden) document.getElementById('filter-kind').focus();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && event.target.closest('#transaction-filters')) {
+            document.getElementById('transaction-filters').hidden = true;
+            const toggle = document.getElementById('transaction-filter-toggle');
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.focus();
+        }
+    });
     // Delegation also covers the server-rendered charts replaced after a save.
     document.addEventListener("pointerover", showChartDetail);
     document.addEventListener("focusin", showChartDetail);
@@ -163,6 +200,7 @@
         if (point) document.getElementById('chart-detail').textContent = point.dataset.chartDetail;
     }
     document.addEventListener("change", (event) => {
+        if (event.target.id === 'filter-kind') updateFilterCategory();
         if (event.target.matches('[data-auto-submit="month"] input[type="month"], [data-auto-submit="period"]')) {
             event.target.form.requestSubmit();
         }

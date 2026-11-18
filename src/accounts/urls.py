@@ -1,6 +1,8 @@
 from django.urls import include, path
+from django.views.decorators.http import require_POST
 
 from accounts import recovery, views
+from transactions.views import spending_by_category
 
 
 registration_patterns = [
@@ -19,6 +21,6 @@ urlpatterns = [
     path("sign-out/", views.sign_out, name="sign_out"),
     path("account/", views.account_settings, name="account_settings"),
     path("dashboard/", views.dashboard, name="dashboard"),
-    path("dashboard/explain/", views.dashboard, name="explain_spending"),
+    path("dashboard/explain/", require_POST(spending_by_category), name="explain_spending"),
     path("accounts/", include((registration_patterns, "accounts"))),
 ]

@@ -1,12 +1,41 @@
 import json
 import os
 import re
+from datetime import timedelta
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+from django.db import connection, transaction
+from django.db.models import F
+from django.utils import timezone
+from django.utils.crypto import salted_hmac
+
+from accounts.models import SpendingSummaryBudget
 
 
 class SpendingSummaryError(RuntimeError):
     """Raised when the configured spending-summary provider cannot respond."""
+
+
+def claim_summary_request(user_id):
+    """Admit at most five requests per student and 100 overall per rolling hour.
+
+    Like recovery admission, the database lock shares limits across workers.
+    Failures consume admission too, and provider calls run outside the lock.
+    """
+    source = salted_hmac("accounts.summary", str(user_id), algorithm="sha256").hexdigest()
+    with transaction.atomic():
+        if connection.vendor == "sqlite":
+            SpendingSummaryBudget.objects.filter(pk=1).update(id=F("id"))
+        budget, _ = SpendingSummaryBudget.objects.select_for_update().get_or_create(pk=1)
+        now = timezone.now()
+        cutoff = (now - timedelta(hours=1)).timestamp()
+        recent = [entry for entry in budget.admitted_at if entry[0] > cutoff]
+        if len(recent) >= 100 or sum(entry[1] == source for entry in recent) >= 5:
+            return False
+        budget.admitted_at = [*recent, [now.timestamp(), source]]
+        budget.save(update_fields=["admitted_at"])
+    return True
 
 
 def _summary_prompt(category_totals):
@@ -80,15 +109,7 @@ def generate_spending_summary(category_totals):
         with urlopen(request, timeout=10) as response:
             provider_response = json.loads(response.read().decode("utf-8"))
         observations = json.loads(_provider_text(provider_response))
-    except (
-        HTTPError,
-        URLError,
-        TimeoutError,
-        OSError,
-        UnicodeDecodeError,
-        json.JSONDecodeError,
-        TypeError,
-    ):
+    except (HTTPError, URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError, TypeError):
         raise SpendingSummaryError("Spending summary service is unavailable.") from None
     if not isinstance(observations, list) or not all(
         isinstance(observation, str) for observation in observations

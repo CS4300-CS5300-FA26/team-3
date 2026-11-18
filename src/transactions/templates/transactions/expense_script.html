@@ -1,29 +1,140 @@
- <script>
+<script>
+    window.cancelReceiptScans = function (root) {
+        root.querySelectorAll('form').forEach(form => form.cancelReceiptScan?.());
+    };
+    function initializeReceipt(root) {
+        const controls = root.querySelector('[data-receipt-controls]');
+        if (!controls || controls.dataset.initialized) return;
+        controls.dataset.initialized = 'true';
+        controls.hidden = false;
+        const form = controls.closest('form');
+        const amount = form.querySelector('[name="amount"]');
+        const file = controls.querySelector('input[type="file"]');
+        const scan = controls.querySelector('[data-scan-receipt]');
+        const cancel = controls.querySelector('[data-cancel-scan]');
+        const status = controls.querySelector('.receipt-status');
+        let generation = 0;
+        let sessionExpired = false;
+        let controller;
+        let saveStates = [];
+        function finish() {
+            form.dataset.receiptScanning = 'false';
+            scan.disabled = sessionExpired;
+            cancel.hidden = true;
+            controls.removeAttribute('aria-busy');
+            saveStates.forEach(([button, disabled]) => button.disabled = disabled);
+            saveStates = [];
+        }
+        form.cancelReceiptScan = function () {
+            generation++;
+            controller?.abort();
+            finish();
+        };
+        cancel.addEventListener('click', () => {
+            form.cancelReceiptScan();
+            status.textContent = 'Scan cancelled. Enter the amount manually or scan another receipt.';
+        });
+        amount.addEventListener('input', () => {
+            if (form.dataset.receiptScanning !== 'true') return;
+            form.cancelReceiptScan();
+            status.textContent = 'Amount changed. Scan cancelled to keep your entry.';
+        });
+        // Native and keyboard submissions must wait for a reviewed scan result.
+        form.addEventListener('submit', event => {
+            if (form.dataset.receiptScanning === 'true') {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }
+        }, true);
+        scan.addEventListener('click', () => {
+            file.value = '';
+            file.click();
+        });
+        file.addEventListener('change', async () => {
+            const receipt = file.files[0];
+            if (!receipt) return;
+            form.cancelReceiptScan();
+            if (!['image/jpeg', 'image/png', 'image/webp'].includes(receipt.type) || receipt.size > 4 * 1024 * 1024) {
+                status.textContent = 'Choose a JPEG, PNG, or WebP image no larger than 4 MB.';
+                return;
+            }
+            if (amount.value && !window.confirm('Replace the current amount with the receipt total if one is found?')) {
+                status.textContent = 'Your amount was kept.';
+                return;
+            }
+            const current = ++generation;
+            const originalAmount = amount.value;
+            controller = new AbortController();
+            form.dataset.receiptScanning = 'true';
+            saveStates = [...form.querySelectorAll('button[type="submit"]')].map(button => [button, button.disabled]);
+            saveStates.forEach(([button]) => button.disabled = true);
+            scan.disabled = true;
+            cancel.hidden = false;
+            controls.setAttribute('aria-busy', 'true');
+            status.textContent = 'Scanning receipt…';
+            const body = new FormData();
+            body.set('receipt', receipt);
+            body.set('csrfmiddlewaretoken', form.querySelector('[name="csrfmiddlewaretoken"]').value);
+            try {
+                const response = await fetch(controls.dataset.scanUrl, {method: 'POST', body, signal: controller.signal});
+                if (current !== generation || !form.isConnected) return;
+                const login = new URL("{% url 'sign_in' %}", window.location.origin);
+                if (response.status === 401 || (response.redirected && new URL(response.url).pathname === login.pathname)) {
+                    sessionExpired = true;
+                    status.textContent = 'Your session has expired. Sign in again to scan a receipt. ';
+                    const link = document.createElement('a');
+                    const destination = form.closest('#transaction-dialog') ? "{% url 'dashboard' %}" : window.location.pathname;
+                    login.searchParams.set('next', destination + window.location.search);
+                    link.href = login.href;
+                    link.textContent = 'Sign in again';
+                    status.append(link);
+                    return;
+                }
+                const result = response.redirected ? {} : await response.json();
+                if (current !== generation || !form.isConnected) return;
+                if (response.redirected || !response.ok) {
+                    status.textContent = response.status === 429
+                        ? 'Too many receipt scans. Try again in an hour or enter the amount manually.'
+                        : response.status === 400
+                        ? 'This image could not be accepted. Choose a valid JPEG, PNG, or WebP image.'
+                        : 'Receipt scanning is unavailable. Try again later or enter the amount manually.';
+                    return;
+                }
+                if (typeof result.amount !== 'string' || !/^\d+\.\d{2}$/.test(result.amount)) {
+                    status.textContent = 'Could not read a total. Try a clearer receipt or enter the amount manually.';
+                    return;
+                }
+                if (amount.value !== originalAmount) {
+                    status.textContent = 'Your newer amount was kept.';
+                    return;
+                }
+                amount.value = result.amount;
+                status.textContent = 'Receipt total found. Review before saving.';
+                amount.focus({preventScroll: true});
+            } catch (error) {
+                if (current === generation && error.name !== 'AbortError') {
+                    status.textContent = 'Receipt scanning is unavailable. Try again later or enter the amount manually.';
+                }
+            } finally {
+                if (current === generation) finish();
+            }
+        });
+    }
+
     window.initializeExpenseForm = function (root) {
         const schedule = root.querySelector('#recurrence-fields');
-
-        if (schedule) {
-            const fixed = root.querySelector(
-                'input[name="is_fixed"][value="fixed"]'
-            );
-
-            function update() {
-                const off = !(fixed && fixed.checked);
-                schedule.hidden = off;
-                schedule.disabled = off;
-            }
-
-            root.querySelectorAll('input[name="is_fixed"]').forEach(choice => {
-                choice.addEventListener('change', update);
-            });
-
-            update();
+        if (!schedule) return;
+        const fixed = root.querySelector('input[name="is_fixed"][value="fixed"]');
+        function update() {
+            const off = !(fixed && fixed.checked);
+            schedule.hidden = off;
+            schedule.disabled = off;
         }
-
-        if (window.initializeReceiptScanner) {
-            window.initializeReceiptScanner(root);
-        }
+        root.querySelectorAll('input[name="is_fixed"]').forEach(choice => {
+            choice.addEventListener('change', update);
+        });
+        update();
+        initializeReceipt(root);
     };
-
     window.initializeExpenseForm(document);
 </script>

@@ -23,13 +23,18 @@ Feature: Explore monthly spending from the dashboard (#74)
     Then all my personal exploration records are listed
     And no exploration criteria remain
 
-  Scenario: Requesting an explanation keeps the selected category and day
+  Scenario: Monthly details are independent from the selected category and day
     When I explore Food expenses on November 3
     And I request an explanation of the displayed spending
-    Then the explanation keeps only my Food expenses on November 3
+    Then the explanation uses my selected month while history filters stay separate
     And the monthly figures still include every November transaction
 
   Scenario: The cumulative chart stops today without hiding future records
     When I view November exploration on November 16
     Then the chart includes flat zero-spend days through November 16
     And future expenses remain in the monthly total while the chart labels its end date
+
+  Scenario: Choose filters from the transactions card
+    When I choose Food expenses on November 3 in the transaction filters
+    Then only my Food expenses on November 3 are listed
+    And the monthly figures still include every November transaction

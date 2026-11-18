@@ -1,115 +1,140 @@
 # BudgetWise Deployment
 
-Chase will maintain the AWS setup for Team 3. Local development follows the README and uses SQLite.
+Chase maintains the AWS and Resend setup for Team 3. Local setup is documented
+in the [README](../README.md).
 
-## Request flow
+## Hosting
 
-`budget-wise.dev → Cloudflare DNS → API Gateway → Lambda → Django`
+`budget-wise.dev → Cloudflare → API Gateway → Lambda → Django → Aurora`
 
-Cloudflare manages DNS and filters public HTTP traffic. API Gateway calls the `live` alias of Lambda function `budgetwise` in `us-east-1`. Lambda uses Python 3.13, x86_64, and handler `lambda_entry.handler`.
+Cloudflare provides DNS and public HTTP filtering. API Gateway uses HTTP payload
+format 2.0 and invokes the `live` alias of Lambda function `budgetwise` in
+`us-east-1`.
 
-`src/lambda_entry.py` uses Mangum to translate requests for Django. It disables debug output, accepts our domain, and requires HTTPS and secure cookies. These overrides only apply when Lambda loads the adapter.
+| Lambda setting | Value |
+| --- | --- |
+| Runtime / architecture | Python 3.13 / x86_64 |
+| Handler | `lambda_entry.handler` |
+| Memory | 1,024 MB |
+| Timeout | 30 seconds |
+| Temporary storage | 512 MB |
+| Package | ZIP |
 
-## Configuration
+API Gateway also has a 30-second integration timeout.
+[`src/lambda_entry.py`](../src/lambda_entry.py) adapts requests through Mangum,
+disables Django debug output, restricts the host to `budget-wise.dev`, and
+requires HTTPS and secure cookies. Application dates use `America/Denver`.
 
-Set `DJANGO_SECRET_KEY` in Lambda to a private, randomly generated value of at least 50 characters. Never commit its value. Dependencies are recorded in `requirements.txt`.
+## Environment configuration
 
-For D9 spending summaries, set `OPENAI_API_KEY` in the `budgetwise` Lambda
-environment. The default model is `gpt-6-luna`; optionally set
-`OPENAI_SPENDING_SUMMARY_MODEL` to override it. Keep both values out of source
-control and GitHub workflow files.
+Set these variables on the Lambda function before publishing a version. Published
+versions retain their own configuration; changing `$LATEST` does not change the
+version served by `live`. CD preserves function configuration when updating code.
+Keep keys and database hostnames out of source control.
 
-GitHub Actions builds the deployment ZIP from `src/` and Linux-compatible dependencies, excluding local databases, `.env` files, virtual environments, and caches.
+| Variable | Value or purpose |
+| --- | --- |
+| `DJANGO_SECRET_KEY` | Private random signing key, at least 50 characters |
+| `DB_HOST` | Aurora writer instance endpoint |
+| `DB_NAME` | `budgetwise` |
+| `DB_USER` | `budgetwise_app` |
+| `AWS_REGION` | `us-east-1` (provided by Lambda) |
+| `RESEND_API_KEY` | Sending-only key restricted to `budget-wise.dev` |
+| `SIGNUP_BASE_URL` | Account email link origin; defaults to `https://budget-wise.dev` |
+| `OPENAI_API_KEY` | Application key shared by spending explanations and receipt scanning |
+| `OPENAI_SPENDING_SUMMARY_MODEL` | Optional; defaults to `gpt-6-luna` |
+| `OPENAI_RECEIPT_MODEL` | Optional; defaults to `gpt-6-luna` |
 
-## Signup email
+The GitHub AI-review secret is separate from the application's OpenAI key.
+Leave `OPENAI_RESPONSES_URL` unset to use the standard OpenAI endpoint.
 
-Chase owns BudgetWise's Resend setup. The app sends from `accounts@budget-wise.dev`
-through Resend SMTP over TLS. Set `RESEND_API_KEY` to a sending-only key restricted
-to `budget-wise.dev` in Lambda's environment before deploying signup. Keep its
-value out of source and CI. `SIGNUP_BASE_URL` defaults to `https://budget-wise.dev`;
-for local delivery checks, set it to the local server URL and export the key in
-that shell. Tests use Django's in-memory mail backend and send no real email.
+Spending explanations use a 10-second provider timeout; receipt scans use
+20 seconds. Both share the HTTP request budget with database and application
+processing. Each feature has a separate database-backed limit of five requests
+per student and 100 overall per rolling hour; failed provider calls count.
 
-Resend's Emails dashboard shows delivery failures; a failed send also gives the
-visitor a generic retry message. Revoke the BudgetWise key in Resend to disable
-sending without changing other applications. Deployed code still needs the key
-configured; local integration does not configure Lambda.
-
-## Fixed expense reminder email
-
-After this change reaches `main`, the
-[`Fixed expense reminders`](../.github/workflows/fixed-expense-reminders.yml)
-workflow runs daily at 15:17 UTC. It uses GitHub OIDC to invoke the `live`
-alias of `budgetwise` with a private event; students do not call an HTTP
-reminder endpoint. The GitHub role must permit `lambda:InvokeFunction` on that
-alias, and Lambda needs its existing `RESEND_API_KEY` and database access.
-
-The command sends one email per schedule and due date while the due date is
-inside its saved notice window. It can catch up after a missed day and skips
-past-due expenses. A mail failure leaves that due date retryable and makes the
-workflow fail; check the Actions run and `/aws/lambda/budgetwise` logs. An
-operator can rerun the workflow on `main` while the due date is still inside
-the notice window. A crash
-after SMTP accepts a message but before the database records it can still
-produce a duplicate on retry. Local tests use in-memory mail and make no AWS
-calls; the first live scheduled run needs separate verification.
+Receipt uploads accept JPEG, PNG and WebP images up to 4 MiB and 20 million
+pixels. The size limit leaves room for base64 encoding within Lambda's
+[6 MB synchronous request limit](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html).
+Images use temporary files that are removed after processing; there is no receipt
+archive. The scanner disables automatic SDK retries and sets `store=False`.
 
 ## Database
 
-Aurora PostgreSQL cluster `budgetwise` is our application database in `us-east-1`, configured for 0–1 ACU and automatic pause after five idle minutes. Use local tests to conserve credits.
+Aurora PostgreSQL cluster `budgetwise` runs PostgreSQL 17.9 in `us-east-1`, with
+one writer, 0.5–1 ACU capacity, auto-pause disabled and one-day backup retention.
 
-Without `DB_HOST`, Django uses local SQLite. To select Aurora, set:
+The [Aurora backend](../src/budgetwise/db/aurora/base.py) generates a fresh IAM
+authentication token for each connection. It uses port 5432, verifies the server
+certificate and hostname, and has a 25-second connection timeout.
+`CONN_MAX_AGE=0` closes connections after each request. Lambda authenticates with
+its execution role; no database password is stored.
 
-| Variable | Value |
+The application connects as `budgetwise_app`. CD runs migrations as
+`budgetwise_migrator`, whose new tables grant the app access. Keep `DB_HOST` in
+Lambda and GitHub Actions synchronized if the writer endpoint changes.
+
+Without `DB_HOST`, Django uses SQLite. CI uses a disposable PostgreSQL 17 service
+through `budgetwise.ci_settings`; never run test database creation against Aurora.
+
+## Email and scheduled reminders
+
+Signup, password recovery and expense reminders send from
+`accounts@budget-wise.dev` through `smtp.resend.com`, port 465, with implicit TLS
+and a five-second timeout. Delivery failures appear in Resend's Emails dashboard.
+Revoking the BudgetWise Resend key disables all application email.
+
+The [fixed expense reminder workflow](../.github/workflows/fixed-expense-reminders.yml)
+runs daily at 15:17 UTC: 08:17 Mountain standard time or 09:17 daylight time.
+It uses GitHub OIDC to invoke `budgetwise:live` with
+`{"operation":"send_fixed_expense_reminders"}`. The deployment role requires
+`lambda:InvokeFunction` on that alias; there is no public reminder endpoint.
+
+The command uses each student's notice window and records delivery per schedule
+and due date. Failed sends remain retryable; past-due expenses are skipped.
+A crash between SMTP acceptance and recording delivery can cause a duplicate.
+Check failed Actions runs and `/aws/lambda/budgetwise` logs, then rerun from
+`main` while the notice window remains open. Disable the workflow in Actions to
+stop scheduled reminders while retaining account email.
+
+## Deployment workflow
+
+[Deploy](../.github/workflows/cd.yml) runs for `main` changes under `src/`,
+`tests/`, `requirements.txt` or `.github/workflows/`, and supports manual runs
+from `main`. Documentation-only changes do not trigger deployment.
+
+| GitHub Actions setting | Purpose |
 | --- | --- |
-| `DB_HOST` | Aurora writer endpoint from the AWS console |
-| `DB_NAME` | `budgetwise` |
-| `DB_USER` | `budgetwise_app` for the web app; `budgetwise_migrator` for migrations |
-| `AWS_REGION` | `us-east-1` |
+| Variable `AWS_DEPLOY_ROLE_ARN` | ARN of `budgetwise-github-deploy` |
+| Variable `ROOT_STATUS` | `200`, the expected sign-in response status |
+| Secret `DB_HOST` | Same Aurora writer endpoint used by Lambda |
 
-The backend in `src/budgetwise/db/aurora/` generates a fresh IAM token for each connection and verifies the server certificate. Lambda uses its IAM role; teammates do not need AWS access to develop or test their code. No Aurora password is stored. Connections close after each request so Aurora can pause to avoid wasting usage credits.
+The deployment role trusts this repository's `main` branch through OIDC.
+The workflow:
 
-Keep the actual hostname in environment configuration rather than source control. We currently use the single writer's instance endpoint; update it if the writer is replaced. Run local tests with `python src/manage.py test tests src`; database-connection tests use mocks and make no AWS calls.
+1. Runs CI and builds a ZIP without AWS credentials.
+2. Downloads that exact artifact, rejects stale `main` revisions and obtains temporary AWS credentials.
+3. Applies migrations from the package and publishes a Lambda version.
+4. Checks the new version's database connection and `/sign-in/` response before moving `live`.
+5. Checks the public URL and restores the previous alias target if that request fails.
 
-The app user can read and write records. The migration user can create tables; its new tables automatically grant the app access. CD runs migrations using that role. Keep routine tests local; don't run Django's test database creation against Aurora.
+The package contains `src/` and dependencies from `requirements.txt`, excluding
+local databases, environment files and caches. The build accepts
+`manylinux2014_x86_64` and `manylinux_2_28_x86_64` wheels for the Python 3.13
+Amazon Linux 2023 runtime. Keep the ZIP below 50 MB and unpacked contents,
+including layers, below 250 MB. Artifacts are retained for one day; rerun the
+workflow if an artifact expires.
 
-## Release and rollback
+## Operations and rollback
 
-CI uses `budgetwise.ci_settings` and a temporary PostgreSQL 17 service. Its fixed password is only for that disposable database. Local SQLite, CI PostgreSQL, and deployed Aurora do not share data.
+Application logs are in `/aws/lambda/budgetwise`. The public deployment probe
+follows the root redirect to sign-in and uses
+`BudgetWise-Deployment-Check/1.0` as its user agent for Cloudflare compatibility.
 
-`.github/workflows/cd.yml` runs after application or workflow changes merge into `main`, or manually through Actions → Deploy on `main`:
+CD reports the previous Lambda version. For a code rollback, point `live` back
+to that version in Lambda's Aliases tab. CD uses revision checks and reads back
+ambiguous alias updates to avoid overwriting another change.
 
-1. Run CI and build one ZIP in a job without AWS access.
-2. Download that exact ZIP, reject stale `main` revisions, and obtain temporary AWS credentials through GitHub OIDC.
-3. Apply Aurora migrations from the ZIP and publish it as a new Lambda version.
-4. Check that version's database connection and public `/sign-in/` page before moving `live` to it.
-5. Check the public URL; restore the previous version if this check fails.
-
-The package is retained in GitHub Actions for one day. If it expires, rerun the entire workflow to rebuild it. If an alias-update response is lost, CD reads the alias back before continuing; it does not overwrite a conflicting change.
-
-The AWS role `budgetwise-github-deploy` trusts only this repository's `main` branch. It can deploy this Lambda and connect as the migration user. No AWS access keys or teammate AWS accounts are needed.
-
-GitHub Actions settings:
-
-| Setting | Purpose |
-| --- | --- |
-| Variable `AWS_DEPLOY_ROLE_ARN` | Deployment role ARN |
-| Variable `ROOT_STATUS` | Expected sign-in page status: `200` (legacy variable name) |
-| Secret `DB_HOST` | Same Aurora writer endpoint as Lambda |
-
-The workflow reports the previous Lambda version. For a later code rollback, point `live` back to it in Lambda's Aliases tab. This does not undo migrations: keep schema changes compatible with the previous release.
-
-## Release verification
-
-The root redirects anonymous visitors to `/sign-in/`; authenticated visitors see
-their private dashboard. The candidate probe checks `/sign-in/` directly, while
-the public check follows the root redirect. Retained demo rows are excluded from
-student dashboards, and `/demo/` is no longer a route.
-
-The public probe identifies itself as `BudgetWise-Deployment-Check/1.0` because
-Cloudflare can block Python's default user agent. Unexpected HTTP statuses still
-fail deployment and restore the previous live version.
-
-Verify a release with a small number of requests and check
-`/aws/lambda/budgetwise` logs for failures. Local checks do not establish which
-version is currently deployed.
+Alias rollback does not undo migrations. Keep schema changes compatible with
+the previous application version. Aurora backups provide a separate data-recovery
+path; a database restore requires its own operator action.

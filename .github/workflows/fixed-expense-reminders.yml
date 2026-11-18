@@ -1,7 +1,7 @@
 name: Fixed expense reminders
 
 on:
-  # The Django app uses UTC; this runs once each day, away from the hour boundary.
+  # Cron uses UTC; the command evaluates due dates in the app’s Mountain timezone.
   schedule:
     - cron: "17 15 * * *"
   # Operators can retry a failed due-day run from main before its window closes.

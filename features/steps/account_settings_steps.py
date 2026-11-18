@@ -1,5 +1,6 @@
 """Increment 1 acceptance through Django's local client; no external email."""
 from decimal import Decimal
+import re
 from unittest.mock import patch
 
 from behave import given, then, when
@@ -25,9 +26,7 @@ def dashboard_entry_actions(context):
 
     response = context.client.get(reverse("dashboard"))
     html = response.content.decode()
-
-    assert '<input type="number" name="amount"' not in html
-
+    assert not re.search(r'<input\b[^>]*name="amount"', html)
     for route in ("record_income", "record_expense"):
         assert html.count(f'href="{reverse(route)}"') == 1
 

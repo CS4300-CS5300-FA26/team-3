@@ -135,7 +135,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+# Student-facing calendar dates follow Mountain time, including daylight saving time.
+TIME_ZONE = "America/Denver"
 
 USE_I18N = True
 
