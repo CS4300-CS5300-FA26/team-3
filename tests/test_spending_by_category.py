@@ -133,7 +133,7 @@ class SpendingByCategoryTests(TestCase):
 
         self.assertRedirects(self.client.get(url), reverse("sign_in") + "?next=" + url)
 
-    def test_navigation_links_to_the_breakdown(self):
+    def test_dashboard_links_to_the_breakdown(self):
         response = self.client.get(reverse("dashboard"))
 
-        self.assertContains(response, 'href="' + reverse("spending_by_category") + '"')
+        self.assertContains(response, 'href="' + reverse("spending_by_category") + '?month=')

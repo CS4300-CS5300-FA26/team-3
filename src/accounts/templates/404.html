@@ -1,0 +1,15 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Page not found | BudgetWise{% endblock %}
+
+{% block content %}
+<section class="panel">
+    <h1>Page not found</h1>
+    <p>This page is unavailable. Use the link below to continue.</p>
+    {% if request.user.is_authenticated %}
+        <a class="button" href="{% url 'dashboard' %}">Back to dashboard</a>
+    {% else %}
+        <a class="button" href="{% url 'sign_in' %}">Go to sign in</a>
+    {% endif %}
+</section>
+{% endblock %}

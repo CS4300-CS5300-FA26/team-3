@@ -1,4 +1,4 @@
-"""Require a session even for unknown URLs; registration and admin stay reachable."""
+"""Require a session for private routes; let Django handle missing URLs."""
 from django.conf import settings
 from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import resolve_url
@@ -18,6 +18,6 @@ class RequireSignInMiddleware:
             public = match and (
                 not getattr(match.func, "login_required", True) or match.app_name == "admin"
             )
-            if not public:
+            if match and not public:
                 return redirect_to_login(request.get_full_path(), resolve_url(settings.LOGIN_URL))
         return self.get_response(request)
