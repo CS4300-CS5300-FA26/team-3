@@ -71,7 +71,7 @@ class Command(BaseCommand):
                         continue
                     due_label = f"{due:%B} {due.day}, {due.year}"
                     delivered = send_mail(
-                        f"Upcoming fixed expense: {current.description}",
+                        f"Upcoming fixed expense: {' '.join(current.description.split())}",
                         f"{current.description} of ${current.amount:.2f} is due on {due_label}.",
                         settings.DEFAULT_FROM_EMAIL,
                         [current.owner.email],
