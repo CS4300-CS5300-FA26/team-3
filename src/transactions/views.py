@@ -13,7 +13,7 @@ from django.db import transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-
+from PIL import Image, UnidentifiedImageError
 from .models import Transaction
 
 
@@ -265,6 +265,34 @@ def scan_receipt_upload(request):
         with image_path.open("wb") as destination:
             for chunk in receipt.chunks():
                 destination.write(chunk)
+
+        # Verify that the uploaded file is a genuine supported image.
+        allowed_formats = {
+            "image/jpeg": "JPEG",
+            "image/png": "PNG",
+            "image/webp": "WEBP",
+        }
+
+        try:
+            with Image.open(image_path) as image:
+                actual_format = image.format
+                image.verify()
+
+            if actual_format != allowed_formats[receipt.content_type]:
+                return JsonResponse(
+                    {"error": "Unsupported receipt image format."},
+                    status=400,
+                )
+
+            # Decode the image to catch corrupted image data.
+            with Image.open(image_path) as image:
+                image.load()
+
+        except (UnidentifiedImageError, OSError, ValueError):
+            return JsonResponse(
+                {"error": "Invalid or corrupted receipt image."},
+                status=400,
+            )
 
         try:
             amount = scan_receipt(image_path)

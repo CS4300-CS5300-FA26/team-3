@@ -2,17 +2,25 @@
 
 from decimal import Decimal
 from unittest.mock import patch
-
+from io import BytesIO
+from PIL import Image
 from behave import then, when
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 
 def receipt_image():
-    """Create a small mock upload for the Django test client."""
+    """Create a valid JPEG upload for acceptance tests."""
+    buffer = BytesIO()
+
+    Image.new("RGB", (10, 10), "white").save(
+        buffer,
+        format="JPEG",
+    )
+
     return SimpleUploadedFile(
         "receipt.jpeg",
-        b"fake receipt image",
+        buffer.getvalue(),
         content_type="image/jpeg",
     )
 

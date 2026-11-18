@@ -1,7 +1,8 @@
-
 from decimal import Decimal
+from io import BytesIO
 from unittest.mock import patch
 
+from PIL import Image
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -17,10 +18,21 @@ class ReceiptUploadTests(TestCase):
         )
         self.client.force_login(self.user)
 
-    def make_image(self, content_type="image/jpeg", size=100):
+    def make_image(self, content_type="image/jpeg", size=None):
+        """Generate a genuine JPEG image for upload tests."""
+        buffer = BytesIO()
+
+        image = Image.new("RGB", (10, 10), color="white")
+        image.save(buffer, format="JPEG")
+
+        image_bytes = buffer.getvalue()
+
+        if size is not None and size > len(image_bytes):
+            image_bytes += b"x" * (size - len(image_bytes))
+
         return SimpleUploadedFile(
             "receipt.jpg",
-            b"x" * size,
+            image_bytes,
             content_type=content_type,
         )
 
@@ -52,6 +64,7 @@ class ReceiptUploadTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.json()["amount"])
         self.assertIn("message", response.json())
+        mock_scan.assert_called_once()
 
     def test_missing_receipt(self):
         response = self.client.post(self.url)
@@ -113,6 +126,7 @@ class ReceiptUploadTests(TestCase):
 
         self.assertEqual(response.status_code, 503)
         self.assertIn("error", response.json())
+        mock_scan.assert_called_once()
 
     @patch("transactions.views.scan_receipt")
     def test_scan_does_not_create_transaction(self, mock_scan):
@@ -122,12 +136,58 @@ class ReceiptUploadTests(TestCase):
 
         before = Transaction.objects.count()
 
-        self.client.post(
+        response = self.client.post(
             self.url,
             {"receipt": self.make_image()},
         )
 
-        self.assertEqual(
-            Transaction.objects.count(),
-            before,
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Transaction.objects.count(), before)
+
+    @patch("transactions.views.scan_receipt")
+    def test_rejects_fake_jpeg(self, mock_scan):
+        """Reject non-image bytes even with an allowed MIME type."""
+        fake_image = SimpleUploadedFile(
+            "fake.jpeg",
+            b"This is not actually an image.",
+            content_type="image/jpeg",
         )
+
+        response = self.client.post(
+            self.url,
+            {"receipt": fake_image},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["error"],
+            "Invalid or corrupted receipt image.",
+        )
+        mock_scan.assert_not_called()
+
+    @patch("transactions.views.scan_receipt")
+    def test_rejects_mismatched_image_format(self, mock_scan):
+        """Reject a valid PNG falsely declared as a JPEG."""
+        buffer = BytesIO()
+        Image.new("RGB", (10, 10), "white").save(
+            buffer,
+            format="PNG",
+        )
+
+        receipt = SimpleUploadedFile(
+            "fake.jpg",
+            buffer.getvalue(),
+            content_type="image/jpeg",
+        )
+
+        response = self.client.post(
+            self.url,
+            {"receipt": receipt},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["error"],
+            "Unsupported receipt image format.",
+        )
+        mock_scan.assert_not_called()

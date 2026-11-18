@@ -6,3 +6,4 @@ certifi==2026.10.19
 idna==3.20
 openai==3.54.0
 python-dotenv==1.2.4
+Pillow==13.0.0
