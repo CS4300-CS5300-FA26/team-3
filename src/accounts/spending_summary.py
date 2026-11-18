@@ -40,13 +40,16 @@ def _provider_text(response):
     for item in output:
         if not isinstance(item, dict):
             raise SpendingSummaryError("Spending summary service returned invalid output.")
+        if item.get("type") != "message":
+            continue
         content = item.get("content")
         if not isinstance(content, list):
             raise SpendingSummaryError("Spending summary service returned invalid output.")
         for part in content:
-            if not isinstance(part, dict) or not isinstance(part.get("text"), str):
-                raise SpendingSummaryError("Spending summary service returned invalid output.")
-            text_parts.append(part["text"])
+            if not isinstance(part, dict):
+                continue
+            if part.get("type") == "output_text" and isinstance(part.get("text"), str):
+                text_parts.append(part["text"])
 
     if not text_parts:
         raise SpendingSummaryError("Spending summary service returned invalid output.")
@@ -75,9 +78,17 @@ def generate_spending_summary(category_totals):
     )
     try:
         with urlopen(request, timeout=10) as response:
-            provider_response = json.loads(response.read().decode())
+            provider_response = json.loads(response.read().decode("utf-8"))
         observations = json.loads(_provider_text(provider_response))
-    except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError, TypeError):
+    except (
+        HTTPError,
+        URLError,
+        TimeoutError,
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        TypeError,
+    ):
         raise SpendingSummaryError("Spending summary service is unavailable.") from None
     if not isinstance(observations, list) or not all(
         isinstance(observation, str) for observation in observations
@@ -97,13 +108,13 @@ def validate_spending_observations(observations, category_totals):
         if not isinstance(observation, str):
             continue
 
-        monetary_tokens = set(re.findall(r"\$\d+(?:\.\d{2})?", observation))
+        monetary_tokens = set(re.findall(r"\$\d+(?:,\d{3})*(?:\.\d+)?", observation))
         if not monetary_tokens or not monetary_tokens.issubset(known_amounts):
             continue
 
         clauses = [
             clause.strip()
-            for clause in re.split(r"(?:\band\b|,|;|[.!?](?:\s|$))", observation)
+            for clause in re.split(r"(?:\band\b|;|[.!?](?:\s|$))", observation)
             if clause.strip()
         ]
         if not clauses:
@@ -117,17 +128,19 @@ def validate_spending_observations(observations, category_totals):
                 if re.search(rf"\b{re.escape(category)}\b", clause, re.IGNORECASE)
             ]
             if not category_matches:
-                if re.search(r"\$\d+(?:\.\d{2})?", clause):
+                if re.search(r"\$\d+(?:,\d{3})*(?:\.\d+)?", clause):
                     valid = False
                     break
                 continue
 
+            # Multiple pairs in one clause are ambiguous (amounts may be swapped).
+            # Separate clauses such as "Food ... and Housing ..." remain supported.
+            if len(category_matches) != 1:
+                valid = False
+                break
             matched_category_count += len(category_matches)
-            clause_amounts = set(re.findall(r"\$\d+(?:\.\d{2})?", clause))
-            if not clause_amounts or any(
-                known_totals[category] not in clause_amounts
-                for category in category_matches
-            ):
+            clause_amounts = set(re.findall(r"\$\d+(?:,\d{3})*(?:\.\d+)?", clause))
+            if clause_amounts != {known_totals[category_matches[0]]}:
                 valid = False
                 break
 

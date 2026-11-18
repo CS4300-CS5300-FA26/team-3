@@ -323,14 +323,17 @@ def dashboard(request):
                     {"kind": t.kind, "category": t.category, "amount": t.amount} for t in transactions
                 )
             ]
-            try:
-                provider_observations = generate_spending_summary(summary_totals)
-            except SpendingSummaryError:
-                summary_message = "Unable to generate spending summary right now."
+            if not summary_totals:
+                summary_message = "No expense activity yet to summarize"
             else:
-                summary_observations = validate_spending_observations(
-                    provider_observations, summary_totals
-                )
+                try:
+                    provider_observations = generate_spending_summary(summary_totals)
+                except SpendingSummaryError:
+                    summary_message = "Unable to generate spending summary right now."
+                else:
+                    summary_observations = validate_spending_observations(
+                        provider_observations, summary_totals
+                    )
 
     monthly = monthly_context(budget_transactions, selected_month, today)
     show_history_totals = bool(criteria) or not (

@@ -312,3 +312,27 @@ class TransactionPeriodFilterTests(TestCase):
 
         self.assertContains(response, "Unable to generate spending summary right now.")
         self.assertNotContains(response, "private provider details")
+
+    @patch("accounts.views.generate_spending_summary", create=True)
+    def test_spending_summary_does_not_call_ai_for_income_only_period(
+        self, generate_summary
+    ):
+        for index in range(10):
+            self.create_transaction(
+                Transaction.Kind.INCOME,
+                "50.00",
+                date(2026, 10, index + 1),
+                f"October income {index}",
+            )
+
+        response = self.client.post(
+            reverse("explain_spending"),
+            {
+                "month": "2026-10",
+                "period": "selected_month",
+                "explain_spending": "Explain my spending",
+            },
+        )
+
+        self.assertContains(response, "No expense activity yet to summarize")
+        generate_summary.assert_not_called()
