@@ -127,7 +127,7 @@
         <span>Expenses <strong>${{ expense_total|floatformat:2 }}</strong></span>
     </p>
 </section>
-<form method="post" action="{% url 'explain_spending' %}">
+<form method="post" action="{% url 'explain_spending' %}?month={{ selected_month }}&amp;period={{ selected_period }}">
     {% csrf_token %}
     <input type="hidden" name="month" value="{{ selected_month }}">
     <input type="hidden" name="period" value="{{ selected_period }}">

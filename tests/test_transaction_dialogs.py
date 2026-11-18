@@ -1,5 +1,8 @@
 """Increment 2 uses the existing transaction routes for dialog and fallback forms."""
 from datetime import date
+from decimal import Decimal
+from html import unescape
+import re
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -34,6 +37,23 @@ class TransactionDialogTests(TestCase):
         self.assertContains(response, f'href="{reverse("edit_transaction", args=[self.entry.pk])}"')
         self.assertNotContains(response, '>Edit</a>')
         self.assertNotContains(response, '>Delete</a>')
+
+    def test_explanation_then_dialog_edit_preserves_month_and_history_on_refresh(self):
+        response = self.client.get(reverse("dashboard"), {"month": "2026-10", "period": "all"})
+        action = unescape(re.search(r'<form[^>]*action="([^"]*explain[^"]*)"',
+                                    response.content.decode()).group(1))
+        explained = self.client.post(action, {
+            "month": "2026-10", "period": "all", "explain_spending": "1",
+        })
+        self.assertContains(explained, "Not enough activity yet to summarize")
+        updated = self.client.post(reverse("edit_transaction", args=[self.entry.pk]),
+                                   self.expense(amount="41.00"), **DIALOG)
+        self.assertEqual(updated.status_code, 200)
+        refreshed = self.client.get(explained.wsgi_request.get_full_path())
+        self.assertEqual(refreshed.context["selected_month"], "2026-10")
+        self.assertEqual(refreshed.context["selected_period"], "all")
+        self.assertEqual(refreshed.context["expense_total"], Decimal("41.00"))
+        self.assertNotContains(refreshed, "Not enough activity yet to summarize")
 
     def test_create_date_defaults_to_today_and_edit_retains_saved_date(self):
         with patch("transactions.views.timezone.localdate", return_value=date(2026, 11, 16)):
