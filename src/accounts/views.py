@@ -1,7 +1,9 @@
 from calendar import monthrange
+from collections import Counter
 from datetime import date, timedelta
 from decimal import Decimal
 from smtplib import SMTPException
+from urllib.parse import urlencode
 
 from django import forms
 from django.conf import settings
@@ -12,7 +14,6 @@ from django.core import signing
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseBadRequest, HttpResponseNotAllowed
 from django.db import IntegrityError
-from django.db.models import Count, Max, Min, Q, Sum
 from django.shortcuts import redirect, render, resolve_url
 from django.urls import reverse
 from django.utils import timezone
@@ -21,6 +22,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from accounts import recovery
+from accounts.dashboard import drilldown_context, monthly_context
 from accounts.forms import SetPasswordForm, SignupForm
 from accounts.identity import normalize_email
 from accounts.lockout import SignInRateLimited, check_login
@@ -33,6 +35,7 @@ from accounts.spending_summary import (
 )
 from accounts.verification import complete_registration, email_from_verification_token
 from transactions.models import Transaction
+from transactions.spending import category_totals
 
 
 @sensitive_post_parameters("email")
@@ -289,48 +292,53 @@ def dashboard(request):
     else:
         period_start = None
         period_end = None
+    criteria, drilldown_filters = drilldown_context(request.GET, selected_month, selected_period)
+    if "kind" in criteria:
+        transactions = transactions.filter(kind=criteria["kind"])
+    if "category" in criteria:
+        transactions = transactions.filter(kind="expense", category=criteria["category"])
+    if "date" in criteria:
+        period_start = period_end = date.fromisoformat(criteria["date"])
+        transactions = transactions.filter(date=period_start)
     transactions = transactions.order_by("-date", "-id")
 
-    period_totals = transactions.aggregate(
-        income_total=Sum("amount", filter=Q(kind=Transaction.Kind.INCOME)),
-        expense_total=Sum("amount", filter=Q(kind=Transaction.Kind.EXPENSE)),
-        first_date=Min("date"),
-        last_date=Max("date"),
-    )
-    income_total = period_totals["income_total"] or Decimal("0.00")
-    expense_total = period_totals["expense_total"] or Decimal("0.00")
+    # These rows are also rendered below; sum their stored Decimal amounts exactly.
+    transactions = list(transactions)
+    income_total = sum((t.amount for t in transactions if t.kind == "income"), Decimal("0.00"))
+    expense_total = sum((t.amount for t in transactions if t.kind == "expense"), Decimal("0.00"))
     if selected_period == "all":
-        period_start = period_totals["first_date"]
-        period_end = period_totals["last_date"]
+        period_start = transactions[-1].date if transactions else None
+        period_end = transactions[0].date if transactions else None
 
     summary_observations = []
     summary_message = ""
     if is_summary_request:
-        if transactions.count() < 10:
+        if len(transactions) < 10:
             summary_message = "Not enough activity yet to summarize"
         else:
-            category_totals = list(
-                transactions.filter(kind=Transaction.Kind.EXPENSE)
-                .values("category")
-                .annotate(total=Sum("amount"), count=Count("id"))
-                .order_by("-total", "category")
-            )
+            counts = Counter(t.category for t in transactions if t.kind == Transaction.Kind.EXPENSE)
+            summary_totals = [
+                {"category": row["category"], "total": row["total"], "count": counts[row["category"]]}
+                for row in category_totals(
+                    {"kind": t.kind, "category": t.category, "amount": t.amount} for t in transactions
+                )
+            ]
             try:
-                provider_observations = generate_spending_summary(category_totals)
+                provider_observations = generate_spending_summary(summary_totals)
             except SpendingSummaryError:
                 summary_message = "Unable to generate spending summary right now."
             else:
                 summary_observations = validate_spending_observations(
-                    provider_observations, category_totals
+                    provider_observations, summary_totals
                 )
 
-    # Calculate the remaining balance using existing model logic
-    remaining_budget = sum(
-        (item.signed_amount for item in budget_transactions),
-        Decimal("0.00"),
+    monthly = monthly_context(budget_transactions, selected_month, today)
+    show_history_totals = bool(criteria) or not (
+        period_start == selected_month and period_end == monthly["month_end"]
+        and selected_period != "all"
     )
     show_low_balance_warning = (
-        current_threshold is not None and remaining_budget < current_threshold.amount
+        current_threshold is not None and monthly["remaining_budget"] < current_threshold.amount
     )
     upcoming_fixed_expenses = [
         {"transaction": expense, "days_until_due": (expense.next_due_date - today).days}
@@ -359,10 +367,13 @@ def dashboard(request):
             "period_options": period_options,
             "period_start": period_start,
             "period_end": period_end,
-            "remaining_budget": remaining_budget,
+            **monthly,
+            "drilldown_filters": drilldown_filters,
+            "drilldown_query": urlencode(criteria),
+            "show_history_totals": show_history_totals,
+            "history_scope": period_options[selected_period],
             "selected_month": selected_month.isoformat()[:7],
             "selected_month_label": selected_month.strftime("%B %Y"),
-            "budget_transaction_count": budget_transactions.count(),
             "current_threshold": current_threshold,
             "show_low_balance_warning": show_low_balance_warning,
             "summary_observations": summary_observations,

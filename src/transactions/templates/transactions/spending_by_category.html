@@ -34,6 +34,7 @@
 
 <h2>{{ month|date:"F Y" }}</h2>
 {% if categories %}
+    <p>Bars compare with the largest category; percentages show share of total spending.</p>
     <ol class="category-chart">
         {% for row in categories %}
             <li>
@@ -41,6 +42,7 @@
                     <span class="category-name">{{ row.category }}</span>
                     <strong>${{ row.total|floatformat:2 }}</strong>
                 </div>
+                <p>{{ row.share }}% of total spending</p>
                 <div class="bar-track" aria-hidden="true">
                     <div class="bar" style="width: {{ row.width }}%"></div>
                 </div>
