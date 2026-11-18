@@ -7,7 +7,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 MODEL = 'gpt-6-luna'
-MAX_INPUT_BYTES = 120_000
+MAX_INPUT_BYTES = 240_000
 
 
 def request_json(url, token, data=None):

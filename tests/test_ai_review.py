@@ -162,10 +162,19 @@ class AIReviewTests(unittest.TestCase):
         self.assertNotIn('tools', payload)
         self.assertEqual(api.call_count, 1)
 
+    def test_large_integration_review_keeps_the_entire_input(self):
+        import json
+        context = {'diff': 'start' + 'x' * 200_000 + 'end'}
+        api = Mock(return_value={'status': 'completed', 'output': [
+            {'type': 'message', 'content': [{'type': 'output_text', 'text': 'Finding'}]}]})
+        self.assertEqual(ai_review.review(context, api), 'Finding')
+        self.assertEqual(json.loads(api.call_args.args[0]['input']), context)
+        self.assertEqual(api.call_count, 1)
+
     def test_oversize_input_never_calls_api(self):
         api = Mock()
         with self.assertRaisesRegex(ValueError, 'large'):
-            ai_review.review({'diff': 'x' * 130_000}, api)
+            ai_review.review({'diff': 'x' * 240_000}, api)
         api.assert_not_called()
 
     def test_incomplete_empty_and_refused_results_fail(self):
