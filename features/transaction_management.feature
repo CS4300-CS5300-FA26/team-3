@@ -35,4 +35,4 @@ Feature: Edit or delete a transaction
 
   Scenario: Dashboard displays transaction actions
     When I view my transaction dashboard
-    Then I see Edit and Delete links for my transaction
+    Then my transaction description links to its editor

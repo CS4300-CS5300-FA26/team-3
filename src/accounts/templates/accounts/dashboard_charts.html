@@ -1,0 +1,66 @@
+<div class="dashboard-charts">
+<section class="chart-panel" aria-labelledby="category-heading">
+    <h2 id="category-heading">Spending by category</h2>
+    <p class="chart-context">{{ selected_month_label }}</p>
+    <ul class="category-bars">
+    {% for row in categories %}
+        <li><a class="category-link" href="{{ row.url }}" aria-label="{{ row.category }}: ${{ row.total|floatformat:2 }}, {{ row.share }}% of spending. Show expenses.">
+            <span class="category-name">{{ row.category }}</span>
+            <span class="bar-track" aria-hidden="true"><span class="bar" style="display: block; width: {{ row.width }}%"></span></span>
+            <span class="category-amount">${{ row.total|floatformat:2 }}<small class="visually-hidden">{{ row.share }}% of total</small></span>
+        </a></li>
+    {% empty %}
+        <li>No expenses in this month</li>
+    {% endfor %}
+    </ul>
+    <a class="button secondary" href="{% url 'spending_by_category' %}?month={{ selected_month }}">View details</a>
+</section>
+<section class="chart-panel" aria-labelledby="cumulative-heading">
+    <h2 id="cumulative-heading">Cumulative spending</h2>
+    {% if spending_days %}
+    <p class="chart-context">{{ selected_month_label }} · through {{ chart_cutoff|date:"M j" }} · <strong>${{ chart_total|floatformat:2 }}</strong></p>
+    {% if not chart_total %}<p class="muted">No spending to date</p>{% endif %}
+    <svg class="spending-chart" viewBox="0 0 500 145" role="group" aria-label="Daily cumulative spending for {{ selected_month_label }}. Select a date to show that day's expenses.">
+        <path class="chart-grid" d="M 76 20 H 480 M 76 70 H 480 M 76 120 H 480" />
+        <g class="chart-axis" aria-hidden="true" text-anchor="end">
+            <text x="68" y="24">{{ chart_axis_max }}</text>
+            <text x="68" y="74">{{ chart_axis_mid }}</text>
+            <text x="68" y="124">$0</text>
+        </g>
+        <path class="chart-line" d="{{ chart_path }}" />
+        {% for point in spending_days %}
+        <a class="chart-date" href="{{ point.url }}" aria-label="{{ point.date|date:'M j' }}: ${{ point.amount|floatformat:2 }} spent, ${{ point.total|floatformat:2 }} cumulative. Show expenses." data-chart-detail="{{ point.date|date:'M j' }} · ${{ point.amount|floatformat:2 }} spent this day · ${{ point.total|floatformat:2 }} cumulative">
+            <circle class="chart-hit" cx="{{ point.x }}" cy="{{ point.y }}" r="10" />
+            <circle class="chart-point" cx="{{ point.x }}" cy="{{ point.y }}" r="3.5" />
+        </a>
+        {% endfor %}
+        <g class="chart-axis" aria-hidden="true">
+            <text x="76" y="140">{{ spending_days.0.date|date:"M j" }}</text>
+            {% if spending_days|length > 1 %}<text x="480" y="140" text-anchor="end">{{ chart_cutoff|date:"M j" }}</text>{% endif %}
+        </g>
+    </svg>
+    <div class="chart-exploration">
+    <p id="chart-detail" class="chart-detail" aria-live="polite">Select a day to see its expenses.</p>
+    <details class="daily-exploration">
+    <summary>Explore daily amounts</summary>
+    <form class="chart-day-picker" method="get" action="{% url 'dashboard' %}#history">
+        <input type="hidden" name="month" value="{{ selected_month }}">
+        <input type="hidden" name="period" value="selected_month">
+        <input type="hidden" name="kind" value="expense">
+        <label for="chart-date">Explore a day (spent / cumulative)</label>
+        <select id="chart-date" name="date">
+            {% for point in spending_days %}
+            <option value="{{ point.date|date:'Y-m-d' }}"{% if forloop.last %} selected{% endif %}>{{ point.date|date:"M j" }} · ${{ point.amount|floatformat:2 }} / ${{ point.total|floatformat:2 }}</option>
+            {% endfor %}
+        </select>
+        <button class="secondary" type="submit">Show day's expenses</button>
+    </form>
+    </details>
+    </div>
+    {% else %}
+    <p class="chart-context">{{ selected_month_label }}</p>
+    <p>No spending to date</p>
+    <p class="muted">This month has not started. Monthly totals include any future-dated records already entered.</p>
+    {% endif %}
+</section>
+</div>

@@ -1,0 +1,67 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Account settings | BudgetWise{% endblock %}
+
+{% block extra_style %}
+<style>
+    main { max-width: 920px; }
+    .panel + .panel { margin-top: 28px; }
+    .account-row { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px 28px; }
+    .account-row + .account-row { margin-top: 24px; padding-top: 24px; border-top: 1px solid #d5dfd2; }
+    .account-row p { margin: 0 0 16px; overflow-wrap: anywhere; }
+    .account-row [role="status"] { margin: 16px 0 0; }
+    .account-row form, .threshold-form { margin: 0; padding: 0; border: 0; background: transparent; }
+    .threshold-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; }
+    .threshold-fields > div { flex: 0 1 240px; min-width: 0; }
+    .threshold-help { margin: 20px 0 0; color: #56616b; }
+    @media (max-width: 600px) {
+        .account-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+        .threshold-fields > div { flex-basis: 100%; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Account settings</h1>
+<section class="panel" aria-labelledby="account-heading">
+    <h2 id="account-heading">Account</h2>
+    <div class="account-row">
+        <strong>Email</strong>
+        <p>{{ request.user.email }}</p>
+    </div>
+    <div class="account-row">
+        <strong>Password</strong>
+        <div>
+            <p>Send a reset link to your email address.</p>
+            <form method="post" action="{% url 'account_settings' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reset_password">
+                <button class="button secondary" type="submit" data-pending-label="Requesting reset…">Send password reset email</button>
+            </form>
+            {% for message in messages %}
+                {% if 'password_reset' in message.tags %}<p role="status">{{ message }}</p>{% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</section>
+<section class="panel" aria-labelledby="preferences-heading">
+    <h2 id="preferences-heading">Budget preferences</h2>
+    <form class="threshold-form" method="post" action="{% url 'account_settings' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="threshold">
+        {{ threshold_form.non_field_errors }}
+        <div class="threshold-fields">
+            <div>
+                <label for="{{ threshold_form.amount.id_for_label }}">Safety threshold ($)</label>
+                {{ threshold_form.amount }}
+                {{ threshold_form.amount.errors }}
+            </div>
+            <button type="submit">Save threshold</button>
+        </div>
+        <p class="threshold-help">Show a dashboard warning when your monthly remaining budget falls below this amount.</p>
+    </form>
+    {% for message in messages %}
+        {% if 'threshold' in message.tags %}<p role="status">{{ message }}</p>{% endif %}
+    {% endfor %}
+</section>
+{% endblock %}

@@ -81,7 +81,7 @@ def scan_receipt(image_path: str | Path) -> Decimal | None:
         client = OpenAI(api_key=api_key, timeout=20.0, max_retries=1)
 
         response = client.responses.create(
-            model=os.environ.get("OPENAI_RECEIPT_MODEL", "gpt-4.1-mini"),
+            model=os.environ.get("OPENAI_RECEIPT_MODEL", "gpt-6-luna"),
             instructions=RECEIPT_PROMPT,
             input=[
                 {

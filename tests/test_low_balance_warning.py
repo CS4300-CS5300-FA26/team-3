@@ -151,16 +151,17 @@ class LowBalanceWarningTests(TestCase):
             description="October expense",
             category="Food",
         )
-        dashboard_url = reverse("dashboard") + "?month=2026-10"
 
         self.assertContains(self.dashboard(), "You are below your $150.00 safety threshold")
 
-        lower = self.client.post(dashboard_url, {"amount": "100.00"}, follow=True)
-        self.assertRedirects(lower, dashboard_url)
+        lower = self.client.post(reverse("account_settings"), {"amount": "100.00"}, follow=True)
+        self.assertRedirects(lower, reverse("account_settings"))
+        lower = self.dashboard()
         self.assertEqual(lower.context["remaining_budget"], Decimal("120.00"))
         self.assertNotContains(lower, "You are below your")
 
-        higher = self.client.post(dashboard_url, {"amount": "200.00"}, follow=True)
-        self.assertRedirects(higher, dashboard_url)
+        higher = self.client.post(reverse("account_settings"), {"amount": "200.00"}, follow=True)
+        self.assertRedirects(higher, reverse("account_settings"))
+        higher = self.dashboard()
         self.assertEqual(higher.context["remaining_budget"], Decimal("120.00"))
         self.assertContains(higher, "You are below your $200.00 safety threshold")

@@ -191,3 +191,32 @@ class ReceiptUploadTests(TestCase):
             "Unsupported receipt image format.",
         )
         mock_scan.assert_not_called()
+
+
+    @patch("transactions.views.scan_receipt")
+    def test_accepts_mpo_jpeg(self, mock_scan):
+        """Accept an MPO format reported for a JPEG upload."""
+        mock_scan.return_value = Decimal("64.44")
+
+        real_image_open = Image.open
+
+        def open_as_mpo(*args, **kwargs):
+            image = real_image_open(*args, **kwargs)
+            image.format = "MPO"
+            return image
+
+        with patch(
+            "transactions.views.Image.open",
+            side_effect=open_as_mpo,
+        ):
+            response = self.client.post(
+                self.url,
+                {"receipt": self.make_image()},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {"amount": "64.44"},
+        )
+        mock_scan.assert_called_once()

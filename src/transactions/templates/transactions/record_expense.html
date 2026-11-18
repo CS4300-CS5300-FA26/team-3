@@ -1,207 +1,47 @@
+{% extends "accounts/base.html" %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Record expense | BudgetWise</title>
-    <style>
-        body {
-            margin: 0;
-            background: #f3f6f1;
-            color: #101820;
-            font: 18px/1.5 Arial, sans-serif;
-        }
-        header {
-            padding: 18px 3%;
-            background: #e9efe6;
-            border-bottom: 1px solid #afc0ad;
-            color: #104b25;
-            font: 32px/1.2 Georgia, serif;
-        }
-        header a { color: inherit; text-decoration: none; }
-        header a:hover, header a:focus-visible { text-decoration: underline; }
-        main { max-width: 480px; margin: 48px auto; padding: 0 20px; }
-        h1 { margin: 0 0 24px; color: #104b25; font: 36px/1.2 Georgia, serif; }
-        form { padding: 24px; background: white; border: 1px solid #afc0ad; border-radius: 8px; }
-        form > div { margin: 0 0 20px; }
-        label, legend { display: block; margin-bottom: 6px; padding: 0; font-weight: bold; }
-        fieldset { margin: 0; padding: 0; border: 0; }
-        fieldset label { font-weight: normal; }
-        select, input:not([type="radio"]) {
-            box-sizing: border-box;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #56616b;
-            border-radius: 4px;
-            font: inherit;
-        }
-        select:focus-visible, input:focus-visible, button:focus-visible {
-            outline: 3px solid #104b25;
-            outline-offset: 2px;
-        }
-        button {
-            padding: 10px 18px;
-            border: 0;
-            border-radius: 4px;
-            background: #104b25;
-            color: white;
-            font: inherit;
-            cursor: pointer;
-        }
-        button:disabled {
-            opacity: 0.6;
-            cursor: wait;
-        }
-        .errorlist { margin: 0 0 8px; padding: 0; list-style: none; color: #9b1c1c; }
-        [role="status"] { padding: 12px; background: #e9efe6; border-left: 4px solid #104b25; }
-        .receipt-help {
-            margin: 6px 0;
-            color: #56616b;
-            font-size: 14px;
-        }
-        .receipt-status {
-            margin: 10px 0 0;
-            font-size: 15px;
-        }
-        .receipt-error {
-            color: #9b1c1c;
-        }
-    </style>
-</head>
-<body>
-    <header><a href="{% url 'dashboard' %}">BudgetWise</a></header>
-    {% include "accounts/navigation.html" %}
-    <main>
-        <h1>Record expense</h1>
+{% block title %}Record expense | BudgetWise{% endblock %}
 
-        {% for message in messages %}
-            <p role="status">{{ message }}</p>
-        {% endfor %}
+{% block extra_style %}
+{% include "transactions/form_style.html" %}
 
-        <form method="post" id="expense-form">
-            {% csrf_token %}
+<style>
+    .receipt-scanner {
+        margin-bottom: 20px;
+    }
 
-            <div>
-                <label for="receipt-upload">Scan a receipt (optional)</label>
-                <input
-                    type="file"
-                    id="receipt-upload"
-                    accept="image/jpeg,image/png,image/webp"
-                >
-                <p class="receipt-help">
-                    Upload a JPG, PNG, or WebP image (maximum 5 MB).
-                    The detected total will fill the amount field.
-                </p>
-                <p
-                    id="receipt-status"
-                    class="receipt-status"
-                    role="status"
-                    aria-live="polite"
-                ></p>
-            </div>
+    .receipt-scanner label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+    }
 
-            {% include "transactions/expense_fields.html" %}
+    .receipt-scanner input {
+        display: block;
+        max-width: 100%;
+    }
 
-            <button type="submit" id="save-expense">Save expense</button>
-        </form>
-    </main>
+    .receipt-scanner p {
+        margin: 8px 0;
+        font-size: 14px;
+    }
 
-    <script>
-        const receiptUpload = document.getElementById("receipt-upload");
-        const receiptStatus = document.getElementById("receipt-status");
-        const amountInput = document.getElementById("id_amount");
-        const csrfToken = document.querySelector(
-            "#expense-form input[name='csrfmiddlewaretoken']"
-        ).value;
+    .receipt-error {
+        color: #9b1c1c;
+    }
+</style>
+{% endblock %}
 
-        let scanController = null;
+{% block content %}
+<h1>Record expense</h1>
 
-        receiptUpload.addEventListener("change", async function () {
-            if (scanController) {
-                scanController.abort();
-            }
+{% for message in messages %}
+    <p role="status">{{ message }}</p>
+{% endfor %}
 
-            const file = receiptUpload.files[0];
+{% include "transactions/transaction_form.html" %}
 
-            if (!file) {
-                receiptStatus.textContent = "";
-                return;
-            }
+{% include "transactions/receipt_script.html" %}
+{% include "transactions/expense_script.html" %}
 
-            const allowedTypes = [
-                "image/jpeg",
-                "image/png",
-                "image/webp"
-            ];
-
-            if (!allowedTypes.includes(file.type)) {
-                receiptStatus.textContent = "Unsupported receipt image format.";
-                receiptStatus.classList.add("receipt-error");
-                return;
-            }
-
-            if (file.size > 5 * 1024 * 1024) {
-                receiptStatus.textContent = "Receipt image must be 5 MB or smaller.";
-                receiptStatus.classList.add("receipt-error");
-                return;
-            }
-
-            receiptStatus.classList.remove("receipt-error");
-            receiptStatus.textContent = "Scanning receipt...";
-
-            const formData = new FormData();
-            formData.append("receipt", file);
-
-            const controller = new AbortController();
-            scanController = controller;
-
-            try {
-                const response = await fetch(
-                    "{% url 'scan_receipt_upload' %}",
-                    {
-                        method: "POST",
-                        headers: {
-                            "X-CSRFToken": csrfToken
-                        },
-                        body: formData,
-                        signal: controller.signal
-                    }
-                );
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(
-                        data.error || "Receipt scanning failed."
-                    );
-                }
-
-                if (data.amount !== null && data.amount !== undefined) {
-                    amountInput.value = data.amount;
-                    receiptStatus.textContent =
-                        "Receipt total detected: $" + data.amount +
-                        ". You can edit the amount before saving.";
-                } else {
-                    receiptStatus.textContent =
-                        data.message ||
-                        "Could not read a total, please enter it manually";
-                    receiptStatus.classList.add("receipt-error");
-                }
-            } catch (error) {
-                if (error.name === "AbortError") {
-                    return;
-                }
-
-                receiptStatus.textContent =
-                    error.message || "Receipt scanning failed.";
-                receiptStatus.classList.add("receipt-error");
-            } finally {
-                if (scanController === controller) {
-                    scanController = null;
-                }
-            }
-        });
-    </script>
-</body>
-</html>
+{% endblock %}

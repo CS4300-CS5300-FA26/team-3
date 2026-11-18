@@ -14,6 +14,11 @@ Cloudflare manages DNS and filters public HTTP traffic. API Gateway calls the `l
 
 Set `DJANGO_SECRET_KEY` in Lambda to a private, randomly generated value of at least 50 characters. Never commit its value. Dependencies are recorded in `requirements.txt`.
 
+For D9 spending summaries, set `OPENAI_API_KEY` in the `budgetwise` Lambda
+environment. The default model is `gpt-6-luna`; optionally set
+`OPENAI_SPENDING_SUMMARY_MODEL` to override it. Keep both values out of source
+control and GitHub workflow files.
+
 GitHub Actions builds the deployment ZIP from `src/` and Linux-compatible dependencies, excluding local databases, `.env` files, virtual environments, and caches.
 
 ## Signup email
@@ -29,6 +34,25 @@ Resend's Emails dashboard shows delivery failures; a failed send also gives the
 visitor a generic retry message. Revoke the BudgetWise key in Resend to disable
 sending without changing other applications. Deployed code still needs the key
 configured; local integration does not configure Lambda.
+
+## Fixed expense reminder email
+
+After this change reaches `main`, the
+[`Fixed expense reminders`](../.github/workflows/fixed-expense-reminders.yml)
+workflow runs daily at 15:17 UTC. It uses GitHub OIDC to invoke the `live`
+alias of `budgetwise` with a private event; students do not call an HTTP
+reminder endpoint. The GitHub role must permit `lambda:InvokeFunction` on that
+alias, and Lambda needs its existing `RESEND_API_KEY` and database access.
+
+The command sends one email per schedule and due date while the due date is
+inside its saved notice window. It can catch up after a missed day and skips
+past-due expenses. A mail failure leaves that due date retryable and makes the
+workflow fail; check the Actions run and `/aws/lambda/budgetwise` logs. An
+operator can rerun the workflow on `main` while the due date is still inside
+the notice window. A crash
+after SMTP accepts a message but before the database records it can still
+produce a duplicate on retry. Local tests use in-memory mail and make no AWS
+calls; the first live scheduled run needs separate verification.
 
 ## Database
 
