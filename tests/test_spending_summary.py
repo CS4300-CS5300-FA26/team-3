@@ -79,6 +79,31 @@ class SpendingSummaryServiceTests(TestCase):
         with self.assertRaisesRegex(SpendingSummaryError, "invalid"):
             generate_spending_summary(self.totals)
 
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
+    @patch("accounts.spending_summary.urlopen")
+    def test_reasoning_items_before_text_output_are_skipped(self, urlopen):
+        urlopen.return_value = io.BytesIO(json.dumps({
+            "output": [
+                {"type": "reasoning", "summary": []},
+                {"type": "message", "content": [
+                    {"type": "output_text", "text": '["Housing was $200.00."]'}
+                ]},
+            ]
+        }).encode())
+
+        self.assertEqual(
+            generate_spending_summary(self.totals),
+            ["Housing was $200.00."],
+        )
+
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
+    @patch("accounts.spending_summary.urlopen")
+    def test_invalid_utf8_provider_response_is_rejected(self, urlopen):
+        urlopen.return_value = io.BytesIO(b"\xff")
+
+        with self.assertRaisesRegex(SpendingSummaryError, "unavailable"):
+            generate_spending_summary(self.totals)
+
 
 class SpendingObservationValidationTests(TestCase):
     totals = [
@@ -96,4 +121,12 @@ class SpendingObservationValidationTests(TestCase):
         self.assertEqual(
             validate_spending_observations(observations, self.totals),
             ["Housing totaled $200.00 and Food totaled $20.00."],
+        )
+
+    def test_comma_punctuated_category_and_amount_pair_is_valid(self):
+        observation = "Housing, at $200.00, was your largest category."
+
+        self.assertEqual(
+            validate_spending_observations([observation], self.totals),
+            [observation],
         )

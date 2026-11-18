@@ -40,13 +40,16 @@ def _provider_text(response):
     for item in output:
         if not isinstance(item, dict):
             raise SpendingSummaryError("Spending summary service returned invalid output.")
+        if item.get("type") != "message":
+            continue
         content = item.get("content")
         if not isinstance(content, list):
             raise SpendingSummaryError("Spending summary service returned invalid output.")
         for part in content:
-            if not isinstance(part, dict) or not isinstance(part.get("text"), str):
-                raise SpendingSummaryError("Spending summary service returned invalid output.")
-            text_parts.append(part["text"])
+            if not isinstance(part, dict):
+                continue
+            if part.get("type") == "output_text" and isinstance(part.get("text"), str):
+                text_parts.append(part["text"])
 
     if not text_parts:
         raise SpendingSummaryError("Spending summary service returned invalid output.")
@@ -75,9 +78,17 @@ def generate_spending_summary(category_totals):
     )
     try:
         with urlopen(request, timeout=10) as response:
-            provider_response = json.loads(response.read().decode())
+            provider_response = json.loads(response.read().decode("utf-8"))
         observations = json.loads(_provider_text(provider_response))
-    except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError, TypeError):
+    except (
+        HTTPError,
+        URLError,
+        TimeoutError,
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        TypeError,
+    ):
         raise SpendingSummaryError("Spending summary service is unavailable.") from None
     if not isinstance(observations, list) or not all(
         isinstance(observation, str) for observation in observations
@@ -103,7 +114,7 @@ def validate_spending_observations(observations, category_totals):
 
         clauses = [
             clause.strip()
-            for clause in re.split(r"(?:\band\b|,|;|[.!?](?:\s|$))", observation)
+            for clause in re.split(r"(?:\band\b|;|[.!?](?:\s|$))", observation)
             if clause.strip()
         ]
         if not clauses:

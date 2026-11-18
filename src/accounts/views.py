@@ -295,14 +295,17 @@ def dashboard(request):
                 .annotate(total=Sum("amount"), count=Count("id"))
                 .order_by("-total", "category")
             )
-            try:
-                provider_observations = generate_spending_summary(category_totals)
-            except SpendingSummaryError:
-                summary_message = "Unable to generate spending summary right now."
+            if not category_totals:
+                summary_message = "No expense activity yet to summarize"
             else:
-                summary_observations = validate_spending_observations(
-                    provider_observations, category_totals
-                )
+                try:
+                    provider_observations = generate_spending_summary(category_totals)
+                except SpendingSummaryError:
+                    summary_message = "Unable to generate spending summary right now."
+                else:
+                    summary_observations = validate_spending_observations(
+                        provider_observations, category_totals
+                    )
 
     # Calculate the remaining balance using existing model logic
     remaining_budget = sum(
