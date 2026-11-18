@@ -1,18 +1,21 @@
 from calendar import monthrange
 from datetime import date, timedelta
 import unicodedata
-
+import tempfile
+from pathlib import Path
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from .services.receipt_scanner import scan_receipt
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.vary import vary_on_headers
 from django.utils import timezone
-
+from PIL import Image, UnidentifiedImageError
 from .models import Transaction
 from .spending import category_totals
 
@@ -244,6 +247,107 @@ def record_expense(request):
         return _saved_response(request, "Expense saved.", "record_expense")
 
     return _form_response(request, form, "expense", "transactions/record_expense.html")
+
+
+@login_required
+@require_POST
+def scan_receipt_upload(request):
+    """
+    Accept a receipt image and return its detected total.
+
+    The endpoint does not save or modify any transactions.
+    """
+    receipt = request.FILES.get("receipt")
+
+    if receipt is None:
+        return JsonResponse(
+            {"error": "Please upload a receipt image."},
+            status=400,
+        )
+
+    allowed_types = {
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+    }
+
+    extension = allowed_types.get(receipt.content_type)
+
+    if extension is None:
+        return JsonResponse(
+            {"error": "Unsupported receipt image format."},
+            status=400,
+        )
+
+    max_file_size = 5 * 1024 * 1024
+
+    if receipt.size > max_file_size:
+        return JsonResponse(
+            {"error": "Receipt image must be 5 MB or smaller."},
+            status=400,
+        )
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        image_path = Path(temp_dir) / f"receipt{extension}"
+
+        with image_path.open("wb") as destination:
+            for chunk in receipt.chunks():
+                destination.write(chunk)
+
+        # Verify that the uploaded file is a genuine supported image.
+        allowed_formats = {
+            "image/jpeg": "JPEG",
+            "image/png": "PNG",
+            "image/webp": "WEBP",
+        }
+
+        try:
+            with Image.open(image_path) as image:
+                actual_format = image.format
+                image.verify()
+
+            expected_format = allowed_formats[receipt.content_type]
+
+            if receipt.content_type == "image/jpeg":
+                valid_format = actual_format in ("JPEG", "MPO")
+            else:
+                valid_format = actual_format == expected_format
+
+            if not valid_format:
+                return JsonResponse(
+                    {"error": "Unsupported receipt image format."},
+                    status=400,
+                )
+
+            # Decode the image to catch corrupted image data.
+            with Image.open(image_path) as image:
+                image.load()
+
+        except (UnidentifiedImageError, OSError, ValueError):
+            return JsonResponse(
+                {"error": "Invalid or corrupted receipt image."},
+                status=400,
+            )
+
+        try:
+            amount = scan_receipt(image_path)
+        except RuntimeError:
+            return JsonResponse(
+                {"error": "Receipt scanning is currently unavailable."},
+                status=503,
+            )
+
+    if amount is None:
+        return JsonResponse(
+            {
+                "amount": None,
+                "message": (
+                    "Could not read a total, please enter it manually"
+                ),
+            }
+        )
+
+    return JsonResponse({"amount": str(amount)})
 
 
 @never_cache

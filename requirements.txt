@@ -4,3 +4,6 @@ boto3[crt]==1.44.3
 psycopg[binary]==3.3.9
 certifi==2026.10.23
 idna==3.20
+openai==3.54.0
+python-dotenv==1.2.4
+Pillow==13.0.0

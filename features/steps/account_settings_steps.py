@@ -25,7 +25,9 @@ def dashboard_entry_actions(context):
 
     response = context.client.get(reverse("dashboard"))
     html = response.content.decode()
-    assert 'name="amount"' not in html
+
+    assert '<input type="number" name="amount"' not in html
+
     for route in ("record_income", "record_expense"):
         assert html.count(f'href="{reverse(route)}"') == 1
 

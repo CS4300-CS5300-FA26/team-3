@@ -1,17 +1,29 @@
-<script>
+ <script>
     window.initializeExpenseForm = function (root) {
         const schedule = root.querySelector('#recurrence-fields');
-        if (!schedule) return;
-        const fixed = root.querySelector('input[name="is_fixed"][value="fixed"]');
-        function update() {
-            const off = !(fixed && fixed.checked);
-            schedule.hidden = off;
-            schedule.disabled = off;
+
+        if (schedule) {
+            const fixed = root.querySelector(
+                'input[name="is_fixed"][value="fixed"]'
+            );
+
+            function update() {
+                const off = !(fixed && fixed.checked);
+                schedule.hidden = off;
+                schedule.disabled = off;
+            }
+
+            root.querySelectorAll('input[name="is_fixed"]').forEach(choice => {
+                choice.addEventListener('change', update);
+            });
+
+            update();
         }
-        root.querySelectorAll('input[name="is_fixed"]').forEach(choice => {
-            choice.addEventListener('change', update);
-        });
-        update();
+
+        if (window.initializeReceiptScanner) {
+            window.initializeReceiptScanner(root);
+        }
     };
+
     window.initializeExpenseForm(document);
 </script>

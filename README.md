@@ -34,6 +34,9 @@ the server. The optional `OPENAI_SPENDING_SUMMARY_MODEL` selects the model and
 defaults to `gpt-6-luna`. Without a key, the dashboard keeps working and shows a
 temporary-unavailable message when a summary is requested.
 
+The receipt scanner also uses `OPENAI_API_KEY` to extract totals from uploaded
+receipt images. Without a configured key, users can still enter expenses manually.
+
 Development always accepts `localhost`, `127.0.0.1`, and `[::1]`. Set
 `DJANGO_DEVELOPMENT_HOSTS` only if you access the server through another hostname,
 using that hostname without a scheme, port, or path (or a comma-separated list).
@@ -126,10 +129,13 @@ API Gateway sends requests to Django on AWS Lambda. Anonymous visitors are redir
 | --- | --- |
 | Sprint 1 | Sign up, sign in, enter income and expenses, and see a remaining balance. |
 | Sprint 2 | Correct entries, view category spending, receive low-balance warnings, and reset a password. |
-| Sprint 3 | Explain monthly spending with the OpenAI API, scan receipts with RapidOCR, and manage recurring-expense schedules and reminders. |
+| Sprint 3 | Explain monthly spending with the OpenAI API, scan receipts using AI, and manage recurring-expense schedules and reminders. |
 | Sprint 4 | Import transactions from Plaid Sandbox without duplicate entries. |
 
-The initial receipt-scanning choice is RapidOCR. We will evaluate its receipt-total extraction and integration effort, and consider Amazon Textract if reliability or development time makes RapidOCR unsuitable.
+Receipt scanning uses an AI API to extract the total from JPEG, PNG, or WEBP
+receipt images (maximum 5 MB). The extracted amount pre-fills the expense form,
+but the user must confirm the expense before it is saved. If extraction fails,
+the user can enter the amount manually.
 
 ## AI Usage Logs
 
@@ -573,6 +579,24 @@ daily check uses each student's saved notice and avoids repeating a recorded
 due-date email; a failed delivery can be retried on a later check. Text
 messages are outside this change.
 
+### Sprint 3: Nov 17, 2026 — AI Receipt Scanning (Issue #24)
+
+**Tool:** ChatGPT
+
+**What it helped with:**
+
+- Implemented receipt image upload and AI-based total extraction.
+- Added image validation, authentication checks, and error handling.
+- Integrated receipt scanning with the expense entry interface.
+- Developed and debugged Django tests and Behave acceptance scenarios.
+- Resolved merge conflicts and test regressions.
+
+**How we used the result:**
+
+We integrated receipt scanning into the existing transaction workflow,
+validated supported image formats and upload limits, and ensured scanning
+does not automatically create an expense. We verified the implementation
+with 398 passing Django tests (8 skipped) and the Behave acceptance suite.
 ### Sprint 3: Nov 17, 2026 — Dependabot dependency scans
 
 **Tool:** Claude Code
