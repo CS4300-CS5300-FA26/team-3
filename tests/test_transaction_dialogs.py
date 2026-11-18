@@ -1,8 +1,6 @@
 """Increment 2 uses the existing transaction routes for dialog and fallback forms."""
-from datetime import date
+from datetime import date, datetime, timezone as datetime_timezone
 from decimal import Decimal
-from html import unescape
-import re
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -41,16 +39,14 @@ class TransactionDialogTests(TestCase):
 
     def test_explanation_then_dialog_edit_preserves_month_and_history_on_refresh(self):
         response = self.client.get(reverse("dashboard"), {"month": "2026-10", "period": "all"})
-        action = unescape(re.search(r'<form[^>]*action="([^"]*explain[^"]*)"',
-                                    response.content.decode()).group(1))
-        explained = self.client.post(action, {
-            "month": "2026-10", "period": "all", "explain_spending": "1",
+        explained = self.client.post(reverse("explain_spending"), {
+            "month": "2026-10", "explain_spending": "1",
         })
         self.assertContains(explained, "Not enough activity yet to summarize")
         updated = self.client.post(reverse("edit_transaction", args=[self.entry.pk]),
                                    self.expense(amount="41.00"), **DIALOG)
         self.assertEqual(updated.status_code, 200)
-        refreshed = self.client.get(explained.wsgi_request.get_full_path())
+        refreshed = self.client.get(response.wsgi_request.get_full_path())
         self.assertEqual(refreshed.context["selected_month"], "2026-10")
         self.assertEqual(refreshed.context["selected_period"], "all")
         self.assertEqual(refreshed.context["expense_total"], Decimal("41.00"))
@@ -64,6 +60,35 @@ class TransactionDialogTests(TestCase):
                     self.assertEqual(response.context["form"]["date"].value(), date(2026, 11, 16))
         response = self.client.get(reverse("edit_transaction", args=[self.entry.pk]), **DIALOG)
         self.assertEqual(response.context["form"]["date"].value(), self.entry.date)
+
+    def test_new_transaction_dates_follow_mountain_time_even_after_utc_midnight(self):
+        # Both standard time and daylight time must keep the student's calendar day.
+        for instant, expected in (
+            (datetime(2026, 11, 18, 2, tzinfo=datetime_timezone.utc), date(2026, 11, 17)),
+            (datetime(2026, 7, 18, 2, tzinfo=datetime_timezone.utc), date(2026, 7, 17)),
+            (datetime(2026, 11, 18, 7, tzinfo=datetime_timezone.utc), date(2026, 11, 18)),
+        ):
+            with self.subTest(instant=instant), patch("django.utils.timezone.now", return_value=instant):
+                for route in ("record_income", "record_expense"):
+                    for options in ({}, DIALOG):
+                        response = self.client.get(reverse(route), **options)
+                        self.assertEqual(response.context["form"]["date"].value(), expected)
+
+    def test_sign_in_resumes_dashboard_filters_without_accepting_external_destinations(self):
+        self.client.logout()
+        target = reverse("dashboard") + "?month=2026-10&period=all&category=Food%20%26%20drink"
+        response = self.client.get(reverse("sign_in"), {"next": target})
+        self.assertEqual(response.context["next"], target)
+        with patch("accounts.views.check_login", return_value=(self.user, False)):
+            response = self.client.post(reverse("sign_in"), {
+                "email": "dialog@example.com", "password": "synthetic", "next": target,
+            })
+        self.assertRedirects(response, target, fetch_redirect_response=False)
+        self.client.logout()
+        for invalid in ("https://example.com/dashboard/?month=2026-10", "//example.com/dashboard/",
+                        "/dashboard/other?month=2026-10", "/dashboard/?month=2026-10\r\nX-Test: bad"):
+            response = self.client.get(reverse("sign_in"), {"next": invalid})
+            self.assertEqual(response.context["next"], reverse("dashboard"))
 
     def test_dialog_form_reuses_fields_without_page_shell(self):
         response = self.client.get(reverse("record_expense"), **DIALOG)

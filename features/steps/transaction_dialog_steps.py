@@ -72,3 +72,25 @@ def deleted_dialog(context):
     assert context.response.status_code == 200
     assert context.response.json() == {"message": "Transaction deleted."}
     assert not context.Transaction.objects.filter(pk=context.entry.pk).exists()
+
+
+@when("I open transaction forms after midnight UTC in winter and summer")
+def evening_forms(context):
+    from datetime import datetime, timezone
+    from unittest.mock import patch
+
+    context.evening_dates = []
+    for month in (11, 7):
+        instant = datetime(2026, month, 18, 2, tzinfo=timezone.utc)
+        with patch("django.utils.timezone.now", return_value=instant):
+            for route in ("/income/", "/expense/"):
+                response = context.client.get(route, **DIALOG)
+                context.evening_dates.append((response.context["form"]["date"].value(), month))
+
+
+@then("each new transaction defaults to the current Mountain date")
+def mountain_dates(context):
+    from datetime import date
+
+    for actual, month in context.evening_dates:
+        assert actual == date(2026, month, 17)

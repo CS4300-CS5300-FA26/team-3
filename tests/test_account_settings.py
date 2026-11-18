@@ -2,7 +2,7 @@
 from datetime import date
 from smtplib import SMTPException
 from unittest.mock import patch
-from html.parser import HTMLParser
+
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import Client, TestCase, override_settings
@@ -15,14 +15,6 @@ from transactions.models import Transaction
 
 ACCOUNT_RESET_FEEDBACK = "Password reset requested. Check your email for instructions."
 
-class AmountInputParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.has_amount_input = False
-
-    def handle_starttag(self, tag, attrs):
-        if tag == "input" and dict(attrs).get("name") == "amount":
-            self.has_amount_input = True
 
 @override_settings(MAILERS={"default": {"BACKEND": "django.core.mail.backends.locmem.EmailBackend"}})
 class AccountSettingsTests(TestCase):
@@ -38,9 +30,7 @@ class AccountSettingsTests(TestCase):
         self.assertContains(response, self.user.email)
         self.assertNotContains(response, 'name="email"')
         dashboard = self.client.get(reverse("dashboard"))
-        parser = AmountInputParser()
-        parser.feed(dashboard.content.decode())
-        self.assertFalse(parser.has_amount_input)
+        self.assertNotRegex(dashboard.content.decode(), r'<input\b[^>]*name="amount"')
         self.assertEqual(self.client.post(reverse("dashboard"), {"amount": "5"}).status_code, 405)
         for route in ("record_income", "record_expense"):
             self.assertContains(dashboard, f'href="{reverse(route)}"', count=1)
@@ -49,15 +39,13 @@ class AccountSettingsTests(TestCase):
             self.assertContains(response, 'href="/account/"', count=1)
             self.assertContains(response, f'action="{reverse("sign_out")}"', count=1)
 
-    @patch("accounts.views.generate_spending_summary")
+    @patch("transactions.views.generate_spending_summary")
     def test_spending_summary_preserves_account_threshold_and_requires_csrf(self, generate_summary):
         threshold = LowBalanceThreshold.objects.create(owner=self.user, amount="12.34")
         data = {"explain_spending": "1", "month": "2026-10", "amount": "999"}
         response = self.client.post(reverse("explain_spending"), data)
         self.assertContains(response, "Not enough activity yet to summarize")
-        parser = AmountInputParser()
-        parser.feed(response.content.decode())
-        self.assertFalse(parser.has_amount_input)
+        self.assertNotContains(response, 'name="amount"')
         threshold.refresh_from_db()
         self.assertEqual(str(threshold.amount), "12.34")
         generate_summary.assert_not_called()

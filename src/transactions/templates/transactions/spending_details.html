@@ -1,0 +1,33 @@
+<h2 id="spending-details-heading" tabindex="-1">Spending details</h2>
+<p class="details-context">{{ month|date:"F Y" }} · {{ expense_count }} expense{{ expense_count|pluralize }}</p>
+<div class="details-total"><span>Total spent</span><strong>${{ total_spent|floatformat:2 }}</strong></div>
+<section class="details-explanation" aria-labelledby="explanation-heading">
+    <h3 id="explanation-heading">Spending explanation</h3>
+    <div class="summary-result" role="status" tabindex="-1"{% if not summary_message and not summary_observations %} hidden{% endif %}>
+        {% if summary_message %}<p>{{ summary_message }}</p>{% endif %}
+        {% if summary_observations %}
+        <p class="summary-label">Generated summary</p>
+        <ul>{% for observation in summary_observations %}<li>{{ observation }}</li>{% endfor %}</ul>
+        {% endif %}
+    </div>
+    {% if can_explain and not summary_observations and not summary_message or summary_retry %}
+    <form class="explanation-form" method="post" action="{% url 'explain_spending' %}?month={{ selected_month }}">
+        {% csrf_token %}
+        <input type="hidden" name="month" value="{{ selected_month }}">
+        <input type="hidden" name="explain_spending" value="1">
+        <button type="submit" data-pending-label="Generating…">{% if summary_retry %}Try again{% else %}Explain my spending{% endif %}</button>
+    </form>
+    {% endif %}
+</section>
+{% if categories %}
+<table class="details-categories">
+    <caption class="visually-hidden">Category amounts and share of spending for {{ month|date:"F Y" }}</caption>
+    <thead><tr><th scope="col">Category</th><th scope="col">Amount</th><th scope="col">Share</th></tr></thead>
+    <tbody>{% for row in categories %}
+    <tr>
+        <th scope="row"><a href="{% url 'dashboard' %}?month={{ selected_month }}&amp;period=selected_month&amp;kind=expense&amp;category={{ row.category|urlencode }}#history"><span>{{ row.category }}</span></a></th>
+        <td>${{ row.total|floatformat:2 }}</td>
+        <td><span>{{ row.share }}%<span class="visually-hidden"> of total spending</span></span><span class="share-track" aria-hidden="true"><span style="width: {{ row.share }}%"></span></span></td>
+    </tr>{% endfor %}</tbody>
+</table>
+{% else %}<p>No expenses in this period</p>{% endif %}

@@ -26,7 +26,22 @@
         error.textContent = message;
         error.hidden = false;
     }
+    function sessionExpired(response) {
+        const login = new URL("{% url 'sign_in' %}", window.location.origin);
+        return response.status === 401 || (response.redirected && new URL(response.url).pathname === login.pathname);
+    }
+    function showSignIn() {
+        uncertain = true; // Reopening after sign-in obtains a fresh form and CSRF token.
+        showError('Your session has expired. Sign in again before saving. ');
+        const link = document.createElement('a');
+        const login = new URL("{% url 'sign_in' %}", window.location.origin);
+        login.searchParams.set('next', "{% url 'dashboard' %}" + window.location.search);
+        link.href = login.href;
+        link.textContent = 'Sign in again';
+        error.append(link);
+    }
     function installForm(html, resetDraft) {
+        window.cancelReceiptScans(content);
         content.innerHTML = html;
         window.initializeExpenseForm(content);
         if (resetDraft) original = values();
@@ -34,6 +49,7 @@
         if (target) target.focus({ preventScroll: true });
     }
     function closeDialog() {
+        window.cancelReceiptScans(content);
         generation++;
         loading = false;
         controller?.abort();
@@ -51,6 +67,7 @@
     }
     async function openForm(link) {
         if (busy || loading) return;
+        document.dispatchEvent(new Event('transaction-opening'));
         loading = true;
         uncertain = false;
         triggerHref = link.href;
@@ -65,6 +82,7 @@
         document.body.classList.add('transaction-dialog-open');
         try {
             const response = await fetch(link.href, { headers, signal: controller.signal });
+            if (sessionExpired(response)) { showSignIn(); return; }
             if (response.redirected || !response.ok) throw new Error('This transaction could not be opened. Close this window and try the page again.');
             const html = await response.text();
             if (current !== generation) return;
@@ -82,11 +100,12 @@
         const updated = page.getElementById('dashboard-content');
         if (!updated) throw new Error('refresh');
         document.getElementById('dashboard-content').replaceWith(updated);
+        window.initializeTransactionFilters();
         feedback.textContent = message;
         feedback.hidden = false;
     }
     async function submit(form, url, deleting) {
-        if (busy || uncertain) return;
+        if (busy || uncertain || form.dataset.receiptScanning === 'true') return;
         busy = true;
         error.hidden = true;
         dialog.setAttribute('aria-busy', 'true');
@@ -98,6 +117,7 @@
         let saved = false;
         try {
             const response = await fetch(url, { method: 'POST', headers, body: data });
+            if (sessionExpired(response)) { showSignIn(); return; }
             if (response.status === 422 && !deleting) {
                 installForm(await response.text(), false);
                 return;
@@ -165,6 +185,8 @@
         }
     });
     dialog.addEventListener('cancel', event => {
+        // File-picker cancellation bubbles from its input; keep the expense draft open.
+        if (event.target !== dialog) return;
         event.preventDefault();
         dismiss();
     });

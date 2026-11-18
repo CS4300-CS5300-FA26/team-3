@@ -1,11 +1,10 @@
 """#74 exploration through dashboard URLs and their rendered link targets."""
 from datetime import date
 from decimal import Decimal
-from html import unescape
-import re
 from unittest.mock import patch
 
 from behave import given, when, then
+from django.urls import reverse
 
 
 def dashboard(context, params):
@@ -69,24 +68,23 @@ def remove_category(context):
 
 @when("I request an explanation of the displayed spending")
 def explain(context):
-    action = unescape(re.search(
-        r'<form method="post" action="(/dashboard/explain/[^\"]*)"',
-        context.response.content.decode(),
-    ).group(1))
-    with patch("accounts.views.generate_spending_summary") as provider:
-        context.response = context.client.post(action, {
-            "month": "2026-11", "period": "selected_month", "explain_spending": "1",
+    context.history_before_details = context.response
+    with patch("transactions.views.generate_spending_summary") as provider:
+        context.response = context.client.post(reverse("explain_spending"), {
+            "month": "2026-11", "explain_spending": "1",
         })
         provider.assert_not_called()
 
 
-@then("the explanation keeps only my Food expenses on November 3")
+@then("the explanation uses my selected month while history filters stay separate")
 def explanation_filters(context):
-    rows = list(context.response.context["transactions"])
+    rows = list(context.history_before_details.context["transactions"])
     assert len(rows) == 2
     assert all(t.kind == "expense" and t.category == "Food" and t.date == date(2026, 11, 3) for t in rows)
-    assert {f["key"] for f in context.response.context["drilldown_filters"]} == {"kind", "category", "date"}
+    assert context.response.context["selected_month"] == "2026-11"
+    assert len(context.response.context["categories"]) == 2
     assert "Not enough activity yet to summarize" in context.response.content.decode()
+    context.response = context.history_before_details
 
 
 @then("all my expenses on November 3 are listed")
@@ -143,3 +141,21 @@ def future(context):
     assert context.response.context["chart_total"] == Decimal("2.30")
     assert "through Nov 16" in context.response.content.decode()
     assert "future-dated expenses." not in context.response.content.decode()
+
+
+@when("I choose Food expenses on November 3 in the transaction filters")
+def transaction_card_filters(context):
+    dashboard(context, {"period": "all"})
+    html = context.response.content.decode()
+    assert 'aria-controls="transaction-filters"' in html
+    assert 'name="kind"' in html and 'name="category"' in html
+    assert 'name="date"' in html
+    follow(context, "/dashboard/?month=2026-11&period=selected_month&kind=expense&category=Food&date=2026-11-03")
+
+
+@then("only my Food expenses on November 3 are listed")
+def filtered_card_rows(context):
+    rows = list(context.response.context["transactions"])
+    assert len(rows) == 2
+    assert all(t.kind == "expense" and t.category == "Food" and t.date == date(2026, 11, 3) for t in rows)
+    assert {f["key"] for f in context.response.context["drilldown_filters"]} == {"kind", "category", "date"}

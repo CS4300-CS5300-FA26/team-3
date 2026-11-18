@@ -23,7 +23,7 @@ def drilldown_context(params, month, period):
         if params.get("kind") in ("income", "expense"):
             criteria["kind"] = params["kind"]
         category = params.get("category", "")
-        if category and len(category) <= 50:
+        if category and len(category) <= 50 and criteria.get("kind") != "income":
             criteria["category"] = category
         try:
             day = date.fromisoformat(params.get("date", ""))

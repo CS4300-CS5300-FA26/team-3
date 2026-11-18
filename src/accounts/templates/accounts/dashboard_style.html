@@ -17,7 +17,7 @@
     a.summary-card:hover { background: #edf2e9; text-decoration: none; }
     .remaining { border-left: 5px solid #104b25; background: #e9efe6; }
     .budget-label { color: #104b25; font: 22px/1.3 Georgia, serif; }
-    .budget-amount { color: #104b25; font: bold clamp(28px, 3vw, 38px)/1.2 Georgia, serif; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .budget-amount { color: #104b25; font: bold clamp(28px, 3vw, 38px)/1.2 Georgia, serif; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .low-balance-warning { margin: 24px 0 0; padding: 8px 16px; border: 1px solid #bd7a08; border-radius: 8px; background: #fff3dc; color: #6d3b00; }
     .upcoming { margin-top: 24px; padding: 14px 20px; border: 1px solid #afc0ad; border-radius: 12px; background: white; }
     .upcoming h2 { font-size: 24px; margin-bottom: 8px; }
@@ -40,7 +40,8 @@
     .category-amount { text-align: right; font-variant-numeric: tabular-nums; }
     .bar-track { height: 14px; border-radius: 4px; background: #e2e8df; overflow: hidden; }
     .bar { height: 100%; background: #28613a; border-radius: 4px; }
-    .chart-panel > .button { padding: 6px 14px; font-size: 15px; }
+    .spending-explanation-action { margin: 0; padding: 0; border: 0; background: transparent; }
+    .spending-explanation-action > button { padding: 6px 14px; font-size: 15px; }
     .spending-chart { display: block; width: 100%; height: auto; overflow: visible; }
     .chart-grid { stroke: #d5dfd2; stroke-width: 1; }
     .chart-axis { fill: #56616b; font: 15px Arial, sans-serif; }
@@ -62,11 +63,20 @@
     .history-header { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 12px 20px; margin-bottom: 16px; }
     .history-header h2 { margin: 0 0 4px; }
     .history-controls { min-width: 0; }
+    .history-title { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+    .history-title [hidden] { display: none; }
+    .history-title .button { min-height: 44px; padding: 8px 14px; font-size: 15px; }
+    .transaction-filter-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; padding: 16px; background: #f3f6f1; border-color: #d5dfd2; }
+    .transaction-filter-form[hidden] { display: none; }
+    .transaction-filter-form > div { margin: 0; min-width: 0; }
+    .transaction-filter-form label { font-size: 15px; }
+    .transaction-filter-form input, .transaction-filter-form select { height: 44px; min-width: 0; max-width: 100%; margin: 0; font-size: 16px; background: white; }
+    .transaction-filter-form .filter-scope { grid-column: 1 / -1; margin: 0; color: #104b25; }
+    .filter-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+    .filter-actions a { padding: 8px 0; }
     .period-picker { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin: 0; padding: 0; border: 0; background: transparent; }
     .period-picker select { width: 280px; max-width: 100%; margin: 0; padding: 8px 10px; background: #f3f6f1; font-size: 15px; cursor: pointer; }
     .period-date-range { color: #56616b; font-size: 13px; }
-    .history-totals { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 16px; margin: 8px 0 0; color: #56616b; font-size: 14px; }
-    .history-totals strong { color: #104b25; font-variant-numeric: tabular-nums; }
     .drilldown-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px; }
     .drilldown-filters a { padding: 10px 14px; font-size: 15px; overflow-wrap: anywhere; }
     .filter-chip { background: #e9efe6; border: 1px solid #afc0ad; border-radius: 24px; text-decoration: none; }
@@ -86,6 +96,8 @@
     a, .transaction-row { transition: background-color .15s ease; }
     @media (max-width: 1000px) {
         .dashboard-charts { grid-template-columns: 1fr; }
+        .monthly-budget { grid-template-columns: 1fr 1fr; }
+        .remaining { grid-column: 1 / -1; }
         .dashboard-heading > div:first-child { flex-basis: 100%; }
         .month-picker { margin-right: auto; }
     }
@@ -98,7 +110,7 @@
         .monthly-budget { grid-template-columns: 1fr 1fr; gap: 12px; }
         .summary-card { padding: 14px; }
         .remaining { grid-column: 1 / -1; }
-        .budget-label { font-size: 20px; } .budget-amount { font-size: 28px; }
+        .budget-label { font-size: 20px; } .budget-amount { font-size: 24px; }
         .upcoming-expense { width: 34%; } .upcoming-amount { width: 28%; } .upcoming-due { width: 38%; }
         .upcoming-table { font-size: 14px; }
         .upcoming-table th, .upcoming-table td { padding: 8px 6px; vertical-align: top; }
@@ -109,8 +121,9 @@
         .chart-axis { font-size: 24px; }
         .category-link { grid-template-columns: 82px minmax(0, 1fr) 85px; gap: 8px; font-size: 14px; }
         .history-controls, .period-picker select { width: 100%; }
+        .transaction-filter-form { grid-template-columns: 1fr; padding: 14px; }
+        .history-title { width: 100%; justify-content: space-between; }
         .period-picker { align-items: flex-start; }
-        .history-totals { justify-content: flex-start; }
         .transactions { font-size: 15px; }
         .transaction-date, .transaction-category, .date-column, .category-column { display: none; }
         .description-column { width: 65%; } .amount-column { width: 35%; }
@@ -118,7 +131,7 @@
         .transactions th, .transactions td { padding: 10px 6px; vertical-align: top; }
         .transaction-details a { padding: 0 0 6px; }
     }
-    @media (max-width: 360px) {
+    @media (max-width: 480px) {
         .monthly-budget { grid-template-columns: 1fr; }
     }
     .spending-summary { margin: 16px 0; padding: 16px 20px; border-left: 5px solid #104b25; border-radius: 8px; background: #e9efe6; }

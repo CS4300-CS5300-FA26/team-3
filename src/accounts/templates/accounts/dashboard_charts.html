@@ -13,7 +13,12 @@
         <li>No expenses in this month</li>
     {% endfor %}
     </ul>
-    <a class="button secondary" href="{% url 'spending_by_category' %}?month={{ selected_month }}">View details</a>
+    <form class="spending-explanation-action" data-spending-details method="post" action="{% url 'explain_spending' %}?month={{ selected_month }}">
+        {% csrf_token %}
+        <input type="hidden" name="month" value="{{ selected_month }}">
+        <input type="hidden" name="explain_spending" value="1">
+        <button type="submit">Explain my spending</button>
+    </form>
 </section>
 <section class="chart-panel" aria-labelledby="cumulative-heading">
     <h2 id="cumulative-heading">Cumulative spending</h2>

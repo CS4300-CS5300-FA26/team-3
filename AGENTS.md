@@ -18,18 +18,30 @@ docs/
 ├── ARCHITECTURE.pdf               Overview; verify against source
 └── DEPLOYMENT.md                  Deployment configuration and rollback
 src/
-├── accounts/                     Authentication, recovery, shared email, dashboard
+├── accounts/                     Auth/recovery/email, Account threshold editor, dashboard, shared shell/404
 ├── budgetwise/                   Settings and root URLs
 │   └── db/aurora/                PostgreSQL IAM backend
 ├── transactions/                 Transaction recording/editing/deletion and category totals
 └── lambda_entry.py               API Gateway/Lambda adapter
 tests/                            Unit and integration tests
 features/                         Behave acceptance scenarios by issue
+.github/dependabot.yml            Weekly Python and GitHub Actions update PRs
 .github/scripts/                  AI review helpers and coverage gate
 .github/workflows/                CI, Luna review, deployment
 requirements*.txt                 Runtime and development dependencies
 .flake8                           Python lint rules
 ```
+
+Feature routes below are relative to `src/`; test names map to
+`tests/test_<name>.py` and scenarios to `features/<name>.feature`.
+
+| Feature | Owners and shared boundaries | Tests / scenarios |
+| --- | --- | --- |
+| Account / shell | `accounts/views.py`; Account edits thresholds, dashboard reads them. Recovery shares `accounts/recovery.py` admission. Shell: `accounts/templates/accounts/base.html`; 404: `accounts/templates/404.html`. | `account_settings` |
+| Transaction forms / dialogs | `transactions/views.py` owns validation/save for pages and dialogs. Under `transactions/templates/transactions/`, `transaction_form.html` and `expense_fields.html` share fields; `dialog_script.html` owns dialog lifecycle, `expense_script.html` schedule/scan controls. | `transaction_dialogs` |
+| Dashboard exploration | `accounts/dashboard.py` builds monthly data and filter links; `transactions/spending.py` shares category ranking with the fallback page. | `dashboard_exploration` |
+| Spending explanations | `transactions/views.py:spending_by_category` owns eligibility; `accounts/spending_summary.py` owns admission/provider calls. UI: `transactions/templates/transactions/spending_details*.html`. | `monthly_details`; test `spending_summary` |
+| Receipt scanning | `transactions/views.py:scan_receipt_upload` validates uploads; `transactions/services/receipt_scanner.py` calls the provider; `transactions/receipt_limits.py` owns separate admission. Uses shared expense controls above. | Tests `receipt_upload`, `receipt_scanner`, `receipt_integration`; scenario `receipt_scanning` |
 
 - Identify the requirement, issue, or acceptance criterion being addressed. Read
   its current details and affected source/tests; the initial backlog and sprint

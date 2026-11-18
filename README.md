@@ -29,13 +29,27 @@ python src/manage.py runserver 0.0.0.0:3000
 
 `check` validates the Django project, and `migrate` creates or updates local SQLite tables. The development server uses port 3000 for DevEdu; open `http://localhost:3000/` for a local setup. Stop it with `Ctrl+C`. The root page requires sign-in and displays the current student's transactions and monthly remaining budget.
 
+Calendar dates use Mountain time (`America/Denver`), including daylight saving time.
+
+`manage.py` loads local settings from a repository-root `.env` file without
+overriding exported environment variables. Keep this file out of Git.
+
 To enable AI spending observations locally, set `OPENAI_API_KEY` before starting
 the server. The optional `OPENAI_SPENDING_SUMMARY_MODEL` selects the model and
 defaults to `gpt-6-luna`. Without a key, the dashboard keeps working and shows a
 temporary-unavailable message when a summary is requested.
 
-The receipt scanner also uses `OPENAI_API_KEY` to extract totals from uploaded
-receipt images. Without a configured key, users can still enter expenses manually.
+Receipt scanning uses the same server-side `OPENAI_API_KEY`. Optional
+`OPENAI_RECEIPT_MODEL` defaults to `gpt-6-luna`, independently of the summary
+model. In Add expense or Edit expense, choose **Scan receipt**, review the detected
+amount, and save normally. A scan never saves an expense or replaces a nonempty
+amount without confirmation. JPEG, PNG and WebP images up to 4 MB and 20 million
+pixels are accepted. Unreadable receipts leave manual entry available.
+
+Both AI features allow five requests per student and 100 overall per rolling
+hour, with separate budgets; failed provider requests count too. Run migrations
+before using the new admission tables. Automated tests mock both providers and
+send no real email.
 
 Development always accepts `localhost`, `127.0.0.1`, and `[::1]`. Set
 `DJANGO_DEVELOPMENT_HOSTS` only if you access the server through another hostname,
@@ -129,13 +143,10 @@ API Gateway sends requests to Django on AWS Lambda. Anonymous visitors are redir
 | --- | --- |
 | Sprint 1 | Sign up, sign in, enter income and expenses, and see a remaining balance. |
 | Sprint 2 | Correct entries, view category spending, receive low-balance warnings, and reset a password. |
-| Sprint 3 | Explain monthly spending with the OpenAI API, scan receipts using AI, and manage recurring-expense schedules and reminders. |
+| Sprint 3 | Explain monthly spending with the OpenAI API, scan receipts with OpenAI, and manage recurring-expense schedules and reminders. |
 | Sprint 4 | Import transactions from Plaid Sandbox without duplicate entries. |
 
-Receipt scanning uses an AI API to extract the total from JPEG, PNG, or WEBP
-receipt images (maximum 5 MB). The extracted amount pre-fills the expense form,
-but the user must confirm the expense before it is saved. If extraction fails,
-the user can enter the amount manually.
+Receipt scanning now follows Jack’s OpenAI implementation in [PR #81](https://github.com/CS4300-CS5300-FA26/team-3/pull/81), replacing the initial RapidOCR trial. This increment integrates the merged receipt feature with shared expense forms. Plaid Sandbox (#26) is still planned for Sprint 4 and is outside this increment.
 
 ## AI Usage Logs
 
@@ -523,6 +534,17 @@ directly, enforced the fixed-only rule in both the form and the database, and
 left advancing the due date to D-14. Noah chose to take D-13 first so Fabian's
 D-14 is not blocked.
 
+### Sprint 3: Nov 12, 2026 — Shared layout, Account and missing pages
+
+**Tool:** Codex
+
+**What it helped with:** Helped implement the first UI/UX increment for #74
+and #54, drafted focused tests and acceptance scenarios.
+
+**How we used the result:** Reused the Django shell, threshold form and recovery
+services. Kept password-reset limits, per-user data and POST sign-out intact.
+Checked all changes personally in browser and phone widths.
+
 ### Sprint 3: Nov 13, 2026 — Upcoming fixed expense dashboard reminder
 
 **Tool:** Codex
@@ -579,6 +601,60 @@ daily check uses each student's saved notice and avoids repeating a recorded
 due-date email; a failed delivery can be retried on a later check. Text
 messages are outside this change.
 
+### Sprint 3: Nov 16, 2026 — Transaction dialogs and clickable rows
+
+**Tool:** Codex
+
+**What it helped with:** Helped implement the second UI/UX increment for #74 and
+checked dialog validation, cancellation, request failures and keyboard/mobile use.
+
+**How we used the result:** Reused our transaction routes, forms and expense
+fields for dialogs and fallback pages. Kept recurrence, reminder settings and
+payment matching intact, with local tests and browser checks, alongside complete
+human review at browser/mobile widths.
+
+### Sprint 3: Nov 16, 2026 — Monthly dashboard and spending exploration
+
+**Tool:** Codex
+
+**What it helped with:** Helped implement the third UI/UX increment for #74: monthly
+summaries, category and cumulative charts, and URL-backed transaction filters.
+
+**How we used the result:** Kept the selected month separate from history presets,
+used Decimal amounts for chart calculations, and checked date boundaries and
+filter behavior with tests and local desktop/mobile browser checks. Reused the
+existing dialogs and preserved recurrence, reminders and payment matching.
+Human reviewed in browser/mobile widths.
+
+### Sprint 3: Nov 17, 2026 — Monthly details and explanation integration
+
+**Tool:** Codex
+
+**What it helped with:** Prepared the fourth UI increment for #74 and integrated
+#9 into monthly spending details, including request limits and failure handling.
+Added transaction-card filters and a one-click explanation action.
+
+**How we used the result:** Reused the existing category calculations and summary
+service, checked the dialog and fallback with local tests, and reviewed the changes
+independently. Integrated the merged reminder-email changes and Jack’s receipt
+service from PR #81 into the shared expense dialog and fallback page. Human reviewed
+all visual interactions in both browser and mobile widths.
+
+### Sprint 3: Nov 17, 2026 — Dependabot dependency scans
+
+**Tool:** Claude Code
+
+**What it helped with:**
+
+- Compared the Sprint 3 rubric with the CI pipeline and found that the
+  Dependabot requirement was not yet configured.
+- Drafted the Dependabot configuration for the pip requirements and pinned
+  GitHub Actions.
+
+**How we used the result:** Noah kept pip-audit in CI as the blocking check and
+added Dependabot for weekly update PRs alongside its vulnerability alerts, with
+routine updates grouped to keep review manageable.
+
 ### Sprint 3: Nov 17, 2026 — AI Receipt Scanning (Issue #24)
 
 **Tool:** ChatGPT
@@ -597,17 +673,3 @@ We integrated receipt scanning into the existing transaction workflow,
 validated supported image formats and upload limits, and ensured scanning
 does not automatically create an expense. We verified the implementation
 with 398 passing Django tests (8 skipped) and the Behave acceptance suite.
-### Sprint 3: Nov 17, 2026 — Dependabot dependency scans
-
-**Tool:** Claude Code
-
-**What it helped with:**
-
-- Compared the Sprint 3 rubric with the CI pipeline and found that the
-  Dependabot requirement was not yet configured.
-- Drafted the Dependabot configuration for the pip requirements and pinned
-  GitHub Actions.
-
-**How we used the result:** Noah kept pip-audit in CI as the blocking check and
-added Dependabot for weekly update PRs alongside its vulnerability alerts, with
-routine updates grouped to keep review manageable.

@@ -1,47 +1,9 @@
 {% extends "accounts/base.html" %}
-
 {% block title %}Record expense | BudgetWise{% endblock %}
-
-{% block extra_style %}
-{% include "transactions/form_style.html" %}
-
-<style>
-    .receipt-scanner {
-        margin-bottom: 20px;
-    }
-
-    .receipt-scanner label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: bold;
-    }
-
-    .receipt-scanner input {
-        display: block;
-        max-width: 100%;
-    }
-
-    .receipt-scanner p {
-        margin: 8px 0;
-        font-size: 14px;
-    }
-
-    .receipt-error {
-        color: #9b1c1c;
-    }
-</style>
-{% endblock %}
-
+{% block extra_style %}{% include "transactions/form_style.html" %}{% endblock %}
 {% block content %}
 <h1>Record expense</h1>
-
-{% for message in messages %}
-    <p role="status">{{ message }}</p>
-{% endfor %}
-
+{% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
 {% include "transactions/transaction_form.html" %}
-
-{% include "transactions/receipt_script.html" %}
 {% include "transactions/expense_script.html" %}
-
 {% endblock %}

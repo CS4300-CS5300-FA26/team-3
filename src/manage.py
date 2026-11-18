@@ -3,7 +3,9 @@
 import os
 import sys
 from pathlib import Path
+
 from dotenv import load_dotenv
+
 
 def main():
     """Run administrative tasks."""

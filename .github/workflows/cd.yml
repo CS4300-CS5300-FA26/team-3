@@ -42,8 +42,10 @@ jobs:
       - name: Build Lambda package
         run: |
           # The same Linux package supplies dependencies for migrations and Lambda.
+          # Python 3.13 Lambda uses AL2023; Pillow also needs its newer Linux wheels.
           python -m pip install -r requirements.txt --target "$RUNNER_TEMP/package" \
-            --platform manylinux2014_x86_64 --implementation cp --python-version 3.13 --only-binary=:all: --no-compile
+            --platform manylinux2014_x86_64 --platform manylinux_2_28_x86_64 \
+            --implementation cp --python-version 3.13 --only-binary=:all: --no-compile
           # Put Django at the ZIP root without copying local data or secrets.
           rsync -a --exclude='__pycache__' --exclude='*.pyc' --exclude='*.sqlite3' \
             --exclude='.env*' --exclude='.venv' src/ "$RUNNER_TEMP/package/"

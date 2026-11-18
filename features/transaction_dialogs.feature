@@ -15,3 +15,7 @@ Feature: Record and manage transactions from dashboard dialogs
     Then the saved transaction has the new description
     When I confirm deletion through the existing delete route
     Then the transaction is deleted and confirmed without a redirect
+
+  Scenario: New transactions use the Mountain calendar date in the evening
+    When I open transaction forms after midnight UTC in winter and summer
+    Then each new transaction defaults to the current Mountain date

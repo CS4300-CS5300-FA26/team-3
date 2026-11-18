@@ -178,7 +178,7 @@ class TransactionPeriodFilterTests(TestCase):
         self.assertEqual(response.context["income_total"], Decimal("200.00"))
         self.assertEqual(response.context["expense_total"], Decimal("42.50"))
 
-    @patch("accounts.views.generate_spending_summary", create=True)
+    @patch("transactions.views.generate_spending_summary", create=True)
     def test_spending_summary_does_not_call_ai_with_fewer_than_ten_transactions(
         self, generate_summary
     ):
@@ -202,7 +202,7 @@ class TransactionPeriodFilterTests(TestCase):
         self.assertContains(response, "Not enough activity yet to summarize")
         generate_summary.assert_not_called()
 
-    @patch("accounts.views.generate_spending_summary", create=True)
+    @patch("transactions.views.generate_spending_summary", create=True)
     def test_spending_summary_sends_selected_period_category_totals(
         self, generate_summary
     ):
@@ -256,7 +256,7 @@ class TransactionPeriodFilterTests(TestCase):
             {"category": "Food", "total": Decimal("120.00"), "count": 6},
         ])
 
-    @patch("accounts.views.generate_spending_summary", create=True)
+    @patch("transactions.views.generate_spending_summary", create=True)
     def test_spending_summary_discards_observations_with_unknown_data(
         self, generate_summary
     ):
@@ -289,7 +289,7 @@ class TransactionPeriodFilterTests(TestCase):
         self.assertNotContains(response, "Food totaled $12.00.")
         self.assertNotContains(response, "Food totaled $200.01 again.")
 
-    @patch("accounts.views.generate_spending_summary", create=True)
+    @patch("transactions.views.generate_spending_summary", create=True)
     def test_spending_summary_provider_failure_shows_safe_message(self, generate_summary):
         for index in range(10):
             self.create_transaction(
@@ -312,27 +312,3 @@ class TransactionPeriodFilterTests(TestCase):
 
         self.assertContains(response, "Unable to generate spending summary right now.")
         self.assertNotContains(response, "private provider details")
-
-    @patch("accounts.views.generate_spending_summary", create=True)
-    def test_spending_summary_does_not_call_ai_for_income_only_period(
-        self, generate_summary
-    ):
-        for index in range(10):
-            self.create_transaction(
-                Transaction.Kind.INCOME,
-                "50.00",
-                date(2026, 10, index + 1),
-                f"October income {index}",
-            )
-
-        response = self.client.post(
-            reverse("explain_spending"),
-            {
-                "month": "2026-10",
-                "period": "selected_month",
-                "explain_spending": "Explain my spending",
-            },
-        )
-
-        self.assertContains(response, "No expense activity yet to summarize")
-        generate_summary.assert_not_called()

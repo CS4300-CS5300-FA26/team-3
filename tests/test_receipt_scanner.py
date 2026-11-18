@@ -24,11 +24,11 @@ class ReceiptScannerTests(SimpleTestCase):
             os.environ,
             {
                 "OPENAI_API_KEY": "test-api-key",
-                "OPENAI_RECEIPT_MODEL": "gpt-4.1-mini",
             },
         )
         self.api_key_patch.start()
         self.addCleanup(self.api_key_patch.stop)
+        os.environ.pop("OPENAI_RECEIPT_MODEL", None)
 
         self.client_patch = patch(
             "transactions.services.receipt_scanner.OpenAI"
@@ -122,9 +122,8 @@ class ReceiptScannerTests(SimpleTestCase):
     def test_returns_none_for_missing_image(self):
         missing_path = Path(self.temp_dir.name) / "missing.jpeg"
 
-        result = scan_receipt(missing_path)
-
-        self.assertIsNone(result)
+        with self.assertRaisesRegex(RuntimeError, "unavailable"):
+            scan_receipt(missing_path)
 
     def test_returns_none_for_empty_image(self):
         self.image_path.write_bytes(b"")
@@ -154,9 +153,8 @@ class ReceiptScannerTests(SimpleTestCase):
             request=MagicMock()
         )
 
-        result = scan_receipt(self.image_path)
-
-        self.assertIsNone(result)
+        with self.assertRaisesRegex(RuntimeError, "unavailable"):
+            scan_receipt(self.image_path)
 
     def test_sends_image_to_openai(self):
         self.set_response("23.47")
@@ -166,7 +164,9 @@ class ReceiptScannerTests(SimpleTestCase):
         self.mock_create.assert_called_once()
         kwargs = self.mock_create.call_args.kwargs
 
-        self.assertEqual(kwargs["model"], "gpt-4.1-mini")
+        self.assertEqual(kwargs["model"], "gpt-6-luna")
+        self.assertFalse(kwargs["store"])
+        self.assertEqual(self.mock_client_class.call_args.kwargs["max_retries"], 0)
 
         content = kwargs["input"][0]["content"]
         image = content[1]
@@ -217,3 +217,14 @@ class ReceiptScannerTests(SimpleTestCase):
         result = scan_receipt(self.image_path)
 
         self.assertIsNone(result)
+
+    def test_zero_and_out_of_range_totals_are_not_valid_expenses(self):
+        for amount in ["0.00", "100000000.00", "999999999999999999999999.99"]:
+            with self.subTest(amount=amount):
+                self.set_response(amount)
+                self.assertIsNone(scan_receipt(self.image_path))
+
+    def test_provider_failure_is_distinct_from_unreadable(self):
+        self.mock_create.side_effect = APIConnectionError(request=MagicMock())
+        with self.assertRaises(RuntimeError):
+            scan_receipt(self.image_path)

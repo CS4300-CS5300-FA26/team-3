@@ -86,9 +86,16 @@ class ReceiptUploadTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
 
-    def test_oversized_receipt(self):
+    @patch("transactions.views.scan_receipt", return_value=Decimal("12.34"))
+    def test_receipt_at_upload_limit(self, scanner):
+        response = self.client.post(self.url, {"receipt": self.make_image(size=4 * 1024 * 1024)})
+        self.assertEqual(response.status_code, 200)
+        scanner.assert_called_once()
+
+    @patch("transactions.views.scan_receipt", return_value=Decimal("12.34"))
+    def test_oversized_receipt(self, scanner):
         receipt = self.make_image(
-            size=5 * 1024 * 1024 + 1,
+            size=4 * 1024 * 1024 + 1,
         )
 
         response = self.client.post(
@@ -97,6 +104,7 @@ class ReceiptUploadTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
+        scanner.assert_not_called()
 
     def test_get_not_allowed(self):
         response = self.client.get(self.url)
@@ -192,31 +200,19 @@ class ReceiptUploadTests(TestCase):
         )
         mock_scan.assert_not_called()
 
-
-    @patch("transactions.views.scan_receipt")
-    def test_accepts_mpo_jpeg(self, mock_scan):
-        """Accept an MPO format reported for a JPEG upload."""
-        mock_scan.return_value = Decimal("64.44")
-
-        real_image_open = Image.open
-
-        def open_as_mpo(*args, **kwargs):
-            image = real_image_open(*args, **kwargs)
-            image.format = "MPO"
-            return image
-
-        with patch(
-            "transactions.views.Image.open",
-            side_effect=open_as_mpo,
-        ):
-            response = self.client.post(
-                self.url,
-                {"receipt": self.make_image()},
-            )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.json(),
-            {"amount": "64.44"},
+    @patch("transactions.views.scan_receipt", return_value=Decimal("64.44"))
+    def test_accepts_mpo_jpeg(self, scanner):
+        buffer = BytesIO()
+        Image.new("RGB", (10, 10), "white").save(
+            buffer, format="MPO", save_all=True,
+            append_images=[Image.new("RGB", (10, 10), "black")],
         )
-        mock_scan.assert_called_once()
+        with Image.open(BytesIO(buffer.getvalue())) as image:
+            self.assertEqual(image.format, "MPO")
+            self.assertEqual(image.n_frames, 2)
+        response = self.client.post(self.url, {
+            "receipt": SimpleUploadedFile("phone-receipt.jpg", buffer.getvalue(), content_type="image/jpeg"),
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"amount": "64.44"})
+        scanner.assert_called_once()

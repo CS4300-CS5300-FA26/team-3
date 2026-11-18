@@ -16,16 +16,70 @@ Keep validation results and execution history out of this record.
 
 ### 2026-11-17 — Add Dependabot dependency scans
 
-- Issue and PR pending. [Dependabot](../.github/dependabot.yml) checks the pip
+- [PR #85](https://github.com/CS4300-CS5300-FA26/team-3/pull/85). [Dependabot](../.github/dependabot.yml) checks the pip
   requirements and pinned GitHub Actions weekly and opens update PRs, grouping
   minor and patch updates. The CI pip-audit check still blocks known
   vulnerabilities. Dependabot alerts and security updates are repository
   settings, not part of this file. The Luna review skips Dependabot PRs because
   they cannot use the OpenAI secret.
 
+### 2026-11-17 — Spending and receipt integration (local, PR pending)
+
+- **#74, #9:** Moved explanations into selected-month spending details, independent
+  of history filters. Reused category totals for the dialog and fallback; added
+  cancellation, retry feedback, bounded request admission and stricter amount validation.
+  Added Type/category/date filters inside the transaction card and removed its extra
+  filtered totals. “Explain my spending” opens details and generates the summary
+  in one action, with loading feedback and retry on failure.
+  See [details](../src/transactions/templates/transactions/spending_details.html)
+  and [scenarios](../features/monthly_details.feature).
+- **#9 / [PR #88](https://github.com/CS4300-CS5300-FA26/team-3/pull/88):** Incorporate
+  Calvin’s handling of provider reasoning items and comma punctuation. Preserve
+  safe invalid-UTF-8 handling and the income-only guard; reject swapped category
+  amounts and partial money matches.
+- **PR84 feedback:** Keep monetary amounts on one line at phone widths, use Mountain
+  time for calendar dates, and offer sign-in when a transaction dialog session expires.
+- **#24 / [PR #81](https://github.com/CS4300-CS5300-FA26/team-3/pull/81):** Incorporate
+  Jack’s OpenAI receipt service and actual-image validation from `1deeb07` into the
+  shared expense form. Review or edit the detected amount before saving; keep
+  manual entry, cancellation and late-response protection. Accept JPEG/MPO images
+  and load local `.env` settings without overriding exported variables. Limit upload size,
+  decoded pixels and request volume; distinguish unreadable totals from outages.
+  [Receipt scenarios](../features/receipt_scanning.feature).
+- **Limits:** Requires accounts migration 0010 and transactions migration 0011.
+  The merged receipt (#81) and reminder-email (#79) features are included. External service configuration and live
+  verification remain delivery steps.
+
+### 2026-11-16 — Explore monthly spending from the dashboard
+
+- [#74](https://github.com/CS4300-CS5300-FA26/team-3/issues/74); [PR #84](https://github.com/CS4300-CS5300-FA26/team-3/pull/84).
+  Group monthly income, expenses and remaining budget above ranked category
+  spending and a cumulative daily chart. [Dashboard calculations](../src/accounts/dashboard.py)
+  use exact Decimal amounts and distinguish chart cutoffs from future-dated totals.
+  Align dashboard controls and use compact desktop transaction columns, with
+  stacked date/category details on phones.
+- Keep kind, category and day drill-downs in the URL with removable criteria.
+  Chart actions select their own month; independent history presets remain labeled.
+  Reuse the existing transaction dialogs and reminder behavior. Receipt scanning,
+  spending explanations and the enhanced details dialog remain later integration work.
+  [Acceptance scenarios](../features/dashboard_exploration.feature).
+
+### 2026-11-16 — Manage transactions from the dashboard
+
+- [#74](https://github.com/CS4300-CS5300-FA26/team-3/issues/74); [PR #83](https://github.com/CS4300-CS5300-FA26/team-3/pull/83).
+  Open add/edit forms in a centered responsive dialog and use transaction
+  descriptions as editor links. Delete is confirmed inside the editor flow.
+  Existing [routes and forms](../src/transactions/views.py) serve both dialog
+  and fallback pages, preserving recurrence, notices and payment matching.
+  [Acceptance scenarios](../features/transaction_dialogs.feature).
+- Preserve selected month/history and scroll after successful changes; retain
+  invalid drafts, guard dismissal and overlapping saves, and never replay an
+  uncertain request. New entries default to today's date. Receipt scanning and
+  the chart redesign remain separate increments.
+
 ### 2026-11-15 — Explain spending from aggregated category totals
 
-- Add the D9 dashboard action for selected-period spending summaries. The request
+- [#9](https://github.com/CS4300-CS5300-FA26/team-3/issues/9), [PR #78](https://github.com/CS4300-CS5300-FA26/team-3/pull/78): add the D9 dashboard action for selected-period spending summaries. The request
   sends only category totals and transaction counts to the configured OpenAI
   Responses API; descriptions, other students' data, demo rows, and out-of-period
   transactions are excluded. [Summary service](../src/accounts/spending_summary.py)
@@ -34,7 +88,7 @@ Keep validation results and execution history out of this record.
 
 ### 2026-11-14 — Email upcoming fixed expense reminders
 
-- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.
+- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); [PR #79](https://github.com/CS4300-CS5300-FA26/team-3/pull/79).
   The private [daily check](../src/transactions/management/commands/send_fixed_expense_reminders.py)
   emails active students about fixed daily, weekly, or monthly expenses inside
   their saved notice window, including a missed first day. It skips demo
@@ -48,7 +102,7 @@ Keep validation results and execution history out of this record.
 
 ### 2026-11-14 — Choose when fixed expense reminders appear
 
-- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.
+- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); [PR #77](https://github.com/CS4300-CS5300-FA26/team-3/pull/77).
   The original fixed three-day notice was too restrictive for planning ahead.
   A fixed expense schedule still defaults to three days, but the student can
   choose 1–30 days on the [expense form](../src/transactions/views.py). The
@@ -67,7 +121,7 @@ Keep validation results and execution history out of this record.
 
 ### 2026-11-14 — Clear a fixed expense reminder after payment
 
-- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.
+- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); [PR #77](https://github.com/CS4300-CS5300-FA26/team-3/pull/77).
   Recording a matching fixed expense through the existing
   [expense form](../src/transactions/views.py) advances one monthly schedule
   to its next due date, clearing the current dashboard reminder. A match needs
@@ -79,7 +133,7 @@ Keep validation results and execution history out of this record.
 
 ### 2026-11-14 — Show upcoming fixed expense reminders on the dashboard
 
-- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); PR pending.
+- [#28](https://github.com/CS4300-CS5300-FA26/team-3/issues/28); [PR #77](https://github.com/CS4300-CS5300-FA26/team-3/pull/77).
   The [dashboard](../src/accounts/views.py) initially showed a signed-in
   student's monthly fixed expenses due within three days, using the schedule
   added in D13.
@@ -87,9 +141,26 @@ Keep validation results and execution history out of this record.
   three days before Rent is due and its absence earlier. Payment clearing and
   daily email delivery belong to separate D14 changes.
 
+### 2026-11-12 — Shared navigation, Account settings and missing pages
+
+- [#74](https://github.com/CS4300-CS5300-FA26/team-3/issues/74); [PR #82](https://github.com/CS4300-CS5300-FA26/team-3/pull/82).
+  Reuse the [shared shell](../src/accounts/templates/accounts/base.html) across
+  entry pages, show a Dashboard header link only for signed-in visitors away
+  from either dashboard URL, keep add actions in dashboard content, and move the safety-threshold
+  editor to [Account](../src/accounts/views.py). Account shows a read-only email
+  and requests recovery through the existing aggregate and per-email limits.
+  Threshold entry uses the same non-stepping decimal text input as income and
+  expenses, preventing wheel changes while keeping server-side validation.
+  The warning remains on the dashboard; transaction dialogs and charts follow
+  in later increments. [Acceptance scenarios](../features/account_settings.feature).
+- [#54](https://github.com/CS4300-CS5300-FA26/team-3/issues/54): missing application
+  pages return a generic styled 404 for either session state, with sign-in or
+  dashboard recovery. Valid private routes still require sign-in; Django admin
+  keeps its own routing and staff gate.
+
 ### 2026-11-09 — Set a recurrence schedule for a fixed expense
 
-- [#25](https://github.com/CS4300-CS5300-FA26/team-3/issues/25); PR pending.
+- [#25](https://github.com/CS4300-CS5300-FA26/team-3/issues/25); [PR #76](https://github.com/CS4300-CS5300-FA26/team-3/pull/76).
   Fixed expenses can repeat monthly with a next due date, set when recording or
   editing the expense. The [expense form](../src/transactions/views.py) shows the
   schedule only for Fixed and ignores any schedule sent with a variable expense

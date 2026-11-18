@@ -9,7 +9,7 @@ from django.urls import reverse
 @when('I select "Explain my spending" for October 2026')
 def explain_october_spending(context):
     context.summary_service = patch(
-        "accounts.views.generate_spending_summary",
+        "transactions.views.generate_spending_summary",
         return_value=[
             "Housing totaled $200.00.",
             "Food totaled $120.00.",
@@ -57,7 +57,7 @@ def insufficient_activity(context):
             description=f"October purchase {index}",
             category="Food",
         )
-    context.summary_service = patch("accounts.views.generate_spending_summary")
+    context.summary_service = patch("transactions.views.generate_spending_summary")
     context.generate_summary = context.summary_service.start()
     context.add_cleanup(context.summary_service.stop)
 

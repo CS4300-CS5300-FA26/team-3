@@ -74,3 +74,9 @@ class LowBalanceThreshold(models.Model):
                 name="low_balance_threshold_nonnegative",
             ),
         ]
+
+
+class SpendingSummaryBudget(models.Model):
+    # One bounded rolling-hour ledger shared across workers; no transaction data.
+    id = models.PositiveSmallIntegerField(primary_key=True)
+    admitted_at = models.JSONField(default=list)

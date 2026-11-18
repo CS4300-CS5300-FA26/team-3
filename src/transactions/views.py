@@ -1,21 +1,31 @@
 from calendar import monthrange
+from collections import Counter
+from decimal import Decimal
 from datetime import date, timedelta
 import unicodedata
 import tempfile
 from pathlib import Path
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from .services.receipt_scanner import scan_receipt
+
+from PIL import Image, UnidentifiedImageError
+
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 from django.views.decorators.vary import vary_on_headers
 from django.utils import timezone
-from PIL import Image, UnidentifiedImageError
+
+from accounts.spending_summary import (
+    SpendingSummaryError, claim_summary_request, generate_spending_summary,
+    validate_spending_observations,
+)
+
+from .services.receipt_scanner import scan_receipt
+from .receipt_limits import claim_receipt_request
 from .models import Transaction
 from .spending import category_totals
 
@@ -249,107 +259,6 @@ def record_expense(request):
     return _form_response(request, form, "expense", "transactions/record_expense.html")
 
 
-@login_required
-@require_POST
-def scan_receipt_upload(request):
-    """
-    Accept a receipt image and return its detected total.
-
-    The endpoint does not save or modify any transactions.
-    """
-    receipt = request.FILES.get("receipt")
-
-    if receipt is None:
-        return JsonResponse(
-            {"error": "Please upload a receipt image."},
-            status=400,
-        )
-
-    allowed_types = {
-        "image/jpeg": ".jpg",
-        "image/png": ".png",
-        "image/webp": ".webp",
-    }
-
-    extension = allowed_types.get(receipt.content_type)
-
-    if extension is None:
-        return JsonResponse(
-            {"error": "Unsupported receipt image format."},
-            status=400,
-        )
-
-    max_file_size = 5 * 1024 * 1024
-
-    if receipt.size > max_file_size:
-        return JsonResponse(
-            {"error": "Receipt image must be 5 MB or smaller."},
-            status=400,
-        )
-
-    with tempfile.TemporaryDirectory() as temp_dir:
-        image_path = Path(temp_dir) / f"receipt{extension}"
-
-        with image_path.open("wb") as destination:
-            for chunk in receipt.chunks():
-                destination.write(chunk)
-
-        # Verify that the uploaded file is a genuine supported image.
-        allowed_formats = {
-            "image/jpeg": "JPEG",
-            "image/png": "PNG",
-            "image/webp": "WEBP",
-        }
-
-        try:
-            with Image.open(image_path) as image:
-                actual_format = image.format
-                image.verify()
-
-            expected_format = allowed_formats[receipt.content_type]
-
-            if receipt.content_type == "image/jpeg":
-                valid_format = actual_format in ("JPEG", "MPO")
-            else:
-                valid_format = actual_format == expected_format
-
-            if not valid_format:
-                return JsonResponse(
-                    {"error": "Unsupported receipt image format."},
-                    status=400,
-                )
-
-            # Decode the image to catch corrupted image data.
-            with Image.open(image_path) as image:
-                image.load()
-
-        except (UnidentifiedImageError, OSError, ValueError):
-            return JsonResponse(
-                {"error": "Invalid or corrupted receipt image."},
-                status=400,
-            )
-
-        try:
-            amount = scan_receipt(image_path)
-        except RuntimeError:
-            return JsonResponse(
-                {"error": "Receipt scanning is currently unavailable."},
-                status=503,
-            )
-
-    if amount is None:
-        return JsonResponse(
-            {
-                "amount": None,
-                "message": (
-                    "Could not read a total, please enter it manually"
-                ),
-            }
-        )
-
-    return JsonResponse({"amount": str(amount)})
-
-
 @never_cache
 @vary_on_headers("X-Requested-With")
 @require_http_methods(["GET", "POST"])
@@ -429,20 +338,148 @@ def month_from_query(value):
         return current_month
 
 
+@never_cache
+@vary_on_headers("X-Requested-With")
+@require_http_methods(["GET", "POST"])
 @login_required
 def spending_by_category(request):
-    month = month_from_query(request.GET.get("month", ""))
-
-    categories = category_totals(Transaction.objects.filter(
+    month = month_from_query(request.GET.get("month", request.POST.get("month", "")))
+    entries = list(Transaction.objects.filter(
         owner=request.user, is_demo=False, date__year=month.year, date__month=month.month,
     ).values("kind", "category", "amount"))
+    categories = category_totals(entries)
+    counts = Counter(row["category"] for row in entries if row["kind"] == "expense")
+    message = ""
+    observations = []
+    retry = False
+    if len(entries) < 10:
+        message = "Not enough activity yet to summarize"
+    elif not categories:
+        message = "No expenses to summarize for this month."
+    elif request.method == "POST":
+        if not claim_summary_request(request.user.pk):
+            message = "Too many summary requests. Please try again in an hour."
+        else:
+            totals = [{"category": row["category"], "total": row["total"],
+                       "count": counts[row["category"]]} for row in categories]
+            try:
+                observations = validate_spending_observations(generate_spending_summary(totals), totals)
+                if not observations:
+                    raise SpendingSummaryError("No validated observations.")
+            except SpendingSummaryError:
+                message = "Unable to generate spending summary right now."
+                retry = True
+    return render(request, (
+        "transactions/spending_details.html" if _dialog_request(request)
+        else "transactions/spending_by_category.html"
+    ), {
+        "categories": categories, "month": month, "selected_month": f"{month:%Y-%m}",
+        "expense_count": sum(counts.values()),
+        "total_spent": sum((row["total"] for row in categories), Decimal("0.00")),
+        "summary_message": message, "summary_observations": observations,
+        "summary_retry": retry, "can_explain": len(entries) >= 10 and bool(categories),
+    })
 
-    return render(
-        request,
-        "transactions/spending_by_category.html",
-        {
-            "categories": categories,
-            "month": month,
-            "selected_month": f"{month:%Y-%m}",
-        },
-    )
+
+MAX_RECEIPT_PIXELS = 20_000_000
+
+
+@never_cache
+@login_required
+@require_POST
+def scan_receipt_upload(request):
+    """
+    Accept a receipt image and return its detected total.
+
+    The endpoint does not save or modify any transactions.
+    """
+    receipt = request.FILES.get("receipt")
+
+    if receipt is None:
+        return JsonResponse(
+            {"error": "Please upload a receipt image."},
+            status=400,
+        )
+
+    allowed_types = {
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+    }
+
+    extension = allowed_types.get(receipt.content_type)
+
+    if extension is None:
+        return JsonResponse(
+            {"error": "Unsupported receipt image format."},
+            status=400,
+        )
+
+    max_file_size = 4 * 1024 * 1024
+
+    if receipt.size > max_file_size:
+        return JsonResponse(
+            {"error": "Receipt image must be 4 MB or smaller."},
+            status=400,
+        )
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        image_path = Path(temp_dir) / f"receipt{extension}"
+
+        with image_path.open("wb") as destination:
+            for chunk in receipt.chunks():
+                destination.write(chunk)
+
+        # Verify that the uploaded file is a genuine supported image.
+        allowed_formats = {
+            "image/jpeg": {"JPEG", "MPO"},
+            "image/png": {"PNG"},
+            "image/webp": {"WEBP"},
+        }
+
+        try:
+            with Image.open(image_path) as image:
+                actual_format = image.format
+                if image.width * image.height > MAX_RECEIPT_PIXELS:
+                    return JsonResponse({"error": "Receipt image dimensions are too large."}, status=400)
+                image.verify()
+
+            if actual_format not in allowed_formats[receipt.content_type]:
+                return JsonResponse(
+                    {"error": "Unsupported receipt image format."},
+                    status=400,
+                )
+
+            # Decode the image to catch corrupted image data.
+            with Image.open(image_path) as image:
+                image.load()
+
+        except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError):
+            return JsonResponse(
+                {"error": "Invalid or corrupted receipt image."},
+                status=400,
+            )
+
+        if not claim_receipt_request(request.user.pk):
+            response = JsonResponse({"error": "Too many receipt scans. Please try again in an hour."}, status=429)
+            response["Retry-After"] = "3600"
+            return response
+        try:
+            amount = scan_receipt(image_path)
+        except RuntimeError:
+            return JsonResponse(
+                {"error": "Receipt scanning is currently unavailable."},
+                status=503,
+            )
+
+    if amount is None:
+        return JsonResponse(
+            {
+                "amount": None,
+                "message": (
+                    "Could not read a total, please enter it manually"
+                ),
+            }
+        )
+
+    return JsonResponse({"amount": str(amount)})

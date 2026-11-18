@@ -13,6 +13,31 @@ from accounts.spending_summary import (
 
 
 class SpendingSummaryServiceTests(TestCase):
+
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
+    @patch("accounts.spending_summary.urlopen")
+    def test_reasoning_items_before_text_output_are_skipped(self, urlopen):
+        urlopen.return_value = io.BytesIO(json.dumps({
+            "output": [
+                {"type": "reasoning", "summary": []},
+                {"type": "message", "content": [
+                    {"type": "output_text", "text": '["Housing was $200.00."]'}
+                ]},
+            ]
+        }).encode())
+
+        self.assertEqual(
+            generate_spending_summary(self.totals),
+            ["Housing was $200.00."],
+        )
+
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
+    @patch("accounts.spending_summary.urlopen")
+    def test_invalid_utf8_provider_response_is_rejected(self, urlopen):
+        urlopen.return_value = io.BytesIO(b"\xff")
+
+        with self.assertRaisesRegex(SpendingSummaryError, "unavailable"):
+            generate_spending_summary(self.totals)
     totals = [
         {"category": "Housing", "total": Decimal("200.00"), "count": 4},
         {"category": "Food", "total": Decimal("120.00"), "count": 6},
@@ -81,31 +106,33 @@ class SpendingSummaryServiceTests(TestCase):
 
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     @patch("accounts.spending_summary.urlopen")
-    def test_reasoning_items_before_text_output_are_skipped(self, urlopen):
-        urlopen.return_value = io.BytesIO(json.dumps({
-            "output": [
-                {"type": "reasoning", "summary": []},
-                {"type": "message", "content": [
-                    {"type": "output_text", "text": '["Housing was $200.00."]'}
-                ]},
-            ]
-        }).encode())
-
-        self.assertEqual(
-            generate_spending_summary(self.totals),
-            ["Housing was $200.00."],
-        )
+    def test_nested_provider_output_is_parsed(self, urlopen):
+        payload = {"output": [{"type": "message", "content": [{"type": "output_text", "text": '["Housing was $200.00."]'}]}]}
+        urlopen.return_value = io.BytesIO(json.dumps(payload).encode())
+        self.assertEqual(generate_spending_summary(self.totals), ["Housing was $200.00."])
 
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     @patch("accounts.spending_summary.urlopen")
-    def test_invalid_utf8_provider_response_is_rejected(self, urlopen):
-        urlopen.return_value = io.BytesIO(b"\xff")
-
-        with self.assertRaisesRegex(SpendingSummaryError, "unavailable"):
-            generate_spending_summary(self.totals)
+    def test_malformed_nested_provider_outputs_are_safe_failures(self, urlopen):
+        for payload in [None, {}, {"output": []}, {"output": [None]},
+                        {"output": [{"content": None}]}, {"output": [{"content": []}]},
+                        {"output": [{"content": [None]}]}, {"output": [{"type": "message", "content": [{"type": "output_text", "text": 7}]}]},
+                        {"output_text": "not JSON"}]:
+            with self.subTest(payload=payload):
+                urlopen.return_value = io.BytesIO(json.dumps(payload).encode())
+                with self.assertRaises(SpendingSummaryError):
+                    generate_spending_summary(self.totals)
 
 
 class SpendingObservationValidationTests(TestCase):
+
+    def test_comma_punctuated_category_and_amount_pair_is_valid(self):
+        observation = "Housing, at $200.00, was your largest category."
+
+        self.assertEqual(
+            validate_spending_observations([observation], self.totals),
+            [observation],
+        )
     totals = [
         {"category": "Housing", "total": Decimal("200.00")},
         {"category": "Food", "total": Decimal("20.00")},
@@ -123,16 +150,10 @@ class SpendingObservationValidationTests(TestCase):
             ["Housing totaled $200.00 and Food totaled $20.00."],
         )
 
-    def test_comma_punctuated_category_and_amount_pair_is_valid(self):
-        observation = "Housing, at $200.00, was your largest category."
-
-        self.assertEqual(
-            validate_spending_observations([observation], self.totals),
-            [observation],
-        )
-
-    def test_rejects_comma_separated_swapped_amounts_and_partial_money_tokens(self):
+    def test_money_tokens_cannot_match_only_a_prefix_or_swap_category_amounts(self):
         self.assertEqual(validate_spending_observations([
-            "Housing was $20.00, Food was $200.00.",
             "Food totaled $20.001.",
+            "Food increased from $20.00 to $200.00.",
+            "Food was $200.00 compared with Housing at $20.00.",
+            "Housing was $20.00, Food was $200.00.",
         ], self.totals), [])

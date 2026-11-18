@@ -1,0 +1,38 @@
+<style>
+    #spending-dialog { box-sizing: border-box; width: min(860px, calc(100% - 32px)); max-height: calc(100dvh - 48px); padding: 32px; border: 1px solid #104b25; border-radius: 16px; color: #101820; background: white; overflow: hidden; }
+    #spending-dialog[open] { display: flex; flex-direction: column; }
+    #spending-dialog::backdrop { background: rgb(16 24 32 / 45%); }
+    #spending-dialog .details-content { min-height: 0; overflow-y: auto; padding: 4px; }
+    .details-content h2 { margin: 0 40px 8px 0; color: #104b25; font: 36px/1.2 Georgia, serif; }
+    .details-context { margin: 0 0 20px; color: #56616b; }
+    .details-total { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 12px 18px; margin-bottom: 20px; border-radius: 8px; background: #e9efe6; color: #104b25; font: 26px/1.2 Georgia, serif; }
+    .details-total strong { font-size: 32px; overflow-wrap: anywhere; }
+    .details-categories { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 17px; }
+    .details-categories th, .details-categories td { padding: 12px 8px; border-bottom: 1px solid #d5dfd2; text-align: left; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+    .details-categories thead { background: #e9efe6; }
+    .details-categories th:first-child { width: 34%; }
+    .details-categories th:nth-child(2) { width: 24%; }
+    .details-categories tbody th { font-weight: normal; }
+    .details-categories a { display: block; padding: 4px 0; }
+    .share-track { display: inline-block; width: 45%; height: 14px; margin-left: 12px; background: #e9efe6; border-radius: 4px; vertical-align: middle; }
+    .share-track > span { display: block; height: 100%; background: #104b25; border-radius: 4px; }
+    .details-explanation { margin-bottom: 24px; }
+    .details-explanation h3 { margin: 0 0 16px; color: #104b25; font: 28px/1.2 Georgia, serif; }
+    .details-explanation ul { padding-left: 24px; margin: 12px 0 0; }
+    .details-explanation li { margin-bottom: 8px; overflow-wrap: anywhere; }
+    .summary-label { display: inline-block; margin: 0; padding: 4px 12px; border-radius: 6px; background: #e9efe6; color: #104b25; font-size: 15px; }
+    .summary-result:not([hidden]) { margin-bottom: 16px; }
+    .details-explanation .explanation-form { margin: 0; padding: 0; border: 0; background: transparent; }
+    .details-footer { display: flex; justify-content: end; flex-shrink: 0; margin-top: 24px; padding-top: 20px; border-top: 1px solid #d5dfd2; }
+    #spending-dialog .details-close { position: absolute; right: 16px; top: 16px; width: 44px; height: 44px; padding: 0; background: white; color: #56616b; font-size: 32px; }
+    body.spending-dialog-open { overflow: hidden; }
+    @media (max-width: 600px) {
+        #spending-dialog { width: calc(100% - 16px); max-height: calc(100dvh - 16px); padding: 24px 16px; }
+        .details-content h2 { font-size: 30px; }
+        .details-categories { font-size: 15px; }
+        .details-categories th, .details-categories td { padding: 12px 4px; }
+        .share-track { display: none; }
+        .details-categories th:first-child { width: 36%; }
+        .details-categories th:nth-child(2) { width: 30%; }
+    }
+</style>

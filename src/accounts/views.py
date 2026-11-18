@@ -1,9 +1,7 @@
 from calendar import monthrange
-from collections import Counter
 from datetime import date, timedelta
 from decimal import Decimal
 from smtplib import SMTPException
-from urllib.parse import urlencode
 
 from django import forms
 from django.conf import settings
@@ -12,7 +10,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_not_required, login_required
 from django.core import signing
 from django.core.exceptions import ValidationError
-from django.http import HttpResponseBadRequest, HttpResponseNotAllowed
+from django.http import HttpResponseBadRequest
 from django.db import IntegrityError
 from django.shortcuts import redirect, render, resolve_url
 from django.urls import reverse
@@ -28,14 +26,8 @@ from accounts.identity import normalize_email
 from accounts.lockout import SignInRateLimited, check_login
 from accounts.models import LowBalanceThreshold
 from accounts.signup import send_signup_email
-from accounts.spending_summary import (
-    SpendingSummaryError,
-    generate_spending_summary,
-    validate_spending_observations,
-)
 from accounts.verification import complete_registration, email_from_verification_token
 from transactions.models import Transaction
-from transactions.spending import category_totals
 
 
 @sensitive_post_parameters("email")
@@ -115,7 +107,10 @@ def sign_in(request):
     # Resume only the protected pages that send users here. This also prevents
     # external redirects and loops through signup, sign-in, or sign-out.
     destination = request.POST.get("next", request.GET.get("next", ""))
-    if destination not in {
+    dashboard_destination = destination.startswith(reverse("dashboard") + "?") and not any(
+        ord(character) < 32 or ord(character) == 127 for character in destination
+    )
+    if not dashboard_destination and destination not in {
         reverse(name)
         for name in ("dashboard", "record_income", "record_expense", "spending_by_category", "account_settings")
     }:
@@ -211,14 +206,12 @@ def account_settings(request):
 
 # Show the current user's monthly budget dashboard
 @never_cache
-@require_http_methods(["GET", "POST"])
+@require_GET
 @login_required(login_url="sign_in")
 def dashboard(request):
-    if request.method == "POST" and "explain_spending" not in request.POST:
-        return HttpResponseNotAllowed(["GET"])
     # Default to the current calendar month
     selected_month = timezone.localdate().replace(day=1)
-    month_value = request.GET.get("month", request.POST.get("month", ""))
+    month_value = request.GET.get("month", "")
 
     # Allow the user to select a different month
     if month_value:
@@ -240,14 +233,11 @@ def dashboard(request):
         "this_quarter": "This quarter",
         "all": "All time",
     }
-    selected_period = request.GET.get(
-        "period", request.POST.get("period", "selected_month")
-    )
+    selected_period = request.GET.get("period", "selected_month")
     if selected_period not in period_options:
         selected_period = "selected_month"
 
     current_threshold = LowBalanceThreshold.objects.filter(owner=request.user).first()
-    is_summary_request = request.method == "POST" and "explain_spending" in request.POST
 
     # Keep the monthly budget independent from the transaction-history filter.
     budget_transactions = Transaction.objects.filter(
@@ -310,36 +300,7 @@ def dashboard(request):
         period_start = transactions[-1].date if transactions else None
         period_end = transactions[0].date if transactions else None
 
-    summary_observations = []
-    summary_message = ""
-    if is_summary_request:
-        if len(transactions) < 10:
-            summary_message = "Not enough activity yet to summarize"
-        else:
-            counts = Counter(t.category for t in transactions if t.kind == Transaction.Kind.EXPENSE)
-            summary_totals = [
-                {"category": row["category"], "total": row["total"], "count": counts[row["category"]]}
-                for row in category_totals(
-                    {"kind": t.kind, "category": t.category, "amount": t.amount} for t in transactions
-                )
-            ]
-            if not summary_totals:
-                summary_message = "No expense activity yet to summarize"
-            else:
-                try:
-                    provider_observations = generate_spending_summary(summary_totals)
-                except SpendingSummaryError:
-                    summary_message = "Unable to generate spending summary right now."
-                else:
-                    summary_observations = validate_spending_observations(
-                        provider_observations, summary_totals
-                    )
-
     monthly = monthly_context(budget_transactions, selected_month, today)
-    show_history_totals = bool(criteria) or not (
-        period_start == selected_month and period_end == monthly["month_end"]
-        and selected_period != "all"
-    )
     show_low_balance_warning = (
         current_threshold is not None and monthly["remaining_budget"] < current_threshold.amount
     )
@@ -372,15 +333,14 @@ def dashboard(request):
             "period_end": period_end,
             **monthly,
             "drilldown_filters": drilldown_filters,
-            "drilldown_query": urlencode(criteria),
-            "show_history_totals": show_history_totals,
+            "filter_values": criteria,
+            "filter_categories": sorted({row["category"] for row in monthly["categories"]}
+                                        | ({criteria["category"]} if "category" in criteria else set())),
             "history_scope": period_options[selected_period],
             "selected_month": selected_month.isoformat()[:7],
             "selected_month_label": selected_month.strftime("%B %Y"),
             "current_threshold": current_threshold,
             "show_low_balance_warning": show_low_balance_warning,
-            "summary_observations": summary_observations,
-            "summary_message": summary_message,
             "upcoming_fixed_expenses": upcoming_fixed_expenses,
         },
     )
